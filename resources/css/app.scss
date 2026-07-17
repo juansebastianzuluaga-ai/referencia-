@@ -1,0 +1,63 @@
+@import 'element-plus/theme-chalk/dark/css-vars.css';
+
+:root {
+  --blue-900: #0a2347;
+  --blue-800: #0d2d5e;
+  --blue-700: #1a3f7a;
+  --blue-600: #1e4d96;
+  --blue-500: #2563c4;
+  --blue-400: #4b83d4;
+  --blue-300: #7aaae3;
+  --blue-100: #dbeafe;
+  --blue-50:  #eff6ff;
+  --accent:   #1e4d96;
+  --accent-dark: #1a3f7a;
+  --white: #ffffff;
+  --gray-50:  #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-900: #0f172a;
+  --sidebar-w: 240px;
+  --sidebar-collapsed: 64px;
+  --header-h: 56px;
+  --footer-h: 36px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.1);
+  --transition: 0.22s cubic-bezier(0.4,0,0.2,1);
+  --el-color-primary: var(--blue-600);
+  --el-color-primary-light-3: var(--blue-500);
+  --el-color-primary-light-5: var(--blue-400);
+  --el-color-primary-light-7: var(--blue-300);
+  --el-color-primary-light-8: var(--blue-100);
+  --el-color-primary-light-9: var(--blue-50);
+  --el-color-primary-dark-2: var(--blue-700);
+}
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--gray-700);
+  background: var(--gray-100);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-6px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}

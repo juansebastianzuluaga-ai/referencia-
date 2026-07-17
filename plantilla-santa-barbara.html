@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clínica Santa Bárbara — Sistema HIS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue-900: #0a2347;
+    --blue-800: #0d2d5e;
+    --blue-700: #1a3f7a;
+    --blue-600: #1e4d96;
+    --blue-500: #2563c4;
+    --blue-400: #4b83d4;
+    --blue-300: #7aaae3;
+    --blue-100: #dbeafe;
+    --blue-50:  #eff6ff;
+    --accent:   #3bb870;
+    --accent-dark: #2a9458;
+    --white: #ffffff;
+    --gray-50:  #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-900: #0f172a;
+    --sidebar-w: 240px;
+    --sidebar-collapsed: 64px;
+    --header-h: 56px;
+    --footer-h: 36px;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.1);
+    --transition: 0.22s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 14px;
+    color: var(--gray-700);
+    background: var(--gray-100);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--header-h);
+    background: var(--blue-800);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px 0 0;
+    z-index: 100;
+    box-shadow: 0 1px 0 rgba(255,255,255,.06), var(--shadow-md);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    height: 100%;
+  }
+
+  /* Logo zona — siempre visible, mismo ancho que sidebar */
+  .logo-zone {
+    width: var(--sidebar-w);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    background: var(--blue-900);
+    border-right: 1px solid rgba(255,255,255,.08);
+    transition: width var(--transition);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  body.collapsed .logo-zone {
+    width: var(--sidebar-collapsed);
+    justify-content: center;
+    padding: 0;
+  }
+
+  .logo-img {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    /* SVG logo placeholder — in production replace with <img> */
+    background: var(--white);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--blue-800);
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text {
+    margin-left: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: opacity var(--transition), max-width var(--transition);
+    max-width: 160px;
+  }
+
+  body.collapsed .logo-text {
+    opacity: 0;
+    max-width: 0;
+  }
+
+  .logo-text strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--white);
+    line-height: 1.2;
+  }
+
+  .logo-text span {
+    font-size: 10px;
+    color: var(--blue-300);
+    font-weight: 300;
+    letter-spacing: 0.2px;
+  }
+
+  /* Hamburger */
+  .btn-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius);
+    border: none;
+    background: rgba(255,255,255,.08);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 12px;
+    transition: background var(--transition);
+    flex-shrink: 0;
+    color: var(--white);
+  }
+
+  .btn-toggle:hover { background: rgba(255,255,255,.16); }
+
+  .btn-toggle svg { width: 18px; height: 18px; }
+
+  /* Breadcrumb */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--blue-300);
+  }
+
+  .breadcrumb .sep { opacity: .4; font-size: 11px; }
+
+  .breadcrumb .current {
+    color: var(--white);
+    font-weight: 500;
+  }
+
+  /* Header right */
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .header-icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--blue-300);
+    transition: background var(--transition), color var(--transition);
+    position: relative;
+  }
+
+  .header-icon-btn:hover {
+    background: rgba(255,255,255,.1);
+    color: var(--white);
+  }
+
+  .header-icon-btn svg { width: 18px; height: 18px; }
+
+  .badge-dot {
+    position: absolute;
+    top: 7px; right: 7px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #f87171;
+    border: 1.5px solid var(--blue-800);
+  }
+
+  .divider-v {
+    width: 1px;
+    height: 22px;
+    background: rgba(255,255,255,.12);
+    margin: 0 4px;
+  }
+
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px 4px 4px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background var(--transition);
+    border: none;
+    background: transparent;
+  }
+
+  .user-chip:hover { background: rgba(255,255,255,.1); }
+
+  .avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--blue-500);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--white);
+    flex-shrink: 0;
+  }
+
+  .user-info { text-align: left; }
+
+  .user-info .name {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--white);
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .user-info .role {
+    font-size: 10.5px;
+    color: var(--blue-300);
+    line-height: 1;
+  }
+
+  /* ─── LAYOUT BODY ─── */
+  .layout {
+    display: flex;
+    height: calc(100vh - var(--header-h) - var(--footer-h));
+    margin-top: var(--header-h);
+    margin-bottom: var(--footer-h);
+    overflow: hidden;
+  }
+
+  /* ─── SIDEBAR ─── */
+  aside {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    background: var(--gray-900);
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: width var(--transition);
+    display: flex;
+    flex-direction: column;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,.1) transparent;
+  }
+
+  body.collapsed aside {
+    width: var(--sidebar-collapsed);
+  }
+
+  aside::-webkit-scrollbar { width: 4px; }
+  aside::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
+
+  .nav-section {
+    padding: 12px 0 4px;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+  }
+
+  .nav-section:last-child { border-bottom: none; flex: 1; }
+
+  .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--gray-500);
+    padding: 0 16px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity var(--transition);
+  }
+
+  body.collapsed .nav-label { opacity: 0; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    margin: 1px 8px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    color: var(--gray-400);
+    text-decoration: none;
+    transition: background var(--transition), color var(--transition);
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .nav-item:hover {
+    background: rgba(255,255,255,.06);
+    color: var(--white);
+  }
+
+  .nav-item.active {
+    background: rgba(37,99,196,.25);
+    color: var(--white);
+  }
+
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 20%; bottom: 20%;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--blue-400);
+  }
+
+  .nav-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-icon svg { width: 18px; height: 18px; }
+
+  .nav-text {
+    font-size: 13.5px;
+    font-weight: 400;
+    flex: 1;
+    transition: opacity var(--transition), max-width var(--transition);
+    overflow: hidden;
+  }
+
+  body.collapsed .nav-text {
+    opacity: 0;
+    max-width: 0;
+  }
+
+  .nav-badge {
+    font-size: 10px;
+    font-weight: 600;
+    background: var(--blue-600);
+    color: var(--white);
+    padding: 1px 6px;
+    border-radius: 10px;
+    transition: opacity var(--transition);
+  }
+
+  body.collapsed .nav-badge { opacity: 0; }
+
+  /* Tooltip para modo colapsado */
+  .nav-item[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(var(--sidebar-collapsed) - 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--gray-900);
+    color: var(--white);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,.1);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 200;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  body.collapsed .nav-item[data-tooltip]:hover::after { opacity: 1; }
+
+  /* Grupo expandible */
+  .nav-group { }
+
+  .nav-group-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    margin: 1px 8px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    color: var(--gray-400);
+    transition: background var(--transition), color var(--transition);
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .nav-group-header:hover {
+    background: rgba(255,255,255,.06);
+    color: var(--white);
+  }
+
+  .nav-group-header.open { color: var(--white); }
+
+  .nav-group-arrow {
+    margin-left: auto;
+    transition: transform var(--transition), opacity var(--transition);
+    width: 14px; height: 14px;
+  }
+
+  .nav-group-header.open .nav-group-arrow { transform: rotate(180deg); }
+
+  body.collapsed .nav-group-arrow { opacity: 0; }
+
+  .nav-group-children {
+    overflow: hidden;
+    max-height: 200px;
+    transition: max-height var(--transition);
+  }
+
+  .nav-group-children.closed { max-height: 0; }
+
+  .nav-group-children .nav-item {
+    padding-left: 20px;
+  }
+
+  /* ─── MAIN CONTENT ─── */
+  main {
+    flex: 1;
+    overflow: hidden;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--gray-100);
+  }
+
+  /* Card contenedor del módulo — ocupa todo el espacio disponible */
+  .content-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  /* Encabezado fijo de la card */
+  .content-card-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--white);
+    flex-wrap: wrap;
+  }
+
+  .content-card-header .page-title-group h1 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--gray-900);
+    line-height: 1.3;
+  }
+
+  .content-card-header .page-title-group p {
+    font-size: 12px;
+    color: var(--gray-400);
+    margin-top: 2px;
+  }
+
+  /* Cuerpo scrolleable interno de la card */
+  .content-card-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 16px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-300) transparent;
+  }
+
+  .content-card-body::-webkit-scrollbar { width: 5px; }
+  .content-card-body::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 4px; }
+  .content-card-body::-webkit-scrollbar-track { background: transparent; }
+
+  /* Page header — ahora vive dentro del content-card-header */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .page-title-group h1 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--gray-900);
+    line-height: 1.3;
+  }
+
+  .page-title-group p {
+    font-size: 12px;
+    color: var(--gray-400);
+    margin-top: 2px;
+  }
+
+  .page-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    transition: all var(--transition);
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  .btn svg { width: 15px; height: 15px; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--white);
+  }
+  .btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59,184,112,.3); }
+
+  .btn-secondary {
+    background: var(--white);
+    color: var(--gray-600);
+    border: 1px solid var(--gray-200);
+  }
+  .btn-secondary:hover { background: var(--gray-50); border-color: var(--gray-300); }
+
+  .btn-blue {
+    background: var(--blue-600);
+    color: var(--white);
+  }
+  .btn-blue:hover { background: var(--blue-700); transform: translateY(-1px); }
+
+  /* Toolbar / filters */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: var(--gray-50);
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--gray-200);
+    margin-bottom: 14px;
+  }
+
+  .toolbar-spacer { flex: 1; }
+
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-wrap svg {
+    position: absolute;
+    left: 10px;
+    color: var(--gray-400);
+    width: 15px;
+    height: 15px;
+    pointer-events: none;
+  }
+
+  .input-field {
+    height: 34px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 0 12px 0 32px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--gray-700);
+    background: var(--gray-50);
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    width: 220px;
+  }
+
+  .input-field:focus {
+    border-color: var(--blue-400);
+    box-shadow: 0 0 0 3px rgba(37,99,196,.1);
+    background: var(--white);
+  }
+
+  .select-field {
+    height: 34px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 0 28px 0 10px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--gray-700);
+    background: var(--gray-50);
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    transition: border-color var(--transition);
+  }
+
+  .select-field:focus { border-color: var(--blue-400); outline: none; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: transform var(--transition), box-shadow var(--transition);
+  }
+
+  .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+  .stat-icon {
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .stat-icon svg { width: 20px; height: 20px; }
+
+  .stat-icon.blue { background: var(--blue-50); color: var(--blue-600); }
+  .stat-icon.green { background: #f0fdf4; color: #16a34a; }
+  .stat-icon.amber { background: #fffbeb; color: #d97706; }
+  .stat-icon.red   { background: #fef2f2; color: #dc2626; }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--gray-900);
+    line-height: 1.1;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--gray-400);
+    margin-top: 2px;
+  }
+
+  .stat-delta {
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: 3px;
+  }
+
+  .delta-up { color: #16a34a; }
+  .delta-down { color: #dc2626; }
+
+  /* Table */
+  .table-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+    padding: 10px 14px;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gray-500);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--gray-100);
+    transition: background var(--transition);
+    cursor: pointer;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+
+  tbody tr:hover { background: var(--blue-50); }
+
+  tbody td {
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--gray-700);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .td-name { font-weight: 500; color: var(--gray-900); }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .pill-blue   { background: var(--blue-50); color: var(--blue-700); }
+  .pill-green  { background: #f0fdf4; color: #15803d; }
+  .pill-amber  { background: #fffbeb; color: #b45309; }
+  .pill-gray   { background: var(--gray-100); color: var(--gray-600); }
+
+  /* Empty state */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--gray-400);
+    text-align: center;
+  }
+
+  .empty-state svg { width: 48px; height: 48px; margin-bottom: 16px; opacity: .4; }
+  .empty-state h3 { font-size: 15px; font-weight: 500; color: var(--gray-500); margin-bottom: 6px; }
+  .empty-state p  { font-size: 13px; max-width: 280px; line-height: 1.5; }
+
+  /* ─── FOOTER ─── */
+  footer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: var(--footer-h);
+    background: var(--blue-900);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 100;
+    border-top: 1px solid rgba(255,255,255,.06);
+  }
+
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11.5px;
+    color: var(--blue-300);
+  }
+
+  .footer-left strong {
+    color: rgba(255,255,255,.7);
+    font-weight: 500;
+  }
+
+  .footer-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.2);
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px rgba(59,184,112,.6);
+    flex-shrink: 0;
+  }
+
+  .footer-right {
+    font-size: 11px;
+    color: rgba(255,255,255,.3);
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    :root { --sidebar-w: 100%; --sidebar-collapsed: 0px; }
+
+    aside {
+      position: fixed;
+      top: var(--header-h);
+      left: 0;
+      bottom: var(--footer-h);
+      z-index: 90;
+      transform: translateX(-100%);
+      transition: transform var(--transition);
+      width: 240px !important;
+    }
+
+    body.mobile-open aside { transform: translateX(0); }
+
+    .logo-zone { width: 200px !important; }
+
+    body.collapsed .logo-zone { width: 200px !important; }
+
+    .user-info { display: none; }
+
+    .breadcrumb { display: none; }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.4);
+      z-index: 80;
+    }
+
+    body.mobile-open .overlay { display: block; }
+  }
+
+  /* ─── USER DROPDOWN ─── */
+  .user-menu-wrap {
+    position: relative;
+  }
+
+  .user-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 220px;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 24px rgba(0,0,0,.14), 0 2px 8px rgba(0,0,0,.08);
+    z-index: 300;
+    overflow: hidden;
+    animation: dropIn .15s ease both;
+  }
+
+  .user-dropdown.open { display: block; }
+
+  @keyframes dropIn {
+    from { opacity: 0; transform: translateY(-6px) scale(.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .udrop-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 14px 12px;
+    background: var(--gray-50);
+  }
+
+  .udrop-divider {
+    height: 1px;
+    background: var(--gray-200);
+    margin: 4px 0;
+  }
+
+  .udrop-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--gray-700);
+    text-decoration: none;
+    transition: background var(--transition), color var(--transition);
+    cursor: pointer;
+  }
+
+  .udrop-item svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--gray-400); }
+
+  .udrop-item:hover { background: var(--gray-50); color: var(--gray-900); }
+  .udrop-item:hover svg { color: var(--blue-500); }
+
+  .udrop-danger { color: #dc2626; }
+  .udrop-danger svg { color: #dc2626; }
+  .udrop-danger:hover { background: #fef2f2; color: #b91c1c; }
+  .udrop-danger:hover svg { color: #b91c1c; }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .content-card { animation: fadeIn .2s ease both; }
+  .content-card-body > * { animation: fadeIn .25s ease both; }
+  .content-card-body > *:nth-child(2) { animation-delay: .04s; }
+  .content-card-body > *:nth-child(3) { animation-delay: .08s; }
+</style>
+</head>
+<body>
+
+<!-- Overlay móvil -->
+<div class="overlay" onclick="toggleMobile()"></div>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <div class="header-left">
+    <!-- Logo zone -->
+    <div class="logo-zone">
+      <div class="logo-img">SB</div>
+      <div class="logo-text">
+        <strong>Santa Bárbara</strong>
+        <span>Clínica de Alta Complejidad</span>
+      </div>
+    </div>
+
+    <!-- Toggle -->
+    <button class="btn-toggle" onclick="toggleSidebar()" title="Mostrar/ocultar menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <span>Reportes</span>
+      <span class="sep">›</span>
+      <span class="current">Ingresos Activos</span>
+    </nav>
+  </div>
+
+  <div class="header-right">
+    <!-- Notificaciones -->
+    <button class="header-icon-btn" title="Notificaciones">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      <span class="badge-dot"></span>
+    </button>
+
+    <!-- Ayuda -->
+    <button class="header-icon-btn" title="Ayuda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </button>
+
+    <div class="divider-v"></div>
+
+    <!-- Usuario con dropdown -->
+    <div class="user-menu-wrap" id="userMenuWrap">
+      <button class="user-chip" onclick="toggleUserMenu()" id="userChipBtn">
+        <div class="avatar">LP</div>
+        <div class="user-info">
+          <div class="name">Luisa Pérez</div>
+          <div class="role">Enfermera Jefe</div>
+        </div>
+        <svg id="userChevron" style="width:14px;height:14px;color:var(--blue-300);margin-left:2px;transition:transform 0.2s;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <!-- Dropdown -->
+      <div class="user-dropdown" id="userDropdown">
+        <div class="udrop-header">
+          <div class="avatar" style="width:38px;height:38px;font-size:13px;">LP</div>
+          <div>
+            <div style="font-weight:600;font-size:13px;color:var(--gray-900);">Luisa Pérez</div>
+            <div style="font-size:11.5px;color:var(--gray-400);">Enfermera Jefe · Piso 3</div>
+          </div>
+        </div>
+        <div class="udrop-divider"></div>
+        <a href="#" class="udrop-item" onclick="closeUserMenu()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Mi perfil
+        </a>
+        <a href="#" class="udrop-item" onclick="closeUserMenu()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Cambiar contraseña
+        </a>
+        <div class="udrop-divider"></div>
+        <a href="#" class="udrop-item udrop-danger" onclick="closeUserMenu()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Cerrar sesión
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══ LAYOUT ═══ -->
+<div class="layout">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside>
+
+    <div class="nav-section">
+      <div class="nav-label">Principal</div>
+
+      <a class="nav-item" href="#" data-tooltip="Panel principal">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </span>
+        <span class="nav-text">Panel principal</span>
+      </a>
+
+      <a class="nav-item" href="#" data-tooltip="Censo">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </span>
+        <span class="nav-text">Censo</span>
+        <span class="nav-badge">48</span>
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Reportes</div>
+
+      <div class="nav-group">
+        <div class="nav-group-header open" onclick="toggleGroup(this)">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </span>
+          <span class="nav-text">Reportes</span>
+          <svg class="nav-group-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+
+        <div class="nav-group-children">
+          <a class="nav-item active" href="#" data-tooltip="Ingresos">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            </span>
+            <span class="nav-text">Ingresos</span>
+          </a>
+          <a class="nav-item" href="#" data-tooltip="Censo">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </span>
+            <span class="nav-text">Censo</span>
+          </a>
+          <a class="nav-item" href="#" data-tooltip="Medicamentos">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+            </span>
+            <span class="nav-text">Medicamentos</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Administración</div>
+      <a class="nav-item" href="#" data-tooltip="Gestión de usuarios">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </span>
+        <span class="nav-text">Gestión de usuarios</span>
+      </a>
+      <a class="nav-item" href="#" data-tooltip="Roles y permisos">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </span>
+        <span class="nav-text">Roles y permisos</span>
+      </a>
+      <a class="nav-item" href="#" data-tooltip="Configuración">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        </span>
+        <span class="nav-text">Configuración</span>
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Hospitalización</div>
+
+      <a class="nav-item" href="#" data-tooltip="Camas disponibles">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>
+        </span>
+        <span class="nav-text">Camas disponibles</span>
+        <span class="nav-badge">5</span>
+      </a>
+
+      <a class="nav-item" href="#" data-tooltip="Traslados internos">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </span>
+        <span class="nav-text">Traslados internos</span>
+      </a>
+
+      <a class="nav-item" href="#" data-tooltip="Altas programadas">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </span>
+        <span class="nav-text">Altas programadas</span>
+        <span class="nav-badge">3</span>
+      </a>
+
+      <a class="nav-item" href="#" data-tooltip="Cirugías del día">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 3-6 9h4v2h4v-2h4l-6-9z"/><path d="M9 12v9"/></svg>
+        </span>
+        <span class="nav-text">Cirugías del día</span>
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Clínica</div>
+
+      <div class="nav-group">
+        <div class="nav-group-header" onclick="toggleGroup(this)">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+          </span>
+          <span class="nav-text">Medicamentos</span>
+          <svg class="nav-group-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="nav-group-children closed">
+          <a class="nav-item" href="#" data-tooltip="Kardex">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+            <span class="nav-text">Kardex de enfermería</span>
+          </a>
+          <a class="nav-item" href="#" data-tooltip="Formulación">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>
+            <span class="nav-text">Formulación médica</span>
+          </a>
+          <a class="nav-item" href="#" data-tooltip="Dispensación">
+            <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>
+            <span class="nav-text">Dispensación</span>
+          </a>
+        </div>
+      </div>
+
+      <a class="nav-item" href="#" data-tooltip="Historia clínica">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </span>
+        <span class="nav-text">Historia clínica</span>
+      </a>
+
+      <a class="nav-item" href="#" data-tooltip="Laboratorio">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11l-5 5h16l-5-5V3"/></svg>
+        </span>
+        <span class="nav-text">Laboratorio clínico</span>
+      </a>
+
+      <a class="nav-item" href="#" data-tooltip="Imágenes diagnósticas">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </span>
+        <span class="nav-text">Imágenes diagnósticas</span>
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Facturación</div>
+      <a class="nav-item" href="#" data-tooltip="Facturación">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </span>
+        <span class="nav-text">Facturación</span>
+      </a>
+      <a class="nav-item" href="#" data-tooltip="Glosas">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </span>
+        <span class="nav-text">Glosas y devoluciones</span>
+        <span class="nav-badge" style="background:#dc2626;">2</span>
+      </a>
+      <a class="nav-item" href="#" data-tooltip="Cartera">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        </span>
+        <span class="nav-text">Cartera</span>
+      </a>
+    </div>
+
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <main>
+    <div class="content-card">
+
+      <!-- Encabezado fijo del módulo -->
+      <div class="content-card-header">
+        <div class="page-header">
+          <div class="page-title-group">
+            <h1>Ingresos Activos</h1>
+            <p>Pacientes con ingreso hospitalario activo — actualizado hace 2 min</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-secondary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+              Filtros
+            </button>
+            <button class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar Excel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cuerpo scrolleable interno -->
+      <div class="content-card-body">
+
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            </div>
+            <div>
+              <div class="stat-value">48</div>
+              <div class="stat-label">Ingresos activos</div>
+              <div class="stat-delta delta-up">↑ 3 hoy</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+              <div class="stat-value">12</div>
+              <div class="stat-label">Altas hoy</div>
+              <div class="stat-delta delta-up">↑ 2 vs ayer</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+              <div class="stat-value">7</div>
+              <div class="stat-label">Pendientes UCI</div>
+              <div class="stat-delta delta-down">↓ 1 vs ayer</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div>
+              <div class="stat-value">2</div>
+              <div class="stat-label">Alertas activas</div>
+              <div class="stat-delta" style="color:var(--gray-400);">Sin cambio</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="input-field" type="text" placeholder="Buscar paciente, cama, servicio…">
+          </div>
+          <select class="select-field">
+            <option value="">Todas las ubicaciones</option>
+            <option>Piso 1 — Urgencias</option>
+            <option>Piso 2 — Medicina Interna</option>
+            <option>Piso 3 — UCI</option>
+            <option>Piso 4 — Cirugía</option>
+          </select>
+          <select class="select-field">
+            <option value="">Todos los servicios</option>
+            <option>Medicina Interna</option>
+            <option>Cirugía General</option>
+            <option>UCI Adultos</option>
+            <option>Pediatría</option>
+          </select>
+          <div class="toolbar-spacer"></div>
+          <span style="font-size:12px;color:var(--gray-400);">48 registros</span>
+        </div>
+
+        <!-- Tabla -->
+        <div class="table-card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Paciente</th>
+                  <th>Identificación</th>
+                  <th>No. Ingreso</th>
+                  <th>Servicio</th>
+                  <th>Cama</th>
+                  <th>EPS</th>
+                  <th>F. Ingreso</th>
+                  <th>Movilidad</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="td-name">Gómez Rivas, Carlos A.</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;">CC 1.075.234.891</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--blue-600);">ING-04183</td>
+                  <td>Medicina Interna</td>
+                  <td><span class="pill pill-blue">312-B</span></td>
+                  <td>SURA EPS</td>
+                  <td>28/03/2026</td>
+                  <td><span class="pill pill-amber">Restringida</span></td>
+                  <td><span class="pill pill-green">Activo</span></td>
+                </tr>
+                <tr>
+                  <td class="td-name">Torres Mejía, Lucía P.</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;">CC 1.012.987.654</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--blue-600);">ING-04184</td>
+                  <td>Cirugía General</td>
+                  <td><span class="pill pill-blue">205-A</span></td>
+                  <td>Nueva EPS</td>
+                  <td>29/03/2026</td>
+                  <td><span class="pill pill-green">Libre</span></td>
+                  <td><span class="pill pill-green">Activo</span></td>
+                </tr>
+                <tr>
+                  <td class="td-name">Vargas Ospina, Héctor J.</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;">TI 987.456.123</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--blue-600);">ING-04185</td>
+                  <td>UCI Adultos</td>
+                  <td><span class="pill pill-blue">UCI-07</span></td>
+                  <td>Compensar</td>
+                  <td>30/03/2026</td>
+                  <td><span class="pill pill-gray">En cama</span></td>
+                  <td><span class="pill pill-amber">Observación</span></td>
+                </tr>
+                <tr>
+                  <td class="td-name">Ramírez Díaz, Ana M.</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;">CC 1.099.876.543</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--blue-600);">ING-04186</td>
+                  <td>Medicina Interna</td>
+                  <td><span class="pill pill-blue">310-C</span></td>
+                  <td>Sanitas</td>
+                  <td>01/04/2026</td>
+                  <td><span class="pill pill-green">Libre</span></td>
+                  <td><span class="pill pill-green">Activo</span></td>
+                </tr>
+                <tr>
+                  <td class="td-name">Castillo Peña, Jorge L.</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;">CC 1.055.443.221</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--blue-600);">ING-04187</td>
+                  <td>Pediatría</td>
+                  <td><span class="pill pill-blue">408-A</span></td>
+                  <td>Famisanar</td>
+                  <td>01/04/2026</td>
+                  <td><span class="pill pill-amber">Asistida</span></td>
+                  <td><span class="pill pill-green">Activo</span></td>
+                </tr>
+                <tr>
+                  <td class="td-name">Mendoza Silva, Patricia R.</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;">CC 1.088.334.512</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--blue-600);">ING-04188</td>
+                  <td>Cirugía General</td>
+                  <td><span class="pill pill-blue">201-D</span></td>
+                  <td>Coomeva</td>
+                  <td>01/04/2026</td>
+                  <td><span class="pill pill-green">Libre</span></td>
+                  <td><span class="pill pill-green">Activo</span></td>
+                </tr>
+                <tr>
+                  <td class="td-name">Herrera Muñoz, Andrés F.</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;">CC 1.064.221.789</td>
+                  <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--blue-600);">ING-04189</td>
+                  <td>Medicina Interna</td>
+                  <td><span class="pill pill-blue">315-A</span></td>
+                  <td>SURA EPS</td>
+                  <td>01/04/2026</td>
+                  <td><span class="pill pill-amber">Asistida</span></td>
+                  <td><span class="pill pill-amber">Observación</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- /content-card-body -->
+    </div><!-- /content-card -->
+  </main>
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div class="footer-left">
+    <div class="status-dot"></div>
+    <strong>Servicio Censo Hospitalario</strong>
+    <div class="footer-dot"></div>
+    <span>Ver. 1.4.0</span>
+    <div class="footer-dot"></div>
+    <span>Copyright © 2026</span>
+  </div>
+  <div class="footer-right">
+    Sistema HIS · Santa Bárbara Clínica de Alta Complejidad
+  </div>
+</footer>
+
+<script>
+  function toggleSidebar() {
+    if (window.innerWidth <= 768) {
+      toggleMobile();
+    } else {
+      document.body.classList.toggle('collapsed');
+    }
+  }
+
+  function toggleMobile() {
+    document.body.classList.toggle('mobile-open');
+  }
+
+  function toggleGroup(header) {
+    header.classList.toggle('open');
+    const children = header.nextElementSibling;
+    children.classList.toggle('closed');
+  }
+
+  // User dropdown
+  function toggleUserMenu() {
+    const dropdown = document.getElementById('userDropdown');
+    const chevron  = document.getElementById('userChevron');
+    const isOpen   = dropdown.classList.toggle('open');
+    chevron.style.transform = isOpen ? 'rotate(180deg)' : '';
+  }
+
+  function closeUserMenu() {
+    document.getElementById('userDropdown').classList.remove('open');
+    document.getElementById('userChevron').style.transform = '';
+  }
+
+  // Cerrar dropdown al hacer click fuera
+  document.addEventListener('click', function(e) {
+    const wrap = document.getElementById('userMenuWrap');
+    if (wrap && !wrap.contains(e.target)) closeUserMenu();
+  });
+
+  // Highlight active nav items
+  document.querySelectorAll('.nav-item, .nav-group-header').forEach(item => {
+    item.addEventListener('click', function(e) {
+      if (this.classList.contains('nav-group-header')) return;
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

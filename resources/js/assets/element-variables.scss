@@ -1,0 +1,41 @@
+// Element Plus CSS Variables Overrides
+@forward "element-plus/theme-chalk/src/common/var.scss" with (
+  $colors: (
+    "primary": (
+      "base": #1e4d96,
+    ),
+    "success": (
+      "base": #16a34a,
+    ),
+    "warning": (
+      "base": #d97706,
+    ),
+    "danger": (
+      "base": #dc2626,
+    ),
+    "info": (
+      "base": #4b83d4,
+    )
+  ),
+  $border-radius: (
+    "base": 8px,
+    "small": 4px,
+    "round": 20px,
+    "circle": 100%
+  ),
+  $font-family: (
+    "": "'DM Sans', system-ui, sans-serif"
+  ),
+  $text-color: (
+    "primary": #334155,
+    "regular": #475569,
+    "secondary": #64748b,
+    "placeholder": #94a3b8
+  ),
+  $border-color: (
+    "base": #e2e8f0,
+    "light": #f1f5f9,
+    "lighter": #f8fafc,
+    "extra-light": #ffffff
+  )
+);
