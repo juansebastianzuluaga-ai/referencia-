@@ -331,12 +331,6 @@ declare global {
   export type { User } from './stores/auth'
   import('./stores/auth')
   // @ts-ignore
-  export type { ExternalClinic } from './stores/externalClinicAuth'
-  import('./stores/externalClinicAuth')
-  // @ts-ignore
-  export type { ExternalClinicFilters } from './stores/externalClinicRequests'
-  import('./stores/externalClinicRequests')
-  // @ts-ignore
   export type { Notification } from './stores/notifications'
   import('./stores/notifications')
 }
@@ -524,8 +518,6 @@ declare module 'vue' {
     readonly useEventBus: UnwrapRef<typeof import('@vueuse/core')['useEventBus']>
     readonly useEventListener: UnwrapRef<typeof import('@vueuse/core')['useEventListener']>
     readonly useEventSource: UnwrapRef<typeof import('@vueuse/core')['useEventSource']>
-    readonly useExternalClinicAuthStore: UnwrapRef<typeof import('./stores/externalClinicAuth')['useExternalClinicAuthStore']>
-    readonly useExternalClinicRequestsStore: UnwrapRef<typeof import('./stores/externalClinicRequests')['useExternalClinicRequestsStore']>
     readonly useEyeDropper: UnwrapRef<typeof import('@vueuse/core')['useEyeDropper']>
     readonly useFavicon: UnwrapRef<typeof import('@vueuse/core')['useFavicon']>
     readonly useFetch: UnwrapRef<typeof import('@vueuse/core')['useFetch']>
