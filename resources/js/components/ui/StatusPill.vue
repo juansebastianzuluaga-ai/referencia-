@@ -12,26 +12,8 @@ import { computed } from 'vue';
 
 const props = withDefaults(defineProps<{
   type?: 'blue' | 'green' | 'amber' | 'red' | 'gray';
-  status?: 'pending' | 'approved' | 'rejected' | 'active' | 'inactive' | string;
 }>(), {
-  type: undefined,
-  status: undefined,
-});
-
-const resolvedType = computed<'blue' | 'green' | 'amber' | 'red' | 'gray'>(() => {
-  if (props.type) {
-    return props.type;
-  }
-
-  const statusMap: Record<string, 'blue' | 'green' | 'amber' | 'red' | 'gray'> = {
-    pending: 'amber',
-    approved: 'green',
-    active: 'green',
-    rejected: 'red',
-    inactive: 'gray',
-  };
-
-  return props.status ? (statusMap[props.status] ?? 'gray') : 'gray';
+  type: 'gray'
 });
 
 const colorClasses = computed(() => {
@@ -42,6 +24,6 @@ const colorClasses = computed(() => {
     red: 'bg-red-50 text-red-700',
     gray: 'bg-gray-100 text-gray-600',
   };
-  return map[resolvedType.value];
+  return map[props.type];
 });
 </script>

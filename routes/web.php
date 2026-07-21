@@ -1,10 +1,7 @@
 <?php
 
-use App\Http\Controllers\Api\AdminExternalClinicController;
 use App\Http\Controllers\Api\ApiCredentialController;
 use App\Http\Controllers\Api\CurrentUserController;
-use App\Http\Controllers\Api\ExternalClinicAuthController;
-use App\Http\Controllers\Api\ExternalClinicController;
 use App\Http\Controllers\Api\IdentificationTypeController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PermissionController;
@@ -19,35 +16,6 @@ Route::get('/', function () {
 
 Route::prefix('api')->name('api.')->group(function (): void {
     Route::get('user/password-policy', [CurrentUserController::class, 'passwordPolicy'])->name('user.password-policy');
-
-    Route::prefix('external-clinics')->name('external-clinics.')->group(function (): void {
-        Route::post('register', [ExternalClinicAuthController::class, 'register'])->name('register');
-        Route::post('login', [ExternalClinicAuthController::class, 'login'])->name('login');
-        Route::post('check-nit', [ExternalClinicAuthController::class, 'checkNit'])->name('check-nit');
-    });
-
-    Route::get('public/identification-types', [IdentificationTypeController::class, 'publicList'])->name('public.identification-types');
-
-    Route::prefix('external-clinics')->name('external-clinics.')
-        ->middleware(['auth:sanctum', 'external_clinic'])
-        ->group(function (): void {
-            Route::get('profile', [ExternalClinicController::class, 'profile'])->name('profile');
-            Route::put('profile', [ExternalClinicController::class, 'updateProfile'])->name('profile.update');
-            Route::put('password', [ExternalClinicController::class, 'updatePassword'])->name('password.update');
-            Route::post('logout', [ExternalClinicAuthController::class, 'logout'])->name('logout');
-        });
-
-    Route::prefix('admin/external-clinics')->name('admin.external-clinics.')
-        ->middleware(['auth:sanctum', 'active'])
-        ->group(function (): void {
-            Route::post('get-all', [AdminExternalClinicController::class, 'getAll'])->name('get-all');
-            Route::get('{clinic}', [AdminExternalClinicController::class, 'show'])->name('show');
-            Route::post('{clinic}/approve', [AdminExternalClinicController::class, 'approve'])->name('approve');
-            Route::post('{clinic}/reject', [AdminExternalClinicController::class, 'reject'])->name('reject');
-            Route::patch('{clinic}/toggle-status', [AdminExternalClinicController::class, 'toggleStatus'])->name('toggle-status');
-            Route::get('{clinic}/documents', [AdminExternalClinicController::class, 'documents'])->name('documents');
-            Route::get('{clinic}/documents/{document}/download', [AdminExternalClinicController::class, 'downloadDocument'])->name('documents.download');
-        });
 
     Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
         Route::get('user', CurrentUserController::class)->name('user');

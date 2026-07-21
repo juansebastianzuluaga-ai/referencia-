@@ -31,10 +31,6 @@ class RoleSeeder extends Seeder
                     'identification-types.view',
                     'identification-types.create',
                     'identification-types.update',
-                    'external-clinics.view',
-                    'external-clinics.approve',
-                    'external-clinics.reject',
-                    'external-clinics.manage',
                 ],
             ],
             'medico' => [

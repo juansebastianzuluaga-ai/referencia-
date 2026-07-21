@@ -32,10 +32,6 @@ class PermissionSeeder extends Seeder
             ['api-keys.create', 'Crear API keys', 'Permite crear nuevas credenciales API'],
             ['api-keys.update', 'Actualizar API keys', 'Permite actualizar y regenerar credenciales API'],
             ['api-keys.delete', 'Eliminar API keys', 'Permite eliminar credenciales API'],
-            ['external-clinics.view', 'Ver clínicas externas', 'Permite listar y consultar clínicas externas'],
-            ['external-clinics.approve', 'Aprobar clínicas externas', 'Permite aprobar solicitudes de clínicas externas'],
-            ['external-clinics.reject', 'Rechazar clínicas externas', 'Permite rechazar solicitudes de clínicas externas'],
-            ['external-clinics.manage', 'Gestionar clínicas externas', 'Permite activar/desactivar cuentas de clínicas externas'],
         ])->each(fn (array $permission) => Permission::query()->updateOrCreate(
             [
                 'name' => $permission[0],

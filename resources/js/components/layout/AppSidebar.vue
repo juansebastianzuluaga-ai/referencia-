@@ -39,12 +39,6 @@
           text="Configuración"
           permission="settings.view"
         />
-        <AppSidebarItem 
-          to="/solicitudes-clinicas" 
-          icon="Building2" 
-          text="Clínicas externas"
-          permission="external-clinics.view"
-        />
       </div>
       
     </div>
