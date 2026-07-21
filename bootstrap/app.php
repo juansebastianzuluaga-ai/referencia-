@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\ApiAuthMiddleware;
+use App\Http\Middleware\EnsureExternalClinic;
 use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureUserIsActive::class,
             'permission' => EnsureUserHasPermission::class,
             'api-auth' => ApiAuthMiddleware::class,
+            'external_clinic' => EnsureExternalClinic::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

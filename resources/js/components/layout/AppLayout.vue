@@ -12,7 +12,7 @@
     <div class="flex flex-1 mt-[56px] mb-[36px] overflow-hidden">
       <AppSidebar />
 
-      <main class="flex-1 flex flex-col min-h-0 p-4 bg-gray-100 overflow-hidden">
+      <main class="flex-1 flex flex-col min-h-0 p-4 bg-gray-100 overflow-auto">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />

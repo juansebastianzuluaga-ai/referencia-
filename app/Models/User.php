@@ -64,6 +64,18 @@ class User extends Authenticatable implements Auditable
         return $this->can($permission);
     }
 
+    protected function fullName(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn () => trim(implode(' ', array_filter([
+                $this->first_name,
+                $this->middle_name,
+                $this->last_name,
+                $this->sur_name,
+            ]))),
+        );
+    }
+
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new ResetPasswordNotification($token));

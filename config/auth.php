@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ExternalClinic;
 use App\Models\User;
 
 return [
@@ -42,6 +43,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        'external_clinic' => [
+            'driver' => 'session',
+            'provider' => 'external_clinics',
+        ],
     ],
 
     /*
@@ -65,6 +71,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
+        ],
+
+        'external_clinics' => [
+            'driver' => 'eloquent',
+            'model' => ExternalClinic::class,
         ],
 
         // 'users' => [

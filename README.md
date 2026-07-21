@@ -153,6 +153,14 @@ composer run dev
 - Logs de solicitudes API
 - Estadísticas de uso
 
+### ✅ Clínicas Externas
+- Registro público de clínicas externas con validación de NIT
+- Solicitud con documentos de soporte
+- Flujo de aprobación/rechazo por administradores
+- Notificaciones automáticas por email
+- Login separado para clínicas externas con guard propio
+- Panel de clínica externa con gestión de perfil y contraseña
+
 ### ✅ Auditoría
 - Registro de cambios en modelos
 - Activity logs de usuarios

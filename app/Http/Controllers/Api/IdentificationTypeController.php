@@ -42,6 +42,19 @@ class IdentificationTypeController extends BaseController
         'created_at',
     ];
 
+    public function publicList(): JsonResponse
+    {
+        $identificationTypes = IdentificationType::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return $this->sendResponse(
+            IdentificationTypeResource::collection($identificationTypes),
+            'Tipos de identificacion consultados correctamente',
+        );
+    }
+
     public function getAll(Request $request): JsonResponse
     {
         abort_unless($request->user()->hasPermission('identification-types.view'), Response::HTTP_FORBIDDEN);

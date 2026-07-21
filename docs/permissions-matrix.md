@@ -49,6 +49,14 @@ Los permisos siguen el formato: `modulo.accion`
 | `api-keys.update` | Actualizar API keys | Permite actualizar y regenerar credenciales API |
 | `api-keys.delete` | Eliminar API keys | Permite eliminar credenciales API |
 
+### Clínicas Externas (external-clinics)
+| Permiso | Display Name | Descripción |
+|---------|-------------|-------------|
+| `external-clinics.view` | Ver clínicas externas | Permite listar y consultar solicitudes de clínicas externas |
+| `external-clinics.approve` | Aprobar clínicas externas | Permite aprobar solicitudes de clínicas externas |
+| `external-clinics.reject` | Rechazar clínicas externas | Permite rechazar solicitudes de clínicas externas |
+| `external-clinics.manage` | Gestionar clínicas externas | Permite activar/desactivar cuentas de clínicas externas |
+
 ---
 
 ## 👥 Roles Predefinidos
@@ -60,7 +68,7 @@ Los permisos siguen el formato: `modulo.accion`
 
 ### Admin (admin)
 **Display Name:** Administrador  
-**Descripción:** Administra usuarios, roles y catálogos base  
+**Descripción:** Administra usuarios, roles, catálogos base y solicitudes de clínicas externas  
 **Permisos:**
 - `users.view`
 - `users.create`
@@ -70,6 +78,10 @@ Los permisos siguen el formato: `modulo.accion`
 - `identification-types.view`
 - `identification-types.create`
 - `identification-types.update`
+- `external-clinics.view`
+- `external-clinics.approve`
+- `external-clinics.reject`
+- `external-clinics.manage`
 
 ### Médico (medico)
 **Display Name:** Medico  
@@ -108,6 +120,11 @@ Los permisos siguen el formato: `modulo.accion`
 | api-keys.create | ✅ | ❌ | ❌ |
 | api-keys.update | ✅ | ❌ | ❌ |
 | api-keys.delete | ✅ | ❌ | ❌ |
+| **Clínicas Externas** |
+| external-clinics.view | ✅ | ✅ | ❌ |
+| external-clinics.approve | ✅ | ✅ | ❌ |
+| external-clinics.reject | ✅ | ✅ | ❌ |
+| external-clinics.manage | ✅ | ✅ | ❌ |
 
 ---
 
