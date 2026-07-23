@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { useAuthStore } from '@/stores/auth';
+import { useClinicaAuthStore } from '@/stores/clinicaAuth';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -23,6 +24,48 @@ const router = createRouter({
       component: () => import('@/views/ResetPasswordView.vue'),
       meta: { isPublic: true },
     },
+
+    // ── Login externo (redirige al login unificado) ──────────────────────────
+    {
+      path: '/login-externo',
+      redirect: '/login',
+    },
+    {
+      path: '/login-externo/verificar-otp',
+      name: 'login-externo-otp',
+      component: () => import('@/views/login-externo/VerificarOtpView.vue'),
+      meta: { isPublic: true },
+    },
+    {
+      path: '/login-externo/magic/:token',
+      name: 'login-externo-magic',
+      component: () => import('@/views/login-externo/MagicLinkView.vue'),
+      meta: { isPublic: true },
+    },
+    {
+      path: '/login-externo/registro',
+      name: 'registro-clinica',
+      component: () => import('@/views/login-externo/RegistroClinicaView.vue'),
+      meta: { isPublic: true },
+    },
+    {
+      path: '/clinica',
+      component: () => import('@/components/layout/AppLayout.vue'),
+      meta: { requiresClinicaAuth: true },
+      children: [
+        {
+          path: '',
+          redirect: '/clinica/dashboard',
+        },
+        {
+          path: 'dashboard',
+          name: 'clinica-dashboard',
+          component: () => import('@/views/login-externo/ClinicaDashboardView.vue'),
+        },
+      ],
+    },
+    // ────────────────────────────────────────────────────────────────────────
+
     {
       path: '/',
       component: () => import('@/components/layout/AppLayout.vue'),
@@ -60,6 +103,12 @@ const router = createRouter({
           name: 'profile',
           component: () => import('@/views/profile/ProfileView.vue'),
         },
+        {
+          path: 'clinicas',
+          name: 'clinicas',
+          component: () => import('@/views/clinicas/ClinicasView.vue'),
+          meta: { permissions: ['clinicas.view'] },
+        },
       ],
     },
   ],
@@ -67,6 +116,23 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const auth = useAuthStore();
+  const clinicaAuth = useClinicaAuthStore();
+
+  // Rutas totalmente públicas — pasar directo sin hidratar ningún store
+  if (to.meta.isPublic) {
+    return next();
+  }
+
+  // Guard para rutas de clínica externa
+  if (to.meta.requiresClinicaAuth) {
+    if (!clinicaAuth.isHydrated) {
+      await clinicaAuth.fetchClinica();
+    }
+    if (!clinicaAuth.isAuthenticated) {
+      return next({ name: 'login-externo' });
+    }
+    return next();
+  }
 
   if (!auth.isHydrated) {
     await auth.fetchUser();

@@ -1,6 +1,6 @@
 <template>
   <aside 
-    class="bg-gray-900 h-full overflow-y-auto overflow-x-hidden flex flex-col shrink-0 transition-all duration-300 z-50 fixed md:static top-[56px] bottom-[36px]"
+    class="bg-gray-900 h-full overflow-y-auto overflow-x-hidden flex flex-col shrink-0 transition-all duration-300 z-50 fixed md:static top-[56px] bottom-0"
     :class="[
       layout.isMobileMenuOpen ? 'w-[240px] translate-x-0 shadow-2xl' : 'w-[240px] -translate-x-full md:translate-x-0',
       layout.isSidebarCollapsed ? 'md:w-[64px]' : 'md:w-[240px]',
@@ -33,14 +33,25 @@
           text="Roles y permisos"
           permission="roles.view"
         />
-        <AppSidebarItem 
-          to="/configuracion" 
-          icon="Settings" 
+        <AppSidebarItem
+          to="/configuracion"
+          icon="Settings"
           text="Configuración"
           permission="settings.view"
         />
       </div>
-      
+
+      <!-- Clínicas externas -->
+      <div class="mb-4">
+        <div class="text-[10px] font-semibold uppercase tracking-widest text-gray-500 px-4 pb-1.5 whitespace-nowrap overflow-hidden transition-opacity" :class="{ 'opacity-0': layout.isSidebarCollapsed }">Clínicas externas</div>
+        <AppSidebarItem
+          to="/clinicas"
+          icon="Hospital"
+          text="Clínicas registradas"
+          permission="clinicas.view"
+        />
+      </div>
+
     </div>
   </aside>
 </template>

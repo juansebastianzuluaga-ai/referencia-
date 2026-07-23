@@ -296,10 +296,14 @@ async function saveProfile() {
     auth.user = data.data;
     ElMessage.success('Perfil actualizado correctamente');
   } catch (e: any) {
-    if (e.response?.status === 422 && e.response?.data?.errors) {
-      const errors = e.response.data.errors;
-      const errorMessages = Object.values(errors).flat().join('\n');
-      ElMessage.error(errorMessages || 'Error de validación');
+    if (e.response?.status === 422) {
+      const errors = e.response.data?.data?.errors || e.response.data?.errors;
+      if (errors) {
+        const errorMessages = Object.values(errors).flat().join('\n');
+        ElMessage.error(errorMessages || 'Error de validación');
+      } else {
+        ElMessage.error(e.response.data?.message || 'Error de validación');
+      }
     } else {
       ElMessage.error('Error al actualizar el perfil');
     }
@@ -322,10 +326,14 @@ async function savePassword() {
     ElMessage.success('Contraseña actualizada correctamente');
     resetPasswordForm();
   } catch (e: any) {
-    if (e.response?.status === 422 && e.response?.data?.errors) {
-      const errors = e.response.data.errors;
-      const errorMessages = Object.values(errors).flat().join('\n');
-      ElMessage.error(errorMessages || 'Error de validación');
+    if (e.response?.status === 422) {
+      const errors = e.response.data?.data?.errors || e.response.data?.errors;
+      if (errors) {
+        const errorMessages = Object.values(errors).flat().join('\n');
+        ElMessage.error(errorMessages || 'Error de validación');
+      } else {
+        ElMessage.error(e.response.data?.message || 'Error de validación');
+      }
     } else {
       ElMessage.error('Error al actualizar la contraseña');
     }

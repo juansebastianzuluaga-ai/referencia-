@@ -9,7 +9,7 @@
 
     <AppHeader />
 
-    <div class="flex flex-1 mt-[56px] mb-[36px] overflow-hidden">
+    <div class="flex flex-1 mt-[56px] overflow-hidden">
       <AppSidebar />
 
       <main class="flex-1 flex flex-col min-h-0 p-4 bg-gray-100 overflow-hidden">
@@ -20,8 +20,6 @@
         </router-view>
       </main>
     </div>
-
-    <AppFooter />
   </div>
 </template>
 
@@ -29,7 +27,6 @@
 import { useLayoutStore } from '@/stores/layout';
 import AppHeader from './AppHeader.vue';
 import AppSidebar from './AppSidebar.vue';
-import AppFooter from './AppFooter.vue';
 
 const layout = useLayoutStore();
 </script>

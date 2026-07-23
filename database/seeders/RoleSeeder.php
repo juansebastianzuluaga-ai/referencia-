@@ -31,6 +31,7 @@ class RoleSeeder extends Seeder
                     'identification-types.view',
                     'identification-types.create',
                     'identification-types.update',
+                    'clinicas.view',
                 ],
             ],
             'medico' => [

@@ -1,12 +1,16 @@
 <?php
 
 use App\Http\Controllers\Api\ApiCredentialController;
+use App\Http\Controllers\Api\Clinica\LoginExternoController;
+use App\Http\Controllers\Api\Clinica\SolicitudReferenciaController as SolicitudReferenciaExternoController;
+use App\Http\Controllers\Api\ClinicaController;
 use App\Http\Controllers\Api\CurrentUserController;
 use App\Http\Controllers\Api\IdentificationTypeController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\SolicitudReferenciaController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,6 +19,22 @@ Route::get('/', function () {
 });
 
 Route::prefix('api')->name('api.')->group(function (): void {
+
+    // ── Login externo para clínicas (sin Sanctum) ────────────────────────────
+    Route::prefix('externo')->name('externo.')->group(function () {
+        Route::post('buscar-clinica', [LoginExternoController::class, 'buscarClinica'])->name('buscar-clinica');
+        Route::post('solicitar-acceso', [LoginExternoController::class, 'solicitarAcceso'])->name('solicitar-acceso');
+        Route::post('verificar-otp', [LoginExternoController::class, 'verificarOtp'])->name('verificar-otp');
+        Route::post('verificar-magic-link', [LoginExternoController::class, 'verificarMagicLink'])->name('verificar-magic-link');
+        Route::post('registro', [LoginExternoController::class, 'registro'])->name('registro');
+        Route::get('clinica', [LoginExternoController::class, 'clinicaActual'])->name('clinica');
+        Route::post('logout', [LoginExternoController::class, 'logout'])->name('logout');
+        Route::get('solicitudes', [SolicitudReferenciaExternoController::class, 'index'])->name('solicitudes.index');
+        Route::post('solicitudes', [SolicitudReferenciaExternoController::class, 'store'])->name('solicitudes.store');
+        Route::get('solicitudes/{id}', [SolicitudReferenciaExternoController::class, 'show'])->name('solicitudes.show');
+    });
+    // ────────────────────────────────────────────────────────────────────────
+
     Route::get('user/password-policy', [CurrentUserController::class, 'passwordPolicy'])->name('user.password-policy');
 
     Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
@@ -46,6 +66,16 @@ Route::prefix('api')->name('api.')->group(function (): void {
         Route::post('api-credentials/{id}/revoke', [ApiCredentialController::class, 'revoke'])->name('api-credentials.revoke');
         Route::get('api-credentials/{id}/logs', [ApiCredentialController::class, 'logs'])->name('api-credentials.logs');
         Route::get('api-credentials/{id}/stats', [ApiCredentialController::class, 'stats'])->name('api-credentials.stats');
+
+        Route::get('clinicas', [ClinicaController::class, 'index'])->name('clinicas.index');
+        Route::post('clinicas/{clinica}/aprobar', [ClinicaController::class, 'aprobar'])->name('clinicas.aprobar');
+        Route::post('clinicas/{clinica}/rechazar', [ClinicaController::class, 'rechazar'])->name('clinicas.rechazar');
+
+        Route::get('solicitudes-referencia', [SolicitudReferenciaController::class, 'index'])->name('solicitudes-referencia.index');
+        Route::get('solicitudes-referencia/{solicitud}', [SolicitudReferenciaController::class, 'show'])->name('solicitudes-referencia.show');
+        Route::post('solicitudes-referencia/{solicitud}/aceptar', [SolicitudReferenciaController::class, 'aceptar'])->name('solicitudes-referencia.aceptar');
+        Route::post('solicitudes-referencia/{solicitud}/negar', [SolicitudReferenciaController::class, 'negar'])->name('solicitudes-referencia.negar');
+        Route::post('solicitudes-referencia/{solicitud}/pendiente', [SolicitudReferenciaController::class, 'pendiente'])->name('solicitudes-referencia.pendiente');
 
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');

@@ -250,10 +250,14 @@ async function save() {
     emit('saved');
   } catch (e: any) {
     console.error(e);
-    if (e.response?.status === 422 && e.response?.data?.errors) {
-      const errors = e.response.data.errors;
-      const errorMessages = Object.values(errors).flat().join('\n');
-      ElMessage.error(errorMessages || 'Error de validación');
+    if (e.response?.status === 422) {
+      const errors = e.response.data?.data?.errors || e.response.data?.errors;
+      if (errors) {
+        const errorMessages = Object.values(errors).flat().join('\n');
+        ElMessage.error(errorMessages || 'Error de validación');
+      } else {
+        ElMessage.error(e.response.data?.message || 'Error de validación');
+      }
     } else {
       ElMessage.error('Error al guardar el usuario');
     }
