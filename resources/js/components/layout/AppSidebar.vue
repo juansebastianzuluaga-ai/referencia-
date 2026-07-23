@@ -1,12 +1,13 @@
 <template>
-  <aside 
-    class="bg-gray-900 h-full overflow-y-auto overflow-x-hidden flex flex-col shrink-0 transition-all duration-300 z-50 fixed md:static top-[56px] bottom-0"
+  <aside
+    class="h-full overflow-y-auto overflow-x-hidden flex flex-col shrink-0 transition-all duration-300 z-50 fixed md:static top-[56px] bottom-0"
+    style="background:#1e2d55; box-shadow: 6px 0 20px rgba(0,0,0,0.2);"
     :class="[
       layout.isMobileMenuOpen ? 'w-[240px] translate-x-0 shadow-2xl' : 'w-[240px] -translate-x-full md:translate-x-0',
       layout.isSidebarCollapsed ? 'md:w-[64px]' : 'md:w-[240px]',
     ]"
   >
-    <div class="py-3 border-b border-white/5 flex-1">
+    <div class="py-3 flex-1">
       
       <!-- Principal -->
       <div class="mb-4">
@@ -48,6 +49,12 @@
           to="/clinicas"
           icon="Hospital"
           text="Clínicas registradas"
+          permission="clinicas.view"
+        />
+        <AppSidebarItem
+          to="/solicitudes-referencia"
+          icon="ClipboardList"
+          text="Solicitudes de referencia"
           permission="clinicas.view"
         />
       </div>

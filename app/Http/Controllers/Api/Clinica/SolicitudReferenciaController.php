@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api\Clinica;
 
 use App\Http\Controllers\Controller;
+use App\Models\Clinica;
+use App\Models\Notification;
 use App\Models\SolicitudReferencia;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -61,7 +64,38 @@ class SolicitudReferenciaController extends Controller
 
         $solicitud = SolicitudReferencia::create($validated);
 
+        // Notificar en campana a usuarios con permisos de referencia
+        $clinica = Clinica::find($clinicaId);
+        $paciente = trim("{$validated['primer_nombre']} {$validated['primer_apellido']}");
+        $this->notificarUsuarios(
+            titulo: 'Nueva solicitud de referencia',
+            mensaje: "La institución \"{$clinica->nombre}\" solicita referencia para el paciente {$paciente} — {$validated['especialidad_requerida']}.",
+            tipo: 'warning',
+            link: '/solicitudes-referencia',
+        );
+
         return response()->json(['data' => $solicitud, 'message' => 'Solicitud enviada correctamente'], 201);
+    }
+
+    private function notificarUsuarios(string $titulo, string $mensaje, string $tipo = 'info', ?string $link = null): void
+    {
+        $usuarios = User::permission('clinicas.view')->where('is_active', true)->get();
+
+        $now = now();
+        $rows = $usuarios->map(fn (User $u) => [
+            'user_id'    => $u->id,
+            'type'       => $tipo,
+            'title'      => $titulo,
+            'message'    => $mensaje,
+            'link'       => $link,
+            'read_at'    => null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ])->all();
+
+        if ($rows) {
+            Notification::insert($rows);
+        }
     }
 
     public function show(int $id): JsonResponse

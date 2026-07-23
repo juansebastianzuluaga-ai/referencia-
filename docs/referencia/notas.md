@@ -1,0 +1,1 @@
+cuando la clinica hace el registro llega al correo de referencia habilitar la opcion de que se pueda activar desde el correo o tenga que activar por medio de la aplicacion

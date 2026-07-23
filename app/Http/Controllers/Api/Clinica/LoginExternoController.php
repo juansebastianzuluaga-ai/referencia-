@@ -7,6 +7,8 @@ use App\Mail\ClinicaRegistroConfirmacion;
 use App\Mail\ClinicaRegistroNotificacionInterna;
 use App\Models\Clinica;
 use App\Models\ClinicaAuthToken;
+use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -52,9 +54,17 @@ class LoginExternoController extends Controller
         // Correo de confirmación a la clínica
         Mail::to($clinica->email)->send(new ClinicaRegistroConfirmacion($clinica));
 
-        // Notificación interna al equipo de referencia
+        // Notificación interna al equipo de referencia (correo)
         $correoReferencia = config('mail.referencia_interna', env('MAIL_REFERENCIA_INTERNA', 'referencia@cacsantabarbara.co'));
         Mail::to($correoReferencia)->send(new ClinicaRegistroNotificacionInterna($clinica));
+
+        // Notificación en campana para usuarios con permiso clinicas.view
+        $this->notificarUsuarios(
+            titulo: 'Nueva solicitud de clínica',
+            mensaje: "La institución \"{$clinica->nombre}\" (NIT: {$clinica->nit}) ha solicitado registro en el sistema.",
+            tipo: 'info',
+            link: '/clinicas',
+        );
 
         return response()->json([
             'message' => 'Solicitud de registro recibida. Será notificado cuando sea aprobada.',
@@ -240,12 +250,12 @@ class LoginExternoController extends Controller
 
         $url = url("/login-externo/magic/{$tokenPlano}");
 
-        // TODO: reemplazar con Mailable personalizado cuando esté listo el diseño
-        Mail::raw(
-            "Hola {$clinica->nombre},\n\nHaga clic en el siguiente enlace para acceder al Sistema de Referencia:\n\n{$url}\n\nEste enlace es válido por 15 minutos.",
+        Mail::send(
+            'emails.clinica-magic-link',
+            ['clinica' => $clinica, 'url' => $url],
             function ($message) use ($clinica) {
                 $message->to($clinica->email)
-                    ->subject('Acceso al Sistema de Referencia — Santa Bárbara');
+                    ->subject('🔐 Acceso al Sistema de Referencia — Santa Bárbara');
             }
         );
     }
@@ -264,6 +274,27 @@ class LoginExternoController extends Controller
         // TODO: integrar proveedor SMS (Twilio, AWS SNS, etc.)
         // SmsService::send($clinica->telefono, "Su código de acceso es: {$codigo}. Válido 10 minutos.");
         \Log::info("OTP para clínica {$clinica->nit}: {$codigo}");
+    }
+
+    private function notificarUsuarios(string $titulo, string $mensaje, string $tipo = 'info', ?string $link = null): void
+    {
+        $usuarios = User::permission('clinicas.view')->where('is_active', true)->get();
+
+        $now = now();
+        $rows = $usuarios->map(fn (User $u) => [
+            'user_id'    => $u->id,
+            'type'       => $tipo,
+            'title'      => $titulo,
+            'message'    => $mensaje,
+            'link'       => $link,
+            'read_at'    => null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ])->all();
+
+        if ($rows) {
+            Notification::insert($rows);
+        }
     }
 
     private function formatClinica(Clinica $clinica): array

@@ -297,9 +297,18 @@ async function handleLogin() {
     await auth.login({ username: form.username, password: form.password });
     router.push({ name: 'dashboard' });
   } catch (error: any) {
-    errorInterno.value = axios.isAxiosError(error) && error.response?.status === 422
-      ? 'Usuario o contraseña incorrectos'
-      : 'Error al intentar iniciar sesión';
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      if (status === 422) {
+        errorInterno.value = 'Usuario o contraseña incorrectos';
+      } else if (status === 429) {
+        errorInterno.value = 'Demasiados intentos. Espere un momento e intente de nuevo.';
+      } else {
+        errorInterno.value = error.response?.data?.message || 'Error al intentar iniciar sesión';
+      }
+    } else {
+      errorInterno.value = 'Error de conexión. Verifique que el servidor esté activo.';
+    }
   } finally {
     loadingInterno.value = false;
   }

@@ -1,22 +1,25 @@
 <template>
-  <div class="bg-white border border-gray-200 rounded-xl p-4 lg:py-4 lg:px-4.5 shadow-sm flex items-center gap-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md animate-fade-in-stagger">
-    <div 
-      class="w-10.5 h-10.5 rounded-lg flex items-center justify-center shrink-0"
-      :class="colorClasses"
+  <div
+    class="rounded-2xl p-5 flex items-center gap-4 transition-all duration-200 animate-fade-in-stagger"
+    style="background:#e8ecf1; box-shadow: 8px 8px 16px #c5c9d0, -8px -8px 16px #ffffff;"
+  >
+    <div
+      class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+      :style="iconContainerStyle"
     >
-      <component :is="resolvedIcon" class="w-5 h-5" />
+      <component :is="resolvedIcon" class="w-5 h-5" :style="{ color: iconColor }" />
     </div>
     <div>
-      <div class="text-2xl font-semibold text-gray-900 leading-tight font-mono">{{ value }}</div>
-      <div class="text-xs text-gray-400 mt-0.5">{{ label }}</div>
-      <div 
-        v-if="delta" 
-        class="text-[11px] font-medium mt-1"
+      <div class="text-2xl font-bold leading-tight" style="color:#1e2d55;">{{ value }}</div>
+      <div class="text-xs mt-0.5" style="color:#8a9ab5;">{{ label }}</div>
+      <div
+        v-if="delta"
+        class="text-[11px] font-semibold mt-1"
         :class="{
           'text-green-600': deltaType === 'up',
-          'text-red-600': deltaType === 'down',
-          'text-gray-400': deltaType === 'neutral'
+          'text-red-500': deltaType === 'down',
         }"
+        :style="deltaType === 'neutral' ? 'color:#8a9ab5' : ''"
       >
         {{ deltaPrefix }} {{ delta }}
       </div>
@@ -44,15 +47,19 @@ const resolvedIcon = computed(() => {
   return (icons as any)[props.icon] || icons.Circle;
 });
 
-const colorClasses = computed(() => {
-  const map = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    amber: 'bg-amber-50 text-amber-600',
-    red: 'bg-red-50 text-red-600',
-  };
-  return map[props.color];
+const colorMap = {
+  blue:  { bg: '#dbe1ff', shadow: '#c2c8e8, #f4f6ff', color: '#3b5bdb' },
+  green: { bg: '#d3f9d8', shadow: '#b4dab9, #f2fff4', color: '#2f9e44' },
+  amber: { bg: '#fff3cd', shadow: '#e0d5a8, #fffff5', color: '#e67700' },
+  red:   { bg: '#ffe0e0', shadow: '#e0bfbf, #fff8f8', color: '#c92a2a' },
+};
+
+const iconContainerStyle = computed(() => {
+  const c = colorMap[props.color];
+  return `background:${c.bg}; box-shadow: inset 3px 3px 6px ${c.shadow.split(',')[0]}, inset -3px -3px 6px ${c.shadow.split(',')[1]};`;
 });
+
+const iconColor = computed(() => colorMap[props.color].color);
 
 const deltaPrefix = computed(() => {
   if (props.deltaType === 'up') return '↑';

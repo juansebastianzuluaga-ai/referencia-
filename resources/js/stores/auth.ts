@@ -37,6 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
     await initCsrf();
     const { data } = await http.post('/api/login', credentials);
     user.value = data.data;
+    isHydrated.value = true;
   }
 
   async function fetchUser() {

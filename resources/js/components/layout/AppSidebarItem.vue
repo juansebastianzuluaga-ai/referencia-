@@ -1,9 +1,9 @@
 <template>
   <el-tooltip v-if="visible" :content="text" placement="right" :disabled="!layout.isSidebarCollapsed">
-    <router-link 
+    <router-link
       :to="to"
-      class="flex items-center gap-2.5 px-3.5 py-2 mx-2 mb-0.5 rounded-lg text-gray-400 no-underline transition-colors relative overflow-hidden whitespace-nowrap hover:bg-white/5 hover:text-white"
-      active-class="bg-blue-600/25 text-white before:absolute before:left-0 before:top-[20%] before:bottom-[20%] before:w-[3px] before:rounded-r-[3px] before:bg-blue-400"
+      class="flex items-center gap-2.5 px-3.5 py-2.5 mx-2 mb-2 rounded-2xl no-underline transition-all duration-200 relative overflow-hidden whitespace-nowrap neu-item"
+      active-class="neu-item-active"
       @click="layout.closeMobileMenu()"
     >
       <div class="w-4.5 h-4.5 shrink-0 flex items-center justify-center">
@@ -49,3 +49,20 @@ const resolvedIcon = computed(() => {
   return (icons as any)[props.icon] || icons.Circle;
 });
 </script>
+
+<style scoped>
+.neu-item {
+  color: #8294b8;
+  background: #1e2d55;
+  box-shadow: 4px 4px 8px #16223f, -4px -4px 8px #26386b;
+}
+.neu-item:hover {
+  color: #ffffff;
+  box-shadow: 5px 5px 10px #16223f, -5px -5px 10px #26386b;
+}
+.neu-item-active {
+  color: #ffffff !important;
+  background: #1e2d55 !important;
+  box-shadow: inset 4px 4px 8px #16223f, inset -4px -4px 8px #26386b !important;
+}
+</style>

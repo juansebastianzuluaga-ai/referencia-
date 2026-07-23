@@ -18,6 +18,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+
 Route::prefix('api')->name('api.')->group(function (): void {
 
     // ── Login externo para clínicas (sin Sanctum) ────────────────────────────

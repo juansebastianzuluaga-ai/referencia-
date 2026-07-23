@@ -50,7 +50,7 @@ const router = createRouter({
     },
     {
       path: '/clinica',
-      component: () => import('@/components/layout/AppLayout.vue'),
+      component: () => import('@/components/layout/ClinicaLayout.vue'),
       meta: { requiresClinicaAuth: true },
       children: [
         {
@@ -109,6 +109,12 @@ const router = createRouter({
           component: () => import('@/views/clinicas/ClinicasView.vue'),
           meta: { permissions: ['clinicas.view'] },
         },
+        {
+          path: 'solicitudes-referencia',
+          name: 'solicitudes-referencia',
+          component: () => import('@/views/solicitudes/SolicitudesReferenciaView.vue'),
+          meta: { permissions: ['clinicas.view'] },
+        },
       ],
     },
   ],
@@ -129,7 +135,7 @@ router.beforeEach(async (to, from, next) => {
       await clinicaAuth.fetchClinica();
     }
     if (!clinicaAuth.isAuthenticated) {
-      return next({ name: 'login-externo' });
+      return next({ name: 'login' });
     }
     return next();
   }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Solicitud de registro recibida</title>
+  <title>Solicitud rechazada</title>
 </head>
 <body style="margin:0;padding:0;background:#f0f4f8;font-family:Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;padding:32px 0;">
@@ -21,11 +21,11 @@
             </td>
           </tr>
 
-          <!-- Barra informativa -->
+          <!-- Barra de alerta -->
           <tr>
-            <td style="background:#e3f2fd;padding:14px 40px;border-bottom:2px solid #90caf9;">
-              <p style="margin:0;font-size:14px;font-weight:bold;color:#1565c0;text-align:center;">
-                📋 Su solicitud de registro ha sido recibida
+            <td style="background:#ffebee;padding:16px 40px;border-bottom:2px solid #ef9a9a;">
+              <p style="margin:0;font-size:15px;font-weight:bold;color:#c62828;text-align:center;letter-spacing:0.3px;">
+                ❌ Su solicitud ha sido rechazada
               </p>
             </td>
           </tr>
@@ -33,19 +33,31 @@
           <!-- Cuerpo -->
           <tr>
             <td style="padding:36px 40px;">
-              <p style="margin:0 0 8px;font-size:22px;font-weight:bold;color:#1a1a2e;">
-                ¡Solicitud recibida!
+              <p style="margin:0 0 8px;font-size:20px;font-weight:bold;color:#1a1a2e;">
+                Resultado de su solicitud
               </p>
               <p style="margin:0 0 20px;font-size:14px;color:#555;line-height:1.7;">
                 Estimados representantes de <strong>{{ $clinica->nombre }}</strong>,
               </p>
               <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.7;">
-                Hemos recibido su solicitud de registro en el <strong>Sistema de Referencia y Contrarreferencia</strong> de la Clínica Santa Bárbara. Nuestro equipo revisará la información suministrada y le notificará el resultado a esta misma dirección de correo.
+                Lamentamos informarles que, tras revisar su solicitud de registro en el <strong>Sistema de Referencia y Contrarreferencia</strong> de la Clínica Santa Bárbara, la misma no ha podido ser aprobada en esta oportunidad.
               </p>
 
-              <!-- Resumen datos -->
+              <!-- Motivo de rechazo -->
+              <p style="margin:0 0 10px;font-size:13px;font-weight:bold;color:#c62828;text-transform:uppercase;letter-spacing:0.5px;">
+                Motivo del rechazo
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff3f3;border-radius:8px;border:1px solid #ffcdd2;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:16px 20px;font-size:14px;color:#b71c1c;line-height:1.7;">
+                    {{ $motivo }}
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Datos de la clínica -->
               <p style="margin:0 0 10px;font-size:13px;font-weight:bold;color:#0D2D6B;text-transform:uppercase;letter-spacing:0.5px;">
-                📋 Resumen de su solicitud
+                📋 Datos de la solicitud
               </p>
               <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:8px;overflow:hidden;border:1px solid #e0e8f0;margin-bottom:24px;">
                 <tr style="background:#f7f9fc;">
@@ -53,21 +65,13 @@
                   <td style="padding:10px 16px;font-size:13px;color:#1a1a2e;font-weight:700;border-bottom:1px solid #e8edf2;">{{ $clinica->nit }}</td>
                 </tr>
                 <tr style="background:#ffffff;">
-                  <td style="padding:10px 16px;font-size:13px;color:#888;border-bottom:1px solid #e8edf2;">🏥 Razón social</td>
-                  <td style="padding:10px 16px;font-size:13px;color:#1a1a2e;border-bottom:1px solid #e8edf2;">{{ $clinica->razon_social }}</td>
-                </tr>
-                <tr style="background:#f7f9fc;">
-                  <td style="padding:10px 16px;font-size:13px;color:#888;border-bottom:1px solid #e8edf2;">📍 Ciudad</td>
-                  <td style="padding:10px 16px;font-size:13px;color:#1a1a2e;border-bottom:1px solid #e8edf2;">{{ $clinica->ciudad }}, {{ $clinica->departamento }}</td>
-                </tr>
-                <tr style="background:#ffffff;">
-                  <td style="padding:10px 16px;font-size:13px;color:#888;">Representante</td>
-                  <td style="padding:10px 16px;font-size:13px;color:#1a1a2e;">{{ $clinica->representante_legal }}</td>
+                  <td style="padding:10px 16px;font-size:13px;color:#888;">🏥 Nombre / Sede</td>
+                  <td style="padding:10px 16px;font-size:13px;color:#1a1a2e;">{{ $clinica->nombre }}</td>
                 </tr>
               </table>
 
               <p style="margin:0;font-size:14px;color:#555;line-height:1.7;">
-                El proceso de verificación puede tardar hasta <strong>24 horas hábiles</strong>. Si tiene alguna duda, comuníquese con el área de referencia de la clínica.
+                Si considera que esto es un error o tiene preguntas, comuníquese con el área de referencia de la Clínica Santa Bárbara.
               </p>
             </td>
           </tr>

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ClinicaAprobacion;
+use App\Mail\ClinicaRechazo;
 use App\Models\Clinica;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,15 +30,7 @@ class ClinicaController extends Controller
         ]);
 
         // Notificar a la clínica
-        Mail::raw(
-            "Estimados representantes de {$clinica->nombre},\n\n" .
-            "Su solicitud de registro ha sido APROBADA. Ya puede acceder al Sistema de Referencia en:\n\n" .
-            url('/login') . "\n\n" .
-            "Ingrese con el NIT: {$clinica->nit}\n\n" .
-            "Clínica Santa Bárbara",
-            fn($m) => $m->to($clinica->email)
-                ->subject('✅ Acceso aprobado — Sistema de Referencia Santa Bárbara')
-        );
+        Mail::to($clinica->email)->send(new ClinicaAprobacion($clinica));
 
         return response()->json(['message' => 'Clínica aprobada correctamente.']);
     }
@@ -54,15 +48,7 @@ class ClinicaController extends Controller
         ]);
 
         // Notificar a la clínica
-        Mail::raw(
-            "Estimados representantes de {$clinica->nombre},\n\n" .
-            "Lamentamos informarle que su solicitud de registro ha sido RECHAZADA por el siguiente motivo:\n\n" .
-            "{$request->motivo}\n\n" .
-            "Si considera que esto es un error, comuníquese con el área de referencia.\n\n" .
-            "Clínica Santa Bárbara",
-            fn($m) => $m->to($clinica->email)
-                ->subject('❌ Solicitud rechazada — Sistema de Referencia Santa Bárbara')
-        );
+        Mail::to($clinica->email)->send(new ClinicaRechazo($clinica, $request->motivo));
 
         return response()->json(['message' => 'Clínica rechazada correctamente.']);
     }

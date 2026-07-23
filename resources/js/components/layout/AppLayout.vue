@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-screen overflow-hidden bg-gray-100 text-gray-700">
+  <div class="flex flex-col h-screen overflow-hidden text-gray-700" style="background:#e8ecf1;">
     <!-- Overlay móvil -->
     <div 
       v-if="layout.isMobileMenuOpen" 
@@ -12,7 +12,7 @@
     <div class="flex flex-1 mt-[56px] overflow-hidden">
       <AppSidebar />
 
-      <main class="flex-1 flex flex-col min-h-0 p-4 bg-gray-100 overflow-hidden">
+      <main class="flex-1 flex flex-col min-h-0 p-4 overflow-hidden" style="background:#e8ecf1;">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />
