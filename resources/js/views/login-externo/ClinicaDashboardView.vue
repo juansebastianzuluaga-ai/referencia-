@@ -26,16 +26,16 @@
 
       <div v-for="(card, i) in statCards" :key="i"
         class="rounded-2xl p-2.5 flex items-center gap-2.5 overflow-hidden anim-slide-up stat-card-hover"
-        :style="{ background: card.gradient, animationDelay: (i * 0.08) + 's' }"
+        :style="{ background: card.background, animationDelay: (i * 0.08) + 's' }"
       >
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 icon-pulse" style="background:rgba(255,255,255,0.18);">
-          <component :is="card.icon" class="w-5 h-5 text-white" />
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 icon-pulse" :style="{ background: card.iconBackground }">
+          <component :is="card.icon" class="w-5 h-5" :style="{ color: card.color }" />
         </div>
         <div>
-          <p class="text-2xl font-extrabold leading-none text-white counter">{{ displayStats[i] }}</p>
-          <p class="text-[11px] font-bold uppercase tracking-wide text-white/80 mt-0.5">{{ card.label }}</p>
-          <p class="text-[10px] text-white/60 mt-0.5">{{ card.sub(displayStats[i]) }}</p>
-          <p class="text-[10px] font-semibold text-white/80 mt-1">{{ card.context(displayStats[i]) }}</p>
+          <p class="text-2xl font-extrabold leading-none counter" :style="{ color: card.color }">{{ displayStats[i] }}</p>
+          <p class="text-[11px] font-bold uppercase tracking-wide mt-0.5" :style="{ color: card.color }">{{ card.label }}</p>
+          <p class="text-[10px] mt-0.5" style="color:#60758c;">{{ card.sub(displayStats[i]) }}</p>
+          <p class="text-[10px] font-semibold mt-1" :style="{ color: card.color }">{{ card.context(displayStats[i]) }}</p>
         </div>
       </div>
     </div>
@@ -61,9 +61,9 @@
           <div v-else-if="stats.total === 0" class="py-2 text-center text-xs" style="color:#8a9ab5;">Sin solicitudes aún</div>
           <div v-else class="space-y-3">
             <div v-for="(item, i) in [
-              { label: 'Pendientes', count: stats.pendientes, color: '#e67700' },
-              { label: 'Aceptadas',  count: stats.aceptadas,  color: '#2f9e44' },
-              { label: 'Negadas',    count: stats.negadas,    color: '#c92a2a' },
+              { label: 'Pendientes', count: stats.pendientes, color: '#9a6700' },
+              { label: 'Aceptadas',  count: stats.aceptadas,  color: '#287154' },
+              { label: 'Negadas',    count: stats.negadas,    color: '#913b3b' },
             ]" :key="i">
               <div class="flex items-center justify-between mb-1.5">
                 <span class="text-xs font-semibold" :style="{ color: item.color }">{{ item.label }}</span>
@@ -80,8 +80,8 @@
         <!-- Accesos rápidos -->
         <div class="flex flex-col gap-3">
           <button @click="verTodasSolicitudes" class="quick-link rounded-2xl p-2.5 flex items-center gap-3 text-left transition-all active:scale-95">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style="background:#d3f9d8; box-shadow: inset 3px 3px 6px #b4dab9, inset -3px -3px 6px #f2fff4;">
-              <component :is="ClipboardListIcon" class="w-4 h-4" style="color:#2f9e44;" />
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style="background:#e6f1fb; box-shadow: inset 3px 3px 6px #caddeb, inset -3px -3px 6px #fff;">
+              <component :is="ClipboardListIcon" class="w-4 h-4" style="color:#16468e;" />
             </div>
             <div class="flex-1 min-w-0">
               <p class="font-bold text-xs" style="color:#1e2d55;">Mis solicitudes</p>
@@ -90,8 +90,8 @@
             <component :is="ChevronRightIcon" class="w-4 h-4 shrink-0" style="color:#c5c9d0;" />
           </button>
           <div class="quick-link rounded-2xl p-2.5 flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style="background:#fff3cd; box-shadow: inset 3px 3px 6px #e0d5a8, inset -3px -3px 6px #fffff5;">
-              <component :is="BuildingIcon" class="w-4 h-4" style="color:#e67700;" />
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style="background:#f5eee2; box-shadow: inset 3px 3px 6px #e4d9c7, inset -3px -3px 6px #fff;">
+              <component :is="BuildingIcon" class="w-4 h-4" style="color:#9a6700;" />
             </div>
             <div class="flex-1 min-w-0">
               <p class="font-bold text-xs" style="color:#1e2d55;">Mi institución</p>
@@ -158,18 +158,19 @@
     <el-dialog
       v-model="drawerVisible"
       title="Nueva Solicitud de Referencia"
-      width="760px"
+      width="900px"
       class="request-dialog"
       :close-on-click-modal="false"
+      :lock-scroll="true"
       :destroy-on-close="true"
       align-center
     >
-      <div class="request-form px-1 pb-6">
-        <div class="form-hero mb-5">
+      <div class="request-form px-1">
+        <div class="form-hero mb-3">
           <div class="form-hero-icon"><component :is="ClipboardListIcon" class="w-5 h-5" /></div>
           <div><p>Nueva remisión</p><span>Complete la información para que el equipo de referencia pueda gestionar el caso.</span></div>
         </div>
-        <div class="stepper mb-6">
+        <div class="stepper mb-3">
           <div v-for="step in formSteps" :key="step.number" class="stepper-item" :class="{ active: pasoFormulario >= step.number }">
             <span class="stepper-number">{{ pasoFormulario > step.number ? '✓' : step.number }}</span>
             <p>{{ step.label }}</p>
@@ -177,17 +178,20 @@
         </div>
         <el-form :model="form" :rules="rules" ref="formRef" label-position="top" size="default">
 
-          <div v-show="pasoFormulario === 1" class="mb-5">
+          <div v-show="pasoFormulario === 1" class="mb-3">
             <div class="flex items-center gap-2 mb-3">
               <div class="w-6 h-6 rounded-full bg-[#0D2D6B] text-white text-xs flex items-center justify-center font-bold shrink-0">1</div>
               <p class="font-semibold text-gray-700 text-sm">Datos del paciente</p>
             </div>
-            <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+            <div class="grid grid-cols-3 gap-x-3 gap-y-1 form-patient-grid">
               <el-form-item label="Fecha" prop="fecha" required>
                 <el-date-picker v-model="form.fecha" type="date" format="DD/MM/YYYY" value-format="YYYY-MM-DD" class="w-full" placeholder="Seleccione" />
               </el-form-item>
               <el-form-item label="Hora" prop="hora" required>
                 <el-time-picker v-model="form.hora" format="HH:mm" value-format="HH:mm" class="w-full" placeholder="HH:MM" />
+              </el-form-item>
+              <el-form-item label="Edad" prop="edad" required>
+                <el-input-number v-model="form.edad" :min="0" :max="120" class="w-full" controls-position="right" />
               </el-form-item>
               <el-form-item label="Primer nombre" prop="primer_nombre" required>
                 <el-input v-model="form.primer_nombre" autocomplete="off" />
@@ -209,26 +213,23 @@
               <el-form-item label="Número de documento" prop="numero_documento" required>
                 <el-input v-model="form.numero_documento" autocomplete="off" />
               </el-form-item>
-              <el-form-item label="Edad" prop="edad" required>
-                <el-input-number v-model="form.edad" :min="0" :max="120" class="w-full" />
-              </el-form-item>
               <el-form-item label="Género" prop="genero" required>
                 <el-select v-model="form.genero" class="w-full" placeholder="Seleccione">
                   <el-option label="Masculino" value="M" />
                   <el-option label="Femenino" value="F" />
                 </el-select>
               </el-form-item>
+              <el-form-item label="EPS / Aseguradora" prop="eps" required class="col-span-2">
+                <el-select v-model="form.eps" filterable class="w-full" placeholder="Seleccione o escriba">
+                  <el-option v-for="e in EPS_LIST" :key="e" :label="e" :value="e" />
+                </el-select>
+              </el-form-item>
             </div>
-            <el-form-item label="EPS / Aseguradora" prop="eps" required>
-              <el-select v-model="form.eps" filterable class="w-full" placeholder="Seleccione o escriba">
-                <el-option v-for="e in EPS_LIST" :key="e" :label="e" :value="e" />
-              </el-select>
-            </el-form-item>
           </div>
 
-          <el-divider />
+          <el-divider class="form-section-divider" />
 
-          <div v-show="pasoFormulario === 2" class="mb-5">
+          <div v-show="pasoFormulario === 2" class="mb-3">
             <div class="flex items-center gap-2 mb-3">
               <div class="w-6 h-6 rounded-full bg-[#0D2D6B] text-white text-xs flex items-center justify-center font-bold shrink-0">2</div>
               <p class="font-semibold text-gray-700 text-sm">Datos de la remisión</p>
@@ -274,9 +275,9 @@
             </div>
           </div>
 
-          <el-divider />
+          <el-divider class="form-section-divider" />
 
-          <div v-show="pasoFormulario === 3" class="mb-5">
+          <div v-show="pasoFormulario === 3" class="mb-3">
             <div class="flex items-center gap-2 mb-3">
               <div class="w-6 h-6 rounded-full bg-[#0D2D6B] text-white text-xs flex items-center justify-center font-bold shrink-0">3</div>
               <p class="font-semibold text-gray-700 text-sm">Resumen clínico</p>
@@ -453,10 +454,10 @@ const formSteps = [
 
 // ── Stat cards config ───────────────────────────────────────────────────────
 const statCards = [
-  { gradient: 'linear-gradient(135deg,#1a73e8,#0d47a1)', icon: ClipboardListIcon, label: 'Solicitudes', sub: () => 'total enviadas', context: (n: number) => n ? 'Seguimiento activo' : 'Sin actividad aún' },
-  { gradient: 'linear-gradient(135deg,#f59f00,#e67700)', icon: ClockIcon, label: 'Pendientes', sub: () => 'en espera', context: (n: number) => n ? 'Requieren seguimiento' : 'Sin pendientes' },
-  { gradient: 'linear-gradient(135deg,#40c057,#2f9e44)', icon: CheckCircleIcon, label: 'Aceptadas', sub: () => 'aprobadas', context: (n: number) => n ? 'Con respuesta recibida' : 'Sin respuestas aún' },
-  { gradient: 'linear-gradient(135deg,#f03e3e,#c92a2a)', icon: XCircleIcon, label: 'Negadas', sub: (n: number) => n ? `${n} del total` : 'sin novedades', context: (n: number) => n ? 'Revise los motivos' : 'Operación estable' },
+  { background: '#e8f1fb', iconBackground: '#d5e6f8', color: '#16468e', icon: ClipboardListIcon, label: 'Solicitudes', sub: () => 'total enviadas', context: (n: number) => n ? 'Seguimiento activo' : 'Sin actividad aún' },
+  { background: '#fff4df', iconBackground: '#fde7bd', color: '#9a6700', icon: ClockIcon, label: 'Pendientes', sub: () => 'en espera', context: (n: number) => n ? 'Requieren seguimiento' : 'Sin pendientes' },
+  { background: '#e8f5ed', iconBackground: '#d5eadf', color: '#287154', icon: CheckCircleIcon, label: 'Aceptadas', sub: () => 'aprobadas', context: (n: number) => n ? 'Con respuesta recibida' : 'Sin respuestas aún' },
+  { background: '#fbedee', iconBackground: '#f6dadd', color: '#913b3b', icon: XCircleIcon, label: 'Negadas', sub: (n: number) => n ? `${n} del total` : 'sin novedades', context: (n: number) => n ? 'Revise los motivos' : 'Operación estable' },
 ];
 
 // Contador animado
@@ -599,6 +600,11 @@ watch(stats, (s) => {
   animateCounters([s.total, s.pendientes, s.aceptadas, s.negadas]);
 });
 
+watch(drawerVisible, (isOpen) => {
+  document.documentElement.style.overflow = isOpen ? 'hidden' : '';
+  document.body.style.overflow = isOpen ? 'hidden' : '';
+});
+
 onMounted(cargar);
 </script>
 
@@ -645,7 +651,21 @@ onMounted(cargar);
 :deep(.request-dialog .el-dialog__title) { color: #fff; font-weight: 800; letter-spacing: .01em; }
 :deep(.request-dialog .el-dialog__headerbtn .el-dialog__close) { color: #e1f7ff; }
 :deep(.request-dialog .el-dialog__headerbtn:hover .el-dialog__close) { color: #fff; }
-:deep(.request-dialog .el-dialog__body) { max-height: min(72vh, 690px); padding: 1.25rem 1.5rem; overflow-y: auto; background: linear-gradient(180deg, #f7faff, #fff); }
+:global(.request-dialog .el-dialog__body) { max-height: calc(100vh - 5.5rem); padding: .85rem 1.25rem 1rem; overflow: hidden !important; background: linear-gradient(180deg, #f7faff, #fff); }
+:global(.request-dialog .el-dialog) {
+  max-height: calc(100vh - 1.5rem);
+  overflow: hidden;
+}
+:global(html:has(.request-dialog)),
+:global(body:has(.request-dialog)) {
+  height: 100%;
+  overflow: hidden !important;
+}
+:deep(.request-form .el-form-item) { margin-bottom: .55rem; }
+:deep(.request-form .el-divider) { display: none; }
+:deep(.request-form .el-textarea__inner) { min-height: 76px !important; }
+:deep(.request-form .el-input__wrapper),
+:deep(.request-form .el-select__wrapper) { min-height: 32px; }
 :deep(.el-overlay) { background-color: rgba(8, 27, 58, .56); backdrop-filter: blur(4px); }
 :deep(.request-form .el-form-item__label) { color: #334e70; font-size: .75rem; font-weight: 700; }
 :deep(.request-form .el-input__wrapper),
@@ -662,15 +682,15 @@ onMounted(cargar);
   display: flex;
   gap: .8rem;
   align-items: center;
-  padding: 1rem;
+  padding: .7rem .85rem;
   border: 1px solid #d9e9fb;
   border-radius: 15px;
   background: linear-gradient(120deg, #eaf4ff, #f8fbff);
 }
 .form-hero-icon {
   display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.1rem;
+  height: 2.1rem;
   place-items: center;
   border-radius: 12px;
   color: #fff;
@@ -681,6 +701,23 @@ onMounted(cargar);
 .form-hero span { color: #61748d; font-size: .72rem; line-height: 1.35; }
 
 .attachments-card { border-color: #bcd7f3; background: linear-gradient(135deg, #f4faff, #fbfdff); }
+
+@media (max-height: 650px) {
+  :global(.request-dialog .el-dialog__header) { margin: .45rem .65rem 0; padding-block: .7rem; }
+  :global(.request-dialog .el-dialog__body) { padding: .55rem .9rem .65rem; }
+  .form-hero { padding: .45rem .6rem; }
+  .form-hero-icon { width: 1.8rem; height: 1.8rem; border-radius: 9px; }
+  .form-hero p { font-size: .76rem; }
+  .form-hero span { font-size: .62rem; }
+  .stepper { gap: .25rem; padding: .25rem; }
+  .stepper-item { min-height: 2rem; font-size: .64rem; }
+  .stepper-number { width: 1.2rem; height: 1.2rem; font-size: .6rem; }
+  :deep(.request-form .el-form-item) { margin-bottom: .3rem; }
+  :deep(.request-form .el-form-item__label) { height: 15px; line-height: 15px; font-size: .66rem; }
+  :deep(.request-form .el-input__wrapper),
+  :deep(.request-form .el-select__wrapper) { min-height: 28px; }
+  :deep(.request-form .el-button) { min-height: 30px; padding-block: .35rem; }
+}
 .attachments-icon { display: inline-grid; width: 1.35rem; height: 1.35rem; place-items: center; color: #fff; background: #2f70bb; border-radius: 6px; font-weight: 800; }
 
 .review-card {
@@ -754,9 +791,9 @@ onMounted(cargar);
 
 .external-dashboard {
   background:
-    radial-gradient(circle at 90% 0%, rgba(180, 210, 250, .42), transparent 28rem),
-    radial-gradient(circle at 2% 100%, rgba(190, 233, 216, .28), transparent 25rem),
-    #eef3f8;
+    radial-gradient(circle at 90% 0%, rgba(181, 207, 239, .3), transparent 28rem),
+    radial-gradient(circle at 2% 100%, rgba(214, 226, 238, .24), transparent 25rem),
+    #f2f5f8;
 }
 
 .welcome-panel,
