@@ -3,6 +3,7 @@
 use App\Http\Middleware\ApiAuthMiddleware;
 use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\PreventSpaResponseCaching;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+        $middleware->appendToGroup('web', PreventSpaResponseCaching::class);
 
         $middleware->validateCsrfTokens(except: [
             'api/login',

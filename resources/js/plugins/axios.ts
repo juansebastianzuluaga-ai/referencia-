@@ -5,7 +5,6 @@ const http = axios.create({
   withCredentials: true, // Crucial for Sanctum SPA Auth
   headers: {
     'Accept': 'application/json',
-    'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
   },
 });
@@ -31,7 +30,7 @@ http.interceptors.response.use(
       }
       // Redirige limpiamente sin mostrar mensajes de error
       window.location.href = '/login';
-      return new Promise(() => {}); // catch blocks no se ejecutan
+      return Promise.reject(error); // catch blocks no se ejecutan
     }
 
     if (status === 419) {

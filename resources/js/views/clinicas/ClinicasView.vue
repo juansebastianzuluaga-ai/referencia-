@@ -1,39 +1,40 @@
 <template>
-  <div class="p-6">
+  <div class="min-h-full p-4 sm:p-6 lg:p-8 clinic-page">
 
     <!-- Encabezado -->
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <div class="flex flex-col xl:flex-row xl:items-end justify-between gap-5 mb-7">
       <div>
-        <h1 class="text-xl font-bold text-gray-800">Clínicas externas</h1>
-        <p class="text-sm text-gray-400 mt-0.5">Gestión y aprobación de instituciones registradas</p>
+        <p class="text-xs font-semibold tracking-[0.18em] uppercase text-[#4778b8] mb-2">Directorio institucional</p>
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#0d2d5e]">Clínicas externas</h1>
+        <p class="text-sm text-slate-500 mt-1">Gestión y aprobación de instituciones registradas</p>
       </div>
-      <div class="flex gap-3">
-        <div class="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-2 text-center">
-          <p class="text-lg font-bold text-yellow-600">{{ resumen.pendientes }}</p>
-          <p class="text-xs text-yellow-500">Pendientes</p>
+      <div class="grid grid-cols-3 gap-2 sm:gap-3 w-full xl:w-auto">
+        <div class="metric-chip metric-chip-pending">
+          <p class="text-xl font-bold text-yellow-700">{{ resumen.pendientes }}</p>
+          <p class="text-[11px] font-medium text-yellow-700/80">Pendientes</p>
         </div>
-        <div class="bg-green-50 border border-green-200 rounded-xl px-4 py-2 text-center">
-          <p class="text-lg font-bold text-green-600">{{ resumen.activas }}</p>
-          <p class="text-xs text-green-500">Activas</p>
+        <div class="metric-chip metric-chip-active">
+          <p class="text-xl font-bold text-emerald-700">{{ resumen.activas }}</p>
+          <p class="text-[11px] font-medium text-emerald-700/80">Activas</p>
         </div>
-        <div class="bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-center">
-          <p class="text-lg font-bold text-red-500">{{ resumen.rechazadas }}</p>
-          <p class="text-xs text-red-400">Rechazadas</p>
+        <div class="metric-chip metric-chip-rejected">
+          <p class="text-xl font-bold text-rose-600">{{ resumen.rechazadas }}</p>
+          <p class="text-[11px] font-medium text-rose-600/80">Rechazadas</p>
         </div>
       </div>
     </div>
 
     <!-- Filtros -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-5 flex flex-wrap gap-3 items-center">
+    <div class="clinic-glass-panel p-3 sm:p-4 mb-6 flex flex-wrap gap-3 items-center">
       <el-input
         v-model="filtro.buscar"
         placeholder="Buscar por nombre, NIT o ciudad..."
-        class="w-64"
+        class="w-full sm:w-72"
         clearable
         size="small"
         :prefix-icon="SearchIcon"
       />
-      <el-select v-model="filtro.estado" placeholder="Estado" size="small" class="w-40" clearable>
+      <el-select v-model="filtro.estado" placeholder="Estado" size="small" class="w-full sm:w-44" clearable>
         <el-option label="Pendientes" value="pendiente" />
         <el-option label="Activas" value="activa" />
         <el-option label="Rechazadas" value="rechazada" />
@@ -65,7 +66,7 @@
       <div
         v-for="clinica in clinicasFiltradas"
         :key="clinica.id"
-        class="bg-white rounded-2xl border shadow-sm flex flex-col transition-shadow hover:shadow-md"
+        class="clinic-card flex flex-col"
         :class="{
           'border-yellow-200': clinica.estado === 'pendiente',
           'border-green-200': clinica.estado === 'activa',
@@ -206,6 +207,58 @@
 
   </div>
 </template>
+
+<style scoped>
+.clinic-page {
+  background:
+    radial-gradient(circle at 95% 0%, rgba(188, 218, 255, 0.45), transparent 24rem),
+    radial-gradient(circle at 5% 100%, rgba(208, 242, 226, 0.35), transparent 22rem);
+}
+
+.clinic-glass-panel {
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  box-shadow: 0 14px 30px rgba(50, 77, 116, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+}
+
+.metric-chip {
+  min-width: 92px;
+  padding: 11px 14px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  box-shadow: 5px 5px 12px rgba(70, 91, 125, 0.1), -4px -4px 10px rgba(255, 255, 255, 0.85);
+}
+
+.metric-chip-pending {
+  background: linear-gradient(145deg, rgba(255, 251, 224, 0.9), rgba(255, 244, 193, 0.72));
+}
+
+.metric-chip-active {
+  background: linear-gradient(145deg, rgba(236, 253, 245, 0.9), rgba(209, 250, 229, 0.7));
+}
+
+.metric-chip-rejected {
+  background: linear-gradient(145deg, rgba(255, 241, 242, 0.9), rgba(255, 222, 226, 0.72));
+}
+
+.clinic-card {
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.84);
+  border-width: 1px;
+  border-radius: 20px;
+  box-shadow: 0 10px 24px rgba(50, 77, 116, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  backdrop-filter: blur(10px);
+}
+
+.clinic-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 34px rgba(31, 69, 118, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+</style>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';

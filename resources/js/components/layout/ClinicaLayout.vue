@@ -84,9 +84,11 @@
 
       <!-- Footer sidebar -->
       <div class="shrink-0 px-4 py-4" style="border-top: 1px solid rgba(255,255,255,0.06);">
-        <p style="color:rgba(255,255,255,0.15); font-size:10px; margin:0; text-align:center;">
-          © 2026 Clínica Santa Bárbara
-        </p>
+        <div class="rounded-xl p-3" style="background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.07);">
+          <div class="flex items-center gap-2 text-xs font-semibold text-white"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Sistema en línea</div>
+          <p style="color:rgba(255,255,255,.45); font-size:10px; margin:7px 0 0; line-height:1.45;">¿Necesita ayuda? Contacte al equipo de referencia.</p>
+        </div>
+        <p style="color:rgba(255,255,255,0.15); font-size:10px; margin:12px 0 0; text-align:center;">© 2026 Clínica Santa Bárbara</p>
       </div>
     </aside>
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SolicitudReferencia extends Model
@@ -53,6 +54,16 @@ class SolicitudReferencia extends Model
     public function clinica(): BelongsTo
     {
         return $this->belongsTo(Clinica::class);
+    }
+
+    public function adjuntos(): HasMany
+    {
+        return $this->hasMany(SolicitudReferenciaAdjunto::class);
+    }
+
+    public function eventos(): HasMany
+    {
+        return $this->hasMany(SolicitudReferenciaEvento::class)->latest();
     }
 
     protected static function booted(): void
