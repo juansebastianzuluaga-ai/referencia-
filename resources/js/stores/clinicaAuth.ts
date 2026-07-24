@@ -47,6 +47,7 @@ export const useClinicaAuthStore = defineStore('clinicaAuth', () => {
     try {
       const { data } = await http.get('/api/externo/clinica', {
         headers: { 'X-Skip-Auth-Redirect': '1' },
+        timeout: 8000,
       });
       clinica.value = data.data;
     } catch {

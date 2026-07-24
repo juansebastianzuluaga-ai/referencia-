@@ -23,7 +23,7 @@ export const useRolesStore = defineStore('roles', () => {
     try {
       // Ensure CSRF cookie is present for POST endpoints (Sanctum)
       await http.get('/sanctum/csrf-cookie', { headers: { 'X-Skip-Auth-Redirect': '1' } }).catch(() => {});
-      const { data } = await http.post('/api/permissions/get-all', { per_page: 1000 }, { headers: { 'X-Skip-Auth-Redirect': '1' } });
+      const { data } = await http.post('/api/permissions/get-all', { per_page: 1000 });
       permissions.value = data.data?.data || data.data || [];
       permissionsLoaded.value = true;
     } catch (e: any) {
@@ -42,7 +42,7 @@ export const useRolesStore = defineStore('roles', () => {
       // Ensure CSRF cookie is present for POST endpoints (Sanctum)
       await http.get('/sanctum/csrf-cookie', { headers: { 'X-Skip-Auth-Redirect': '1' } }).catch(() => {});
       const body = { per_page: pagination.value.per_page, page: pagination.value.current_page, ...payload };
-      const { data } = await http.post('/api/roles/get-all', body, { headers: { 'X-Skip-Auth-Redirect': '1' } });
+      const { data } = await http.post('/api/roles/get-all', body);
       roles.value = data.data?.data || data.data || [];
       pagination.value = {
         current_page: data.data?.current_page || data.data?.meta?.current_page || 1,
@@ -53,12 +53,8 @@ export const useRolesStore = defineStore('roles', () => {
       rolesLoaded.value = true;
     } catch (e: any) {
       roles.value = [];
-      // error handled below
-      const status = e?.response?.status;
-      if (status === 403) {
-        ElMessage.error('No tiene permiso para ver roles (403)');
-      } else if (status === 401) {
-        ElMessage.error('No autenticado (401). Revisa sesión.');
+      if (e?.response?.status === 403) {
+        ElMessage.error('No tiene permiso para ver roles.');
       } else {
         ElMessage.error('Error cargando roles.');
       }

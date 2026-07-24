@@ -42,7 +42,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchUser() {
     try {
-      const { data } = await http.get('/api/user', { headers: { 'X-Skip-Auth-Redirect': '1' } });
+      const { data } = await http.get('/api/user', {
+        headers: { 'X-Skip-Auth-Redirect': '1' },
+        timeout: 8000,
+      });
       user.value = data.data;
     } catch {
       user.value = null;

@@ -18,6 +18,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Named login route required by Laravel's auth redirect mechanism
+Route::get('/login', fn () => view('welcome'))->name('login');
 
 Route::prefix('api')->name('api.')->group(function (): void {
 

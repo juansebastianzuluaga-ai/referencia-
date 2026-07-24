@@ -15,16 +15,13 @@ export const useSettingsStore = defineStore('settings', () => {
     }
     loading.value = true;
     try {
-      const { data } = await http.get('/api/settings', { headers: { 'X-Skip-Auth-Redirect': '1' } });
+      const { data } = await http.get('/api/settings');
       settings.value = data.data || {};
       loaded.value = true;
     } catch (e: any) {
       settings.value = {};
-      const status = e?.response?.status;
-      if (status === 403) {
-        ElMessage.error('No tiene permiso para ver la configuración (403)');
-      } else if (status === 401) {
-        ElMessage.error('No autenticado (401). Revisa sesión.');
+      if (e?.response?.status === 403) {
+        ElMessage.error('No tiene permiso para ver la configuración.');
       } else {
         ElMessage.error('Error cargando configuración.');
       }
@@ -36,7 +33,7 @@ export const useSettingsStore = defineStore('settings', () => {
   async function saveSettings(payload: { key: string; value: any }[]) {
     saving.value = true;
     try {
-      const { data } = await http.put('/api/settings', { settings: payload }, { headers: { 'X-Skip-Auth-Redirect': '1' } });
+      const { data } = await http.put('/api/settings', { settings: payload });
       settings.value = data.data || {};
       loaded.value = true;
       ElMessage.success('Configuración guardada correctamente');
