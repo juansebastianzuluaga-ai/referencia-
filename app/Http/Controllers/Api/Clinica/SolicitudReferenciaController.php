@@ -7,11 +7,13 @@ use App\Mail\NuevaSolicitudReferenciaInterna;
 use App\Models\Clinica;
 use App\Models\Notification;
 use App\Models\SolicitudReferencia;
+use App\Models\SolicitudReferenciaAdjunto;
 use App\Models\SolicitudReferenciaEvento;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SolicitudReferenciaController extends Controller
 {
@@ -146,5 +148,30 @@ class SolicitudReferenciaController extends Controller
             ->findOrFail($id);
 
         return response()->json(['data' => $solicitud]);
+    }
+
+    public function descargarAdjunto(int $solicitudId, int $adjuntoId): BinaryFileResponse
+    {
+        $clinicaId = session('clinica_id');
+
+        if (! $clinicaId) {
+            abort(401);
+        }
+
+        $solicitud = SolicitudReferencia::where('clinica_id', $clinicaId)->findOrFail($solicitudId);
+
+        $adjunto = SolicitudReferenciaAdjunto::where('solicitud_referencia_id', $solicitud->id)
+            ->findOrFail($adjuntoId);
+
+        $path = storage_path('app/private/'.$adjunto->ruta);
+
+        if (! file_exists($path)) {
+            abort(404, 'Archivo no encontrado');
+        }
+
+        return response()->file($path, [
+            'Content-Type' => $adjunto->mime_type,
+            'Content-Disposition' => 'inline; filename="'.$adjunto->nombre_original.'"',
+        ]);
     }
 }

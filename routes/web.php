@@ -35,6 +35,7 @@ Route::prefix('api')->name('api.')->group(function (): void {
         Route::get('solicitudes', [SolicitudReferenciaExternoController::class, 'index'])->name('solicitudes.index');
         Route::post('solicitudes', [SolicitudReferenciaExternoController::class, 'store'])->name('solicitudes.store');
         Route::get('solicitudes/{id}', [SolicitudReferenciaExternoController::class, 'show'])->name('solicitudes.show');
+        Route::get('solicitudes/{solicitudId}/adjuntos/{adjuntoId}/descargar', [SolicitudReferenciaExternoController::class, 'descargarAdjunto'])->name('solicitudes.adjuntos.descargar');
     });
     // ────────────────────────────────────────────────────────────────────────
 
