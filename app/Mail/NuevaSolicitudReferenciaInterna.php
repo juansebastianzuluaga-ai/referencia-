@@ -25,7 +25,7 @@ class NuevaSolicitudReferenciaInterna extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '⚠️ Nueva solicitud de referencia — '.$this->clinica->nombre,
+            subject: 'Nueva solicitud de referencia — '.$this->clinica->nombre.' · '.$this->solicitud->primer_nombre.' '.$this->solicitud->primer_apellido.' ('.$this->solicitud->especialidad_requerida.')',
         );
     }
 

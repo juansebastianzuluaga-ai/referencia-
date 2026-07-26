@@ -171,10 +171,16 @@
       <!-- ── Solicitudes recientes ── -->
       <div class="flex-1 min-h-0 flex flex-col">
         <div class="flex items-center justify-between mb-1.5 shrink-0">
-          <h2 class="font-bold text-sm" style="color:#1e2d55;">Solicitudes recientes</h2>
-          <button @click="cargar" class="inline-flex items-center gap-1.5 text-xs font-medium hover:text-[#21549a] transition-colors" style="color:#8a9ab5;">
+          <div class="flex items-center gap-2">
+            <div class="recent-header-icon">
+              <component :is="ClipboardListIcon" class="w-3.5 h-3.5" />
+            </div>
+            <h2 class="font-bold text-sm" style="color:#1e2d55;">Solicitudes recientes</h2>
+            <span v-if="!cargando && solicitudes.length > 0" class="recent-count-badge">{{ solicitudes.length }}</span>
+          </div>
+          <button @click="cargar" class="recent-refresh-btn">
             <component :is="RefreshCwIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': cargando }" />
-            Actualizar
+            <span>Actualizar</span>
           </button>
         </div>
 
@@ -200,7 +206,7 @@
 
         <div v-else class="flex-1 overflow-y-auto space-y-1.5 pr-1">
           <div
-            v-for="(sol, idx) in solicitudes.slice(0, 5)"
+            v-for="(sol, idx) in solicitudes.slice(0, 3)"
             :key="sol.id"
             class="med-row rounded-xl px-3 py-2 flex items-center gap-3 cursor-pointer transition-all anim-row-in"
             :style="[
@@ -255,11 +261,11 @@
       align-center
     >
       <div class="request-form px-1">
-        <div class="form-hero mb-2">
+        <div class="form-hero mb-1.5">
           <div class="form-hero-icon"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
           <div><p>Nueva remisión</p><span>Complete la información para que el equipo de referencia pueda gestionar el caso.</span></div>
         </div>
-        <div class="stepper mb-2">
+        <div class="stepper mb-1.5">
           <div v-for="step in formSteps" :key="step.number" class="stepper-item" :class="{ active: pasoFormulario >= step.number }">
             <span class="stepper-number">{{ pasoFormulario > step.number ? '✓' : step.number }}</span>
             <p>{{ step.label }}</p>
@@ -267,8 +273,8 @@
         </div>
         <el-form :model="form" :rules="rules" ref="formRef" label-position="top" size="default">
 
-          <div v-show="pasoFormulario === 1" class="mb-1">
-            <div class="flex items-center gap-2 mb-2">
+          <div v-show="pasoFormulario === 1" class="mb-0">
+            <div class="flex items-center gap-2 mb-1.5">
               <div class="w-5 h-5 rounded-full bg-[#0D2D6B] text-white text-[10px] flex items-center justify-center font-bold shrink-0">1</div>
               <p class="font-semibold text-gray-700 text-xs">Datos del paciente</p>
             </div>
@@ -318,8 +324,8 @@
 
           <el-divider class="form-section-divider" />
 
-          <div v-show="pasoFormulario === 2" class="mb-1">
-            <div class="flex items-center gap-2 mb-2">
+          <div v-show="pasoFormulario === 2" class="mb-0">
+            <div class="flex items-center gap-2 mb-1.5">
               <div class="w-5 h-5 rounded-full bg-[#0D2D6B] text-white text-[10px] flex items-center justify-center font-bold shrink-0">2</div>
               <p class="font-semibold text-gray-700 text-xs">Datos de la remisión</p>
             </div>
@@ -382,22 +388,22 @@
 
           <el-divider class="form-section-divider" />
 
-          <div v-show="pasoFormulario === 3" class="mb-1">
-            <div class="flex items-center gap-2 mb-2">
+          <div v-show="pasoFormulario === 3" class="mb-0">
+            <div class="flex items-center gap-2 mb-1.5">
               <div class="w-5 h-5 rounded-full bg-[#0D2D6B] text-white text-[10px] flex items-center justify-center font-bold shrink-0">3</div>
               <p class="font-semibold text-gray-700 text-xs">Resumen clínico</p>
             </div>
             <div class="grid grid-cols-2 gap-x-3 gap-y-0">
               <el-form-item label="Resumen de la historia clínica" prop="resumen_historia_clinica" required class="col-span-2">
-                <el-input v-model="form.resumen_historia_clinica" type="textarea" :rows="3"
+                <el-input v-model="form.resumen_historia_clinica" type="textarea" :rows="2"
                   placeholder="Describa el motivo de remisión, antecedentes relevantes, estado actual del paciente..." />
               </el-form-item>
               <el-form-item label="Observaciones adicionales" class="col-span-2">
                 <el-input v-model="form.observaciones" type="textarea" :rows="1" placeholder="Información adicional relevante..." />
               </el-form-item>
             </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div class="review-card mb-2">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="review-card">
                 <p class="review-title">Revise antes de enviar</p>
                 <div class="grid grid-cols-2 gap-2 text-xs">
                   <div><span>Paciente</span><strong>{{ form.primer_nombre }} {{ form.primer_apellido }}</strong></div>
@@ -406,10 +412,10 @@
                   <div><span>Servicio</span><strong>{{ form.servicio_ubicacion_actual }}</strong></div>
                 </div>
               </div>
-              <div class="attachments-card rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2.5 mb-2">
+              <div class="attachments-card rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2">
                 <div class="flex items-center gap-2"><span class="attachments-icon">+</span><p class="text-xs font-semibold text-slate-700">Soportes clínicos</p></div>
                 <p class="text-[10px] text-slate-500 mt-0.5">Adjunte resultados u órdenes. Hasta 5 archivos de 10 MB.</p>
-                <input class="mt-2 block w-full text-xs text-slate-600" type="file" accept=".pdf,.jpg,.jpeg,.png" multiple @change="seleccionarAdjuntos" />
+                <input class="mt-1.5 block w-full text-xs text-slate-600" type="file" accept=".pdf,.jpg,.jpeg,.png" multiple @change="seleccionarAdjuntos" />
                 <ul v-if="adjuntos.length" class="mt-1 space-y-0.5 text-[10px] text-slate-600">
                   <li v-for="archivo in adjuntos" :key="archivo.name">{{ archivo.name }}</li>
                 </ul>
@@ -419,7 +425,7 @@
 
         </el-form>
 
-        <div class="flex gap-3 pt-2 border-t border-gray-100">
+        <div class="flex gap-3 pt-1.5 border-t border-gray-100 mt-1">
           <el-button class="flex-1" @click="pasoFormulario === 1 ? drawerVisible = false : pasoFormulario--">{{ pasoFormulario === 1 ? 'Cancelar' : 'Anterior' }}</el-button>
           <el-button v-if="pasoFormulario < 3" type="primary" class="flex-1 !bg-[#0D2D6B]" @click="avanzarPaso">Continuar</el-button>
           <el-button v-else type="primary" class="flex-1 !bg-[#0D2D6B]" :loading="guardando" @click="guardar">Enviar solicitud</el-button>
@@ -884,7 +890,7 @@ onUnmounted(() => {
 :deep(.request-dialog .el-dialog__title) { color: #fff; font-weight: 800; letter-spacing: .01em; }
 :deep(.request-dialog .el-dialog__headerbtn .el-dialog__close) { color: #e1f7ff; }
 :deep(.request-dialog .el-dialog__headerbtn:hover .el-dialog__close) { color: #fff; }
-:global(.request-dialog .el-dialog__body) { max-height: calc(100vh - 5.5rem); padding: .6rem 1rem .8rem; overflow: hidden !important; background: linear-gradient(180deg, #f7faff, #fff); }
+:global(.request-dialog .el-dialog__body) { max-height: calc(100vh - 5.5rem); padding: .5rem .9rem .6rem; overflow: hidden !important; background: linear-gradient(180deg, #f7faff, #fff); display: flex; flex-direction: column; }
 :global(.request-dialog .el-dialog) {
   max-height: calc(100vh - 1.5rem);
   overflow: hidden;
@@ -894,10 +900,10 @@ onUnmounted(() => {
   height: 100%;
   overflow: hidden !important;
 }
-:deep(.request-form .el-form-item) { margin-bottom: .35rem; }
+:deep(.request-form .el-form-item) { margin-bottom: .25rem; }
 :deep(.request-form .el-form-item__error) { padding-top: 0; font-size: .6rem; line-height: 1.1; }
 :deep(.request-form .el-divider) { display: none; }
-:deep(.request-form .el-textarea__inner) { min-height: 48px !important; }
+:deep(.request-form .el-textarea__inner) { min-height: 40px !important; }
 :deep(.request-form .el-input__wrapper),
 :deep(.request-form .el-select__wrapper) { min-height: 32px; }
 :deep(.el-overlay) { background-color: rgba(8, 27, 58, .56); backdrop-filter: blur(4px); }
@@ -1145,7 +1151,7 @@ onUnmounted(() => {
 
 .form-hero {
   display: flex;
-  gap: .6rem;
+  gap: .5rem;
   align-items: center;
   padding: .5rem .7rem;
   border: 1px solid #cfe0f5;
@@ -1154,16 +1160,16 @@ onUnmounted(() => {
 }
 .form-hero-icon {
   display: grid;
-  width: 1.8rem;
-  height: 1.8rem;
+  width: 1.6rem;
+  height: 1.6rem;
   place-items: center;
   color: #fff;
   border-radius: 8px;
   background: linear-gradient(135deg, #0d2d5e, #3174c4);
   box-shadow: 0 4px 10px rgba(13, 45, 94, .2);
 }
-.form-hero p { margin: 0 0 .1rem; color: #0d2d5e; font-size: .8rem; font-weight: 800; }
-.form-hero span { color: #61748d; font-size: .65rem; line-height: 1.3; }
+.form-hero p { margin: 0 0 .05rem; color: #0d2d5e; font-size: .75rem; font-weight: 800; }
+.form-hero span { color: #61748d; font-size: .6rem; line-height: 1.2; }
 
 .attachments-card { border-color: #bcd7f3; background: linear-gradient(135deg, #f4faff, #fbfdff); }
 
@@ -1185,16 +1191,16 @@ onUnmounted(() => {
 }
 .attachments-icon { display: inline-grid; width: 1.35rem; height: 1.35rem; place-items: center; color: #fff; background: #2f70bb; border-radius: 6px; font-weight: 800; }
 
-.review-card { background: #f8fbff; border: 1px solid #e0ecf8; border-radius: 10px; padding: .6rem .8rem; }
-.review-title { margin: 0 0 .4rem; font-size: .68rem; font-weight: 800; color: #0d2d5e; text-transform: uppercase; letter-spacing: .04em; }
+.review-card { background: #f8fbff; border: 1px solid #e0ecf8; border-radius: 10px; padding: .4rem .6rem; }
+.review-title { margin: 0 0 .3rem; font-size: .62rem; font-weight: 800; color: #0d2d5e; text-transform: uppercase; letter-spacing: .04em; }
 .review-card div { display: flex; flex-direction: column; }
-.review-card span { color: #64748b; font-size: .6rem; }
-.review-card strong { margin-top: .05rem; color: #1e3a5f; font-weight: 700; font-size: .68rem; }
+.review-card span { color: #64748b; font-size: .55rem; }
+.review-card strong { margin-top: .02rem; color: #1e3a5f; font-weight: 700; font-size: .62rem; }
 
 .stepper {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: .3rem;
+  gap: .25rem;
   padding: .25rem;
   border: 1px solid #dbe8f5;
   border-radius: 14px;
@@ -1206,9 +1212,9 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: .35rem;
-  min-height: 2.1rem;
+  min-height: 2rem;
   padding: 0 .5rem;
-  border-radius: 9px;
+  border-radius: 8px;
   font-size: .68rem;
   font-weight: 600;
   color: #61748d;
@@ -1220,8 +1226,8 @@ onUnmounted(() => {
 .stepper-item p { margin: 0; }
 .stepper-number {
   display: grid;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.1rem;
+  height: 1.1rem;
   place-items: center;
   border: 1px solid #cfe0f5;
   border-radius: 50%;
@@ -1304,9 +1310,25 @@ onUnmounted(() => {
   border-radius: 10px;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
-  transition: transform .2s ease, box-shadow .2s ease;
+  transition: transform .25s ease, box-shadow .25s ease;
+  position: relative;
+  overflow: hidden;
 }
-.hero-link:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(0, 0, 0, .28); }
+.hero-link::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(13, 45, 107, 0.12), transparent);
+  transform: translateX(-100%);
+  transition: transform .6s ease;
+}
+.hero-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .25), 0 0 22px rgba(126, 179, 255, .4);
+}
+.hero-link:hover::before {
+  transform: translateX(100%);
+}
 .hero-link:active { transform: translateY(0); }
 
 .hero-pill {
@@ -1385,6 +1407,19 @@ onUnmounted(() => {
   height: 3px;
   background: linear-gradient(90deg, #fbbf24, #22c55e, #f87171);
   opacity: .6;
+  transition: opacity .28s ease, height .28s ease;
+}
+.distrib-card {
+  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1), border-color .3s ease;
+}
+.distrib-card:hover {
+  transform: translateY(-5px) scale(1.01);
+  box-shadow: 0 18px 34px rgba(22, 70, 142, .15);
+  border-color: #b8c8de;
+}
+.distrib-card:hover::before {
+  opacity: 1;
+  height: 5px;
 }
 
 /* ── Métricas ── */
@@ -1395,7 +1430,7 @@ onUnmounted(() => {
   border-radius: 14px;
   position: relative;
   overflow: hidden;
-  transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s cubic-bezier(.22,1,.36,1);
+  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1), border-color .3s ease;
 }
 .metric-card::before {
   content: '';
@@ -1404,10 +1439,16 @@ onUnmounted(() => {
   height: 3px;
   background: linear-gradient(90deg, #0d2d6b, #16468e, #2f70bb);
   opacity: .6;
+  transition: opacity .28s ease, height .28s ease;
 }
 .metric-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(22, 70, 142, .14);
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 18px 34px rgba(22, 70, 142, .15);
+  border-color: #b8c8de;
+}
+.metric-card:hover::before {
+  opacity: 1;
+  height: 5px;
 }
 
 .metric-ring {
@@ -1484,6 +1525,50 @@ onUnmounted(() => {
 
 /* ── Entradas ── */
 .anim-fade-down  { animation: fadeDown  0.5s cubic-bezier(.22,1,.36,1) both; }
+
+/* ── Header solicitudes recientes ── */
+.recent-header-icon {
+  width: 26px; height: 26px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #16468e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(22, 70, 142, .12);
+}
+.recent-count-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #16468e;
+  background: #e0ecff;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.recent-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .35rem .7rem;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.recent-refresh-btn:hover {
+  color: #16468e;
+  background: #e0ecff;
+  border-color: #bfdbfe;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(22, 70, 142, .1);
+}
+.recent-refresh-btn:active {
+  transform: translateY(0);
+}
 .anim-slide-up   { animation: slideUp   0.5s cubic-bezier(.22,1,.36,1) both; }
 .anim-fade-left  { animation: fadeLeft  0.5s cubic-bezier(.22,1,.36,1) both; }
 .anim-row-in     { animation: rowIn     0.4s cubic-bezier(.22,1,.36,1) both; }
