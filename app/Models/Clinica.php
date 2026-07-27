@@ -19,6 +19,8 @@ class Clinica extends Model
         'representante_legal',
         'cedula_representante',
         'observaciones',
+        'especialidades',
+        'logo_path',
         'is_active',
         'estado',
         'motivo_rechazo',
@@ -26,6 +28,7 @@ class Clinica extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'especialidades' => 'array',
     ];
 
     public function authTokens(): HasMany

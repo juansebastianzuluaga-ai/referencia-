@@ -2,20 +2,21 @@
   <el-tooltip v-if="visible" :content="text" placement="right" :disabled="!layout.isSidebarCollapsed">
     <router-link
       :to="to"
-      class="flex items-center gap-2.5 px-3.5 py-2.5 mx-2 mb-2 rounded-2xl no-underline transition-all duration-200 relative overflow-hidden whitespace-nowrap neu-item"
-      active-class="neu-item-active"
+      class="menu-item no-underline"
+      active-class="menu-item-active"
       @click="layout.closeMobileMenu()"
     >
-      <div class="w-4.5 h-4.5 shrink-0 flex items-center justify-center">
-        <component :is="resolvedIcon" class="w-4.5 h-4.5" />
+      <span class="menu-accent-bar"></span>
+      <div class="menu-icon-wrap">
+        <component :is="resolvedIcon" class="shrink-0" style="width:20px; height:20px;" />
       </div>
-      <span 
-        class="text-[13.5px] font-normal flex-1 transition-all duration-200 overflow-hidden"
+      <span
+        class="menu-label"
         :class="layout.isSidebarCollapsed ? 'opacity-0 max-w-0' : 'opacity-100 max-w-[200px]'"
       >
         {{ text }}
       </span>
-      <span 
+      <span
         v-if="badge !== undefined"
         class="text-[10px] font-semibold bg-blue-600 text-white px-1.5 py-0.5 rounded-full transition-opacity"
         :class="layout.isSidebarCollapsed ? 'opacity-0' : 'opacity-100'"
@@ -51,18 +52,84 @@ const resolvedIcon = computed(() => {
 </script>
 
 <style scoped>
-.neu-item {
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: 12px 14px;
+  border-radius: 14px;
+  margin: 0 16px 8px;
+  cursor: pointer;
+  transition: all .2s ease;
+  position: relative;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.04);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.menu-item:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.menu-accent-bar {
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 3px; height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, #7eb3ff, #16468e);
+  box-shadow: 0 0 8px rgba(126,179,255,0.4);
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+
+.menu-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  color: #6b82a8;
+  transition: all .2s ease;
+  flex-shrink: 0;
+}
+.menu-item:hover .menu-icon-wrap {
   color: #8294b8;
-  background: #1e2d55;
-  box-shadow: 4px 4px 8px #16223f, -4px -4px 8px #26386b;
+  background: rgba(255,255,255,0.08);
 }
-.neu-item:hover {
+
+.menu-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #8294b8;
+  transition: all .2s ease;
+  overflow: hidden;
+}
+.menu-item:hover .menu-label {
+  color: #a0b3d0;
+}
+
+/* Active state */
+.menu-item-active {
+  background: linear-gradient(135deg, rgba(22,70,142,0.5), rgba(13,45,107,0.6)) !important;
+  border-color: rgba(126,179,255,0.15) !important;
+  box-shadow: 0 4px 14px rgba(22,70,142,0.3), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+.menu-item-active:hover {
+  background: linear-gradient(135deg, rgba(22,70,142,0.55), rgba(13,45,107,0.65)) !important;
+}
+.menu-item-active .menu-accent-bar {
+  opacity: 1;
+}
+.menu-item-active .menu-icon-wrap {
+  background: linear-gradient(135deg, rgba(126,179,255,0.2), rgba(22,70,142,0.3));
+  color: #7eb3ff;
+  box-shadow: 0 2px 8px rgba(126,179,255,0.15);
+}
+.menu-item-active .menu-label {
   color: #ffffff;
-  box-shadow: 5px 5px 10px #16223f, -5px -5px 10px #26386b;
-}
-.neu-item-active {
-  color: #ffffff !important;
-  background: #1e2d55 !important;
-  box-shadow: inset 4px 4px 8px #16223f, inset -4px -4px 8px #26386b !important;
+  font-weight: 700;
 }
 </style>

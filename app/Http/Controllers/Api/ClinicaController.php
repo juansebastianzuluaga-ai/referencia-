@@ -24,9 +24,9 @@ class ClinicaController extends Controller
     public function aprobar(Clinica $clinica): JsonResponse
     {
         $clinica->update([
-            'is_active'       => true,
-            'estado'          => 'activa',
-            'motivo_rechazo'  => null,
+            'is_active' => true,
+            'estado' => 'activa',
+            'motivo_rechazo' => null,
         ]);
 
         // Notificar a la clínica
@@ -42,8 +42,8 @@ class ClinicaController extends Controller
         ]);
 
         $clinica->update([
-            'is_active'      => false,
-            'estado'         => 'rechazada',
+            'is_active' => false,
+            'estado' => 'rechazada',
             'motivo_rechazo' => $request->motivo,
         ]);
 
@@ -51,5 +51,16 @@ class ClinicaController extends Controller
         Mail::to($clinica->email)->send(new ClinicaRechazo($clinica, $request->motivo));
 
         return response()->json(['message' => 'Clínica rechazada correctamente.']);
+    }
+
+    public function reactivar(Clinica $clinica): JsonResponse
+    {
+        $clinica->update([
+            'is_active' => true,
+            'estado' => 'activa',
+            'motivo_rechazo' => null,
+        ]);
+
+        return response()->json(['message' => 'Clínica reactivada correctamente.']);
     }
 }

@@ -21,35 +21,45 @@ class LoginExternoController extends Controller
      */
     public function registro(Request $request): JsonResponse
     {
-        $request->validate([
-            'nit'                  => ['required', 'string', 'max:20', 'unique:clinicas,nit'],
-            'razon_social'         => ['required', 'string', 'max:255'],
-            'nombre'               => ['required', 'string', 'max:255'],
-            'email'                => ['required', 'email', 'max:255'],
-            'telefono'             => ['required', 'string', 'max:20'],
-            'ciudad'               => ['required', 'string', 'max:100'],
-            'departamento'         => ['required', 'string', 'max:100'],
-            'direccion'            => ['required', 'string', 'max:255'],
-            'representante_legal'  => ['required', 'string', 'max:255'],
+        $validated = $request->validate([
+            'nit' => ['required', 'string', 'max:20', 'unique:clinicas,nit'],
+            'razon_social' => ['required', 'string', 'max:255'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'email_confirmacion' => ['required', 'email', 'same:email'],
+            'telefono' => ['required', 'string', 'max:20'],
+            'ciudad' => ['required', 'string', 'max:100'],
+            'departamento' => ['required', 'string', 'max:100'],
+            'direccion' => ['required', 'string', 'max:255'],
+            'representante_legal' => ['required', 'string', 'max:255'],
             'cedula_representante' => ['required', 'string', 'max:20'],
-            'observaciones'        => ['nullable', 'string', 'max:1000'],
+            'observaciones' => ['nullable', 'string', 'max:1000'],
+            'especialidades' => ['nullable', 'array'],
+            'especialidades.*' => ['string', 'max:100'],
+            'logo_path' => ['nullable', 'string', 'max:255'],
         ], [
             'nit.unique' => 'Ya existe una clínica registrada con este NIT.',
+            'email_confirmacion.same' => 'Los correos electrónicos no coinciden.',
         ]);
 
         $clinica = Clinica::create([
-            'nit'                 => $request->nit,
-            'razon_social'        => $request->razon_social,
-            'nombre'              => $request->nombre,
-            'email'               => $request->email,
-            'telefono'            => $request->telefono,
-            'ciudad'              => $request->ciudad,
-            'departamento'        => $request->departamento,
-            'direccion'           => $request->direccion,
-            'representante_legal' => $request->representante_legal,
-            'cedula_representante'=> $request->cedula_representante,
-            'is_active'           => false,
+            'nit' => $validated['nit'],
+            'razon_social' => $validated['razon_social'],
+            'nombre' => $validated['nombre'],
+            'email' => $validated['email'],
+            'telefono' => $validated['telefono'],
+            'ciudad' => $validated['ciudad'],
+            'departamento' => $validated['departamento'],
+            'direccion' => $validated['direccion'],
+            'representante_legal' => $validated['representante_legal'],
+            'cedula_representante' => $validated['cedula_representante'],
+            'observaciones' => $validated['observaciones'] ?? null,
+            'especialidades' => $validated['especialidades'] ?? null,
+            'logo_path' => $validated['logo_path'] ?? null,
+            'is_active' => false,
         ]);
+
+        $radicado = 'RAD-'.str_pad((string) $clinica->id, 6, '0', STR_PAD_LEFT).'-'.date('Y');
 
         // Correo de confirmación a la clínica
         Mail::to($clinica->email)->send(new ClinicaRegistroConfirmacion($clinica));
@@ -68,6 +78,7 @@ class LoginExternoController extends Controller
 
         return response()->json([
             'message' => 'Solicitud de registro recibida. Será notificado cuando sea aprobada.',
+            'radicado' => $radicado,
         ], 201);
     }
 
@@ -101,7 +112,7 @@ class LoginExternoController extends Controller
     public function solicitarAcceso(Request $request): JsonResponse
     {
         $request->validate([
-            'nit'    => ['required', 'string', 'max:20'],
+            'nit' => ['required', 'string', 'max:20'],
             'metodo' => ['required', 'in:email,sms'],
         ]);
 
@@ -135,7 +146,7 @@ class LoginExternoController extends Controller
     public function verificarOtp(Request $request): JsonResponse
     {
         $request->validate([
-            'nit'    => ['required', 'string'],
+            'nit' => ['required', 'string'],
             'codigo' => ['required', 'string', 'size:6'],
         ]);
 
@@ -220,6 +231,7 @@ class LoginExternoController extends Controller
 
         if (! $clinica || ! $clinica->is_active) {
             $request->session()->forget('clinica_id');
+
             return response()->json(['message' => 'No autenticado.'], 401);
         }
 
@@ -232,6 +244,7 @@ class LoginExternoController extends Controller
     public function logout(Request $request): JsonResponse
     {
         $request->session()->forget('clinica_id');
+
         return response()->json(['message' => 'Sesión cerrada.']);
     }
 
@@ -243,8 +256,8 @@ class LoginExternoController extends Controller
 
         ClinicaAuthToken::create([
             'clinica_id' => $clinica->id,
-            'tipo'       => 'magic_link',
-            'token'      => hash('sha256', $tokenPlano),
+            'tipo' => 'magic_link',
+            'token' => hash('sha256', $tokenPlano),
             'expires_at' => now()->addMinutes(15),
         ]);
 
@@ -266,7 +279,7 @@ class LoginExternoController extends Controller
 
         ClinicaAuthToken::create([
             'clinica_id' => $clinica->id,
-            'tipo'       => 'otp',
+            'tipo' => 'otp',
             'codigo_otp' => $codigo,
             'expires_at' => now()->addMinutes(10),
         ]);
@@ -282,12 +295,12 @@ class LoginExternoController extends Controller
 
         $now = now();
         $rows = $usuarios->map(fn (User $u) => [
-            'user_id'    => $u->id,
-            'type'       => $tipo,
-            'title'      => $titulo,
-            'message'    => $mensaje,
-            'link'       => $link,
-            'read_at'    => null,
+            'user_id' => $u->id,
+            'type' => $tipo,
+            'title' => $titulo,
+            'message' => $mensaje,
+            'link' => $link,
+            'read_at' => null,
             'created_at' => $now,
             'updated_at' => $now,
         ])->all();
@@ -300,12 +313,12 @@ class LoginExternoController extends Controller
     private function formatClinica(Clinica $clinica): array
     {
         return [
-            'id'        => $clinica->id,
-            'nit'       => $clinica->nit,
-            'nombre'    => $clinica->nombre,
-            'email'     => $clinica->email,
-            'telefono'  => $clinica->telefono,
-            'ciudad'    => $clinica->ciudad,
+            'id' => $clinica->id,
+            'nit' => $clinica->nit,
+            'nombre' => $clinica->nombre,
+            'email' => $clinica->email,
+            'telefono' => $clinica->telefono,
+            'ciudad' => $clinica->ciudad,
             'is_active' => $clinica->is_active,
         ];
     }

@@ -4,14 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\SolicitudReferencia;
+use App\Models\SolicitudReferenciaAdjunto;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SolicitudReferenciaController extends Controller
 {
     public function index(): JsonResponse
     {
-        $solicitudes = SolicitudReferencia::with('clinica')
+        $solicitudes = SolicitudReferencia::with(['clinica', 'adjuntos'])
             ->orderByRaw("FIELD(estado, 'pendiente', 'aceptado', 'negado')")
             ->orderBy('created_at', 'desc')
             ->get();
@@ -45,6 +48,19 @@ class SolicitudReferenciaController extends Controller
             'observaciones_respuesta' => $validated['observaciones_respuesta'] ?? null,
         ]);
 
+        $solicitud->load('clinica');
+
+        if ($solicitud->clinica?->email) {
+            Mail::send(
+                'emails.solicitud-aceptada',
+                ['solicitud' => $solicitud],
+                function ($message) use ($solicitud) {
+                    $message->to($solicitud->clinica->email)
+                        ->subject("Solicitud de referencia ACEPTADA - {$solicitud->primer_nombre} {$solicitud->primer_apellido}");
+                }
+            );
+        }
+
         return response()->json(['data' => $solicitud, 'message' => 'Solicitud aceptada']);
     }
 
@@ -65,6 +81,19 @@ class SolicitudReferenciaController extends Controller
             'observaciones_respuesta' => $validated['observaciones_respuesta'] ?? null,
         ]);
 
+        $solicitud->load('clinica');
+
+        if ($solicitud->clinica?->email) {
+            Mail::send(
+                'emails.solicitud-negada',
+                ['solicitud' => $solicitud],
+                function ($message) use ($solicitud) {
+                    $message->to($solicitud->clinica->email)
+                        ->subject("Solicitud de referencia NEGADA - {$solicitud->primer_nombre} {$solicitud->primer_apellido}");
+                }
+            );
+        }
+
         return response()->json(['data' => $solicitud, 'message' => 'Solicitud negada']);
     }
 
@@ -82,5 +111,23 @@ class SolicitudReferenciaController extends Controller
         ]);
 
         return response()->json(['data' => $solicitud, 'message' => 'Solicitud marcada como pendiente']);
+    }
+
+    public function descargarAdjunto(SolicitudReferencia $solicitud, SolicitudReferenciaAdjunto $adjunto): BinaryFileResponse
+    {
+        if ($adjunto->solicitud_referencia_id !== $solicitud->id) {
+            abort(404);
+        }
+
+        $path = storage_path('app/private/'.$adjunto->ruta);
+
+        if (! file_exists($path)) {
+            abort(404, 'Archivo no encontrado');
+        }
+
+        return response()->file($path, [
+            'Content-Type' => $adjunto->mime_type,
+            'Content-Disposition' => 'inline; filename="'.$adjunto->nombre_original.'"',
+        ]);
     }
 }

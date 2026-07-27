@@ -1,23 +1,44 @@
 <template>
-  <div class="h-screen overflow-y-auto flex items-center justify-center bg-gradient-to-b from-blue-50 to-white py-12">
-    <div class="w-full max-w-md mx-4 my-auto">
-      <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
-        <div class="p-8">
+  <div class="min-h-screen flex items-center justify-center px-4 py-8"
+    style="background: radial-gradient(ellipse at 60% 0%, #16468E 0%, #0D2D6B 55%, #071a42 100%);">
 
-          <!-- Encabezado -->
-          <div class="flex flex-col items-center mb-8">
-            <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-              <component :is="SmartphoneIcon" class="w-8 h-8 text-green-600" />
-            </div>
-            <h1 class="text-2xl font-bold text-gray-800">Verificar código</h1>
-            <p class="text-sm text-gray-500 mt-2 text-center">
-              Ingrese el código de 6 dígitos enviado al número<br>
-              registrado para la clínica con NIT <strong>{{ nit }}</strong>
-            </p>
+    <!-- Glow decorativos de fondo -->
+    <div class="fixed top-0 left-0 w-96 h-96 rounded-full opacity-5 pointer-events-none"
+      style="background: radial-gradient(circle, #fff, transparent)" />
+    <div class="fixed bottom-0 right-0 w-80 h-80 rounded-full opacity-5 pointer-events-none"
+      style="background: radial-gradient(circle, #fff, transparent)" />
+
+    <div class="w-full max-w-md relative z-10">
+
+      <!-- Card -->
+      <div class="rounded-2xl overflow-hidden"
+        style="box-shadow: 0 32px 64px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);">
+
+        <!-- Header con gradiente azul -->
+        <div class="relative px-6 pt-6 pb-5 flex flex-col items-center overflow-hidden"
+          style="background: linear-gradient(160deg, #16468E 0%, #0D2D6B 100%);">
+          <div class="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10"
+            style="background: radial-gradient(circle, #fff, transparent)" />
+          <div class="absolute -bottom-4 -left-4 w-24 h-24 rounded-full opacity-10"
+            style="background: radial-gradient(circle, #fff, transparent)" />
+          <img :src="logoBlanco" alt="logo" class="h-10 object-contain relative z-10 drop-shadow-lg mb-3" />
+          <h1 class="text-xl font-extrabold text-white tracking-wide relative z-10">Verificar código</h1>
+          <p class="text-blue-300 text-xs relative z-10 mt-1 text-center">
+            Ingrese el código de 6 dígitos enviado al número<br>
+            registrado para la clínica con NIT <strong>{{ nit }}</strong>
+          </p>
+        </div>
+
+        <!-- Cuerpo -->
+        <div class="bg-white px-8 py-7">
+
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-1 h-4 rounded-full bg-[#0D2D6B]" />
+            <p class="text-xs font-bold text-[#0D2D6B] uppercase tracking-widest">Código de seguridad</p>
           </div>
 
           <!-- Inputs de 6 dígitos -->
-          <div class="flex justify-center gap-3 mb-8">
+          <div class="flex justify-center gap-2.5 mb-6">
             <input
               v-for="(_, i) in 6"
               :key="i"
@@ -26,10 +47,10 @@
               type="text"
               inputmode="numeric"
               maxlength="1"
-              class="w-12 h-14 text-center text-xl font-bold border-2 rounded-lg outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              class="w-11 h-13 text-center text-xl font-bold border-2 rounded-xl outline-none transition-all focus:border-[#16468E] focus:ring-2 focus:ring-blue-100"
               :class="[
-                error ? 'border-red-400' : 'border-gray-300',
-                digitos[i] ? 'bg-blue-50 border-blue-400' : ''
+                error ? 'border-red-400' : 'border-gray-200',
+                digitos[i] ? 'bg-blue-50 border-[#16468E]' : ''
               ]"
               :disabled="verificando"
               @input="onDigitoInput(i, $event)"
@@ -57,23 +78,23 @@
           />
 
           <!-- Botón verificar -->
-          <el-button
-            type="primary"
-            class="w-full"
-            size="large"
-            :loading="verificando"
-            :disabled="codigoCompleto === false"
+          <button
+            type="button"
+            class="w-full py-3 rounded-xl text-white font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+            style="background: linear-gradient(135deg, #0D2D6B 0%, #16468E 100%); box-shadow: 0 4px 16px rgba(13,45,107,0.25);"
+            :disabled="verificando || !codigoCompleto"
             @click="verificarCodigo"
           >
-            <component :is="ShieldCheckIcon" class="w-4 h-4 mr-2" />
-            Verificar código
-          </el-button>
+            <span v-if="verificando" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <component v-else :is="ShieldCheckIcon" class="w-4 h-4" />
+            {{ verificando ? 'Verificando...' : 'Verificar código' }}
+          </button>
 
           <!-- Reenviar código -->
-          <div class="mt-6 text-center">
+          <div class="mt-5 text-center">
             <p class="text-sm text-gray-500">¿No recibió el código?</p>
             <button
-              class="text-sm text-blue-600 hover:underline mt-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              class="text-sm text-[#0D2D6B] hover:text-[#16468E] font-semibold mt-1 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               :disabled="tiempoReenvio > 0 || reEnviando"
               @click="reenviarCodigo"
             >
@@ -90,14 +111,14 @@
           <div class="mt-4 text-center">
             <router-link
               :to="{ name: 'login-externo' }"
-              class="inline-flex items-center text-sm text-gray-400 hover:text-gray-600"
+              class="inline-flex items-center text-sm text-gray-400 hover:text-[#0D2D6B] transition-colors"
             >
               <component :is="ArrowLeftIcon" class="w-4 h-4 mr-1" />
               Volver al inicio
             </router-link>
           </div>
 
-          <p class="text-xs text-center text-gray-400 mt-8">
+          <p class="text-xs text-center text-gray-300 mt-6">
             © {{ new Date().getFullYear() }} Santa Bárbara
           </p>
         </div>
@@ -110,7 +131,6 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
-  Smartphone as SmartphoneIcon,
   ShieldCheck as ShieldCheckIcon,
   ArrowLeft as ArrowLeftIcon,
   RefreshCw as RefreshCwIcon,
@@ -120,6 +140,8 @@ import { useClinicaAuthStore } from '@/stores/clinicaAuth';
 const router = useRouter();
 const route = useRoute();
 const clinicaAuthStore = useClinicaAuthStore();
+
+const logoBlanco = '/images/logo-w.png';
 
 const nit = computed(() => (route.query.nit as string) ?? '');
 const digitos = ref<string[]>(Array(6).fill(''));

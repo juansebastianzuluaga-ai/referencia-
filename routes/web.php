@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Clinica\LoginExternoController;
 use App\Http\Controllers\Api\Clinica\SolicitudReferenciaController as SolicitudReferenciaExternoController;
 use App\Http\Controllers\Api\ClinicaController;
 use App\Http\Controllers\Api\CurrentUserController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\IdentificationTypeController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PermissionController;
@@ -42,6 +43,8 @@ Route::prefix('api')->name('api.')->group(function (): void {
     Route::get('user/password-policy', [CurrentUserController::class, 'passwordPolicy'])->name('user.password-policy');
 
     Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
+        Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
+
         Route::get('user', CurrentUserController::class)->name('user');
         Route::put('user/profile', [CurrentUserController::class, 'updateProfile'])->name('user.profile.update');
         Route::put('user/password', [CurrentUserController::class, 'updatePassword'])->name('user.password.update');
@@ -74,12 +77,14 @@ Route::prefix('api')->name('api.')->group(function (): void {
         Route::get('clinicas', [ClinicaController::class, 'index'])->name('clinicas.index');
         Route::post('clinicas/{clinica}/aprobar', [ClinicaController::class, 'aprobar'])->name('clinicas.aprobar');
         Route::post('clinicas/{clinica}/rechazar', [ClinicaController::class, 'rechazar'])->name('clinicas.rechazar');
+        Route::post('clinicas/{clinica}/reactivar', [ClinicaController::class, 'reactivar'])->name('clinicas.reactivar');
 
         Route::get('solicitudes-referencia', [SolicitudReferenciaController::class, 'index'])->name('solicitudes-referencia.index');
         Route::get('solicitudes-referencia/{solicitud}', [SolicitudReferenciaController::class, 'show'])->name('solicitudes-referencia.show');
         Route::post('solicitudes-referencia/{solicitud}/aceptar', [SolicitudReferenciaController::class, 'aceptar'])->name('solicitudes-referencia.aceptar');
         Route::post('solicitudes-referencia/{solicitud}/negar', [SolicitudReferenciaController::class, 'negar'])->name('solicitudes-referencia.negar');
         Route::post('solicitudes-referencia/{solicitud}/pendiente', [SolicitudReferenciaController::class, 'pendiente'])->name('solicitudes-referencia.pendiente');
+        Route::get('solicitudes-referencia/{solicitud}/adjuntos/{adjunto}/descargar', [SolicitudReferenciaController::class, 'descargarAdjunto'])->name('solicitudes-referencia.adjuntos.descargar');
 
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');

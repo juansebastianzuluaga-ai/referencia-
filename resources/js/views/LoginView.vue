@@ -1,16 +1,24 @@
 <template>
   <div class="h-screen flex items-center justify-center px-4" style="background: radial-gradient(ellipse at 60% 0%, #16468E 0%, #0D2D6B 55%, #071a42 100%);">
-    <div class="w-full max-w-sm">
+
+    <!-- Glow decorativos de fondo -->
+    <div class="fixed top-0 left-1/4 w-[500px] h-[500px] rounded-full opacity-[0.07] pointer-events-none"
+      style="background: radial-gradient(circle, #3b82f6, transparent 70%)" />
+    <div class="fixed bottom-0 right-1/4 w-[400px] h-[400px] rounded-full opacity-[0.05] pointer-events-none"
+      style="background: radial-gradient(circle, #60a5fa, transparent 70%)" />
+
+    <div class="w-full max-w-sm relative z-10">
 
       <!-- Card -->
-      <div class="rounded-3xl overflow-hidden" style="box-shadow: 0 32px 64px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);">
+      <div class="rounded-3xl overflow-hidden card-enter" style="box-shadow: 12px 12px 24px rgba(7,26,66,0.4), -12px -12px 24px rgba(255,255,255,0.15), 0 0 60px rgba(255,255,255,0.12);">
 
         <!-- Header azul -->
-        <div class="relative px-6 pt-7 pb-6 flex flex-col items-center text-center overflow-hidden"
-          style="background: linear-gradient(160deg, #16468E 0%, #0D2D6B 100%);">
+        <div class="relative px-6 pt-6 pb-5 flex flex-col items-center text-center overflow-hidden"
+          style="background: linear-gradient(135deg, #16468E 0%, #0D2D6B 50%, #0a2150 100%);">
           <!-- Círculos decorativos -->
-          <div class="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-10" style="background: radial-gradient(circle, #fff, transparent)" />
-          <div class="absolute -bottom-4 -left-4 w-20 h-20 rounded-full opacity-10" style="background: radial-gradient(circle, #fff, transparent)" />
+          <div class="absolute -top-8 -right-8 w-36 h-36 rounded-full opacity-[0.12]" style="background: radial-gradient(circle, #60a5fa, transparent 70%)" />
+          <div class="absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-[0.08]" style="background: radial-gradient(circle, #93c5fd, transparent 70%)" />
+          <div class="absolute inset-0 opacity-[0.03]" style="background-image: repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 1px, transparent 12px)" />
 
           <img :src="logoBlanco" alt="logo" class="h-11 object-contain mb-3 relative z-10 drop-shadow-lg" />
           <h1 class="text-xl font-extrabold text-white tracking-wide relative z-10">Sistema de Referencia</h1>
@@ -21,16 +29,18 @@
           </div>
         </div>
 
-        <!-- Cuerpo blanco -->
-        <div class="bg-white px-6 pt-5 pb-7">
+        <!-- Cuerpo -->
+        <div class="px-6 pt-5 pb-6 relative" style="background: #eef1f6;">
+          <div class="absolute inset-0 opacity-[0.02] pointer-events-none" style="background-image: radial-gradient(circle, #0D2D6B 1px, transparent 1px); background-size: 16px 16px;" />
 
           <!-- Tabs -->
-          <div class="flex mb-5 bg-gray-50 rounded-2xl p-1 gap-1">
+          <div class="flex mb-5 rounded-2xl p-1 gap-1 relative z-10" style="background: #eef1f6; box-shadow: inset 3px 3px 6px rgba(163,177,198,0.4), inset -3px -3px 6px rgba(255,255,255,0.8);">
             <button
               class="flex-1 py-2 text-xs font-bold rounded-xl transition-all duration-200"
               :class="tab === 'clinica'
-                ? 'bg-white text-[#0D2D6B] shadow-sm ring-1 ring-gray-200'
+                ? 'text-[#0D2D6B]'
                 : 'text-gray-400 hover:text-gray-600'"
+              :style="tab === 'clinica' ? 'background: #eef1f6; box-shadow: 3px 3px 6px rgba(163,177,198,0.5), -3px -3px 6px rgba(255,255,255,0.9);' : ''"
               @click="cambiarTab('clinica')"
             >
               🏥 Clínica externa
@@ -38,8 +48,9 @@
             <button
               class="flex-1 py-2 text-xs font-bold rounded-xl transition-all duration-200"
               :class="tab === 'interno'
-                ? 'bg-white text-[#0D2D6B] shadow-sm ring-1 ring-gray-200'
+                ? 'text-[#0D2D6B]'
                 : 'text-gray-400 hover:text-gray-600'"
+              :style="tab === 'interno' ? 'background: #eef1f6; box-shadow: 3px 3px 6px rgba(163,177,198,0.5), -3px -3px 6px rgba(255,255,255,0.9);' : ''"
               @click="cambiarTab('interno')"
             >
               🔐 Personal interno
@@ -47,16 +58,16 @@
           </div>
 
           <!-- ── TAB: Clínica externa ── -->
-          <div v-if="tab === 'clinica'">
+          <div v-if="tab === 'clinica'" class="relative z-10">
 
             <!-- Paso 1: NIT -->
             <div v-if="pasoClinoca === 1">
-              <p class="text-xs text-gray-400 mb-3 text-center">
+              <p class="text-xs text-gray-500 mb-3 text-center">
                 Ingrese el <strong>NIT</strong> o <strong>cédula</strong> de su institución
               </p>
               <div class="mb-3">
-                <div class="flex items-center gap-3 border-2 border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-[#0D2D6B] transition-colors bg-blue-50/40">
-                  <component :is="BuildingIcon" class="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <div class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all neu-input">
+                  <component :is="BuildingIcon" class="w-5 h-5 text-[#16468E] flex-shrink-0" />
                   <input
                     v-model="nit"
                     type="text"
@@ -70,14 +81,19 @@
               </div>
               <p v-if="errorClinica" class="text-xs text-red-500 mb-3 text-center">{{ errorClinica }}</p>
               <button
-                class="w-full py-2.5 rounded-xl bg-[#0D2D6B] text-white font-semibold text-sm hover:bg-[#16468E] transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                class="w-full py-2.5 rounded-xl text-white font-semibold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                style="background: linear-gradient(135deg, #0D2D6B 0%, #16468E 100%); box-shadow: 4px 4px 10px rgba(163,177,198,0.5), -4px -4px 10px rgba(255,255,255,0.8);"
                 :disabled="buscando"
                 @click="buscarClinica"
               >
                 <span v-if="buscando" class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                 Continuar
               </button>
-              <div class="mt-4 text-center border-t border-gray-100 pt-3">
+              <div class="flex items-center justify-center gap-1.5 mt-3">
+                <component :is="ShieldCheckIcon" class="w-3 h-3 text-gray-400" />
+                <span class="text-[10px] text-gray-400 font-medium">Acceso seguro y protegido</span>
+              </div>
+              <div class="mt-4 text-center pt-3" style="border-top: 1px solid #d4deea;">
                 <p class="text-xs text-gray-400 mb-1">¿Su institución no está registrada?</p>
                 <router-link :to="{ name: 'registro-clinica' }" class="text-xs font-semibold text-[#0D2D6B] hover:underline">
                   Solicitar registro de clínica →
@@ -87,61 +103,61 @@
 
             <!-- Paso 2: Elegir método -->
             <div v-if="pasoClinoca === 2">
-              <div class="bg-blue-50 border border-blue-100 rounded-2xl p-3 mb-5 flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-[#0D2D6B] flex items-center justify-center flex-shrink-0">
+              <div class="rounded-xl p-3 mb-5 flex items-center gap-3" style="background: #eef1f6; box-shadow: inset 3px 3px 6px rgba(163,177,198,0.4), inset -3px -3px 6px rgba(255,255,255,0.8);">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg, #16468E 0%, #0D2D6B 100%); box-shadow: 2px 2px 6px rgba(7,26,66,0.3);">
                   <component :is="BuildingIcon" class="w-4 h-4 text-white" />
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-[#0D2D6B]">{{ clinicaNombre }}</p>
-                  <p class="text-xs text-blue-400">NIT: {{ nit }}</p>
+                  <p class="text-xs text-[#16468E]">NIT: {{ nit }}</p>
                 </div>
               </div>
               <p class="text-sm text-gray-500 mb-4 text-center">¿Cómo desea recibir su código?</p>
               <div class="space-y-3">
                 <button
-                  class="w-full flex items-center gap-3 p-3.5 border-2 rounded-2xl transition-all hover:border-[#0D2D6B] hover:bg-blue-50/50"
-                  :class="metodo === 'email' ? 'border-[#0D2D6B] bg-blue-50/50' : 'border-gray-200'"
+                  class="w-full flex items-center gap-3 p-3.5 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  style="background: #eef1f6; box-shadow: 4px 4px 10px rgba(163,177,198,0.5), -4px -4px 10px rgba(255,255,255,0.8);"
                   :disabled="enviando"
                   @click="seleccionarMetodo('email')"
                 >
-                  <div class="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <component :is="MailIcon" class="w-4 h-4 text-[#0D2D6B]" />
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg, #16468E 0%, #0D2D6B 100%); box-shadow: 2px 2px 6px rgba(7,26,66,0.3);">
+                    <component :is="MailIcon" class="w-4 h-4 text-white" />
                   </div>
                   <div class="text-left">
                     <p class="text-sm font-semibold text-gray-800">Correo electrónico</p>
-                    <p class="text-xs text-gray-400">Enlace mágico a su correo</p>
+                    <p class="text-xs text-gray-500">Enlace mágico a su correo</p>
                   </div>
-                  <component :is="ChevronRightIcon" class="w-4 h-4 text-gray-300 ml-auto" />
+                  <component :is="ChevronRightIcon" class="w-4 h-4 text-gray-400 ml-auto" />
                 </button>
                 <button
-                  class="w-full flex items-center gap-3 p-3.5 border-2 rounded-2xl transition-all hover:border-[#0D2D6B] hover:bg-blue-50/50"
-                  :class="metodo === 'sms' ? 'border-[#0D2D6B] bg-blue-50/50' : 'border-gray-200'"
+                  class="w-full flex items-center gap-3 p-3.5 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  style="background: #eef1f6; box-shadow: 4px 4px 10px rgba(163,177,198,0.5), -4px -4px 10px rgba(255,255,255,0.8);"
                   :disabled="enviando"
                   @click="seleccionarMetodo('sms')"
                 >
-                  <div class="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <component :is="SmartphoneIcon" class="w-4 h-4 text-green-600" />
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg, #16468E 0%, #0D2D6B 100%); box-shadow: 2px 2px 6px rgba(7,26,66,0.3);">
+                    <component :is="SmartphoneIcon" class="w-4 h-4 text-white" />
                   </div>
                   <div class="text-left">
                     <p class="text-sm font-semibold text-gray-800">Mensaje de texto (SMS)</p>
-                    <p class="text-xs text-gray-400">Código de 6 dígitos</p>
+                    <p class="text-xs text-gray-500">Código de 6 dígitos</p>
                   </div>
-                  <component :is="ChevronRightIcon" class="w-4 h-4 text-gray-300 ml-auto" />
+                  <component :is="ChevronRightIcon" class="w-4 h-4 text-gray-400 ml-auto" />
                 </button>
               </div>
               <p v-if="errorClinica" class="text-xs text-red-500 mt-3 text-center">{{ errorClinica }}</p>
-              <button class="mt-4 text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1" @click="pasoClinoca = 1; errorClinica = ''">
+              <button class="mt-4 text-xs text-gray-500 hover:text-[#0D2D6B] flex items-center gap-1 transition-colors" @click="pasoClinoca = 1; errorClinica = ''">
                 <component :is="ArrowLeftIcon" class="w-3 h-3" /> Volver
               </button>
             </div>
 
             <!-- Paso 3: Correo enviado -->
             <div v-if="pasoClinoca === 3" class="text-center py-2">
-              <div class="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+              <div class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3" style="background: linear-gradient(135deg, #d1fae5 0%, #6ee7b7 100%); box-shadow: 0 8px 24px rgba(34,197,94,0.25);">
                 <component :is="MailCheckIcon" class="w-7 h-7 text-green-600" />
               </div>
               <h2 class="text-base font-bold text-gray-800 mb-1">¡Revise su correo!</h2>
-              <p class="text-sm text-gray-400 mb-5">Le enviamos un enlace de acceso válido por <strong>15 minutos</strong>.</p>
+              <p class="text-sm text-gray-500 mb-5">Le enviamos un enlace de acceso válido por <strong>15 minutos</strong>.</p>
               <button class="text-xs text-[#0D2D6B] hover:underline" @click="pasoClinoca = 1; nit = ''; errorClinica = ''">
                 Intentar con otro NIT
               </button>
@@ -150,10 +166,10 @@
           </div>
 
           <!-- ── TAB: Personal interno ── -->
-          <div v-if="tab === 'interno'">
+          <div v-if="tab === 'interno'" class="relative z-10">
             <div class="mb-3">
-              <div class="flex items-center gap-3 border-2 border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-[#0D2D6B] transition-colors bg-blue-50/40">
-                <component :is="UserIcon" class="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <div class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all neu-input">
+                <component :is="UserIcon" class="w-4 h-4 text-[#16468E] flex-shrink-0" />
                 <input
                   v-model="form.username"
                   type="text"
@@ -165,8 +181,8 @@
               </div>
             </div>
             <div class="mb-2">
-              <div class="flex items-center gap-3 border-2 border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-[#0D2D6B] transition-colors bg-blue-50/40">
-                <component :is="LockIcon" class="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <div class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all neu-input">
+                <component :is="LockIcon" class="w-4 h-4 text-[#16468E] flex-shrink-0" />
                 <input
                   v-model="form.password"
                   :type="mostrarPassword ? 'text' : 'password'"
@@ -187,7 +203,8 @@
             </div>
             <p v-if="errorInterno" class="text-xs text-red-500 mb-3 text-center">{{ errorInterno }}</p>
             <button
-              class="w-full py-2.5 rounded-xl bg-[#0D2D6B] text-white font-semibold text-sm hover:bg-[#16468E] transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              class="w-full py-2.5 rounded-xl text-white font-semibold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+              style="background: linear-gradient(135deg, #0D2D6B 0%, #16468E 100%); box-shadow: 4px 4px 10px rgba(163,177,198,0.5), -4px -4px 10px rgba(255,255,255,0.8);"
               :disabled="loadingInterno"
               @click="handleLogin"
             >
@@ -196,10 +213,11 @@
             </button>
           </div>
 
-        </div><!-- /cuerpo blanco -->
+        </div><!-- /cuerpo -->
       </div>
 
-      <p class="text-center text-xs text-white/30 mt-5 tracking-wide">
+      <p class="text-center text-xs text-white/30 mt-5 tracking-wide flex items-center justify-center gap-1">
+        <component :is="LockIcon" class="w-3 h-3" />
         © {{ new Date().getFullYear() }} · Clínica Santa Bárbara · Todos los derechos reservados
       </p>
     </div>
@@ -221,6 +239,7 @@ import {
   ChevronRight as ChevronRightIcon,
   Eye as EyeIcon,
   EyeOff as EyeOffIcon,
+  ShieldCheck as ShieldCheckIcon,
 } from '@lucide/vue';
 import { useAuthStore } from '@/stores/auth';
 import { useClinicaAuthStore } from '@/stores/clinicaAuth';
@@ -314,3 +333,29 @@ async function handleLogin() {
   }
 }
 </script>
+
+<style scoped>
+.card-enter {
+  animation: cardEnter 0.5s ease-out;
+}
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.neu-input {
+  background: #eef1f6;
+  box-shadow: inset 3px 3px 6px rgba(163, 177, 198, 0.5), inset -3px -3px 6px rgba(255, 255, 255, 0.8);
+}
+
+.neu-input:focus-within {
+  box-shadow: inset 4px 4px 8px rgba(163, 177, 198, 0.6), inset -4px -4px 8px rgba(255, 255, 255, 0.95), 0 0 0 1.5px rgba(13, 45, 107, 0.15);
+}
+</style>

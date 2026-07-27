@@ -7,9 +7,7 @@
       @click="layout.closeMobileMenu"
     ></div>
 
-    <AppHeader />
-
-    <div class="flex flex-1 mt-[56px] overflow-hidden">
+    <div class="flex flex-1 overflow-hidden">
       <AppSidebar />
 
       <main class="flex-1 flex flex-col min-h-0 p-4 overflow-hidden" style="background:#e8ecf1;">
@@ -25,7 +23,6 @@
 
 <script setup lang="ts">
 import { useLayoutStore } from '@/stores/layout';
-import AppHeader from './AppHeader.vue';
 import AppSidebar from './AppSidebar.vue';
 
 const layout = useLayoutStore();

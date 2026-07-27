@@ -47,7 +47,10 @@ class RoleController extends BaseController
 
     public function getAll(Request $request): JsonResponse
     {
-        abort_unless($request->user()->hasPermission('roles.view'), Response::HTTP_FORBIDDEN);
+        abort_unless(
+            $request->user()->hasPermission('roles.view') || $request->user()->hasPermission('users.view'),
+            Response::HTTP_FORBIDDEN
+        );
 
         $roles = $this->filterPaginated(
             query: Role::query()->with('permissions')->withCount('users'),
