@@ -65,7 +65,7 @@
                 <tr>
                   <td style="padding:14px 20px;">
                     <p style="margin:0;font-size:13px;color:#7a5800;">
-                      ⏱️ <strong>Este enlace es válido por 15 minutos</strong> a partir del momento en que fue enviado. Pasado ese tiempo, deberá solicitar uno nuevo.
+                      ⏱️ <strong>Este enlace es válido por 60 minutos</strong> a partir del momento en que fue enviado. Pasado ese tiempo, deberá solicitar uno nuevo.
                     </p>
                   </td>
                 </tr>

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import http from '@/plugins/axios';
+import { markTab, clearTab, isTabMarked, checkDuplicate as checkTabDuplicate } from '@/utils/tabGuard';
 
 export interface User {
   id: number;
@@ -24,6 +25,8 @@ export interface User {
   }[];
 }
 
+const AUTH_KEY = 'interno';
+
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null);
   const isHydrated = ref(false);
@@ -38,9 +41,15 @@ export const useAuthStore = defineStore('auth', () => {
     const { data } = await http.post('/api/login', credentials);
     user.value = data.data;
     isHydrated.value = true;
+    markTab(AUTH_KEY);
   }
 
   async function fetchUser() {
+    if (!isTabMarked(AUTH_KEY)) {
+      user.value = null;
+      isHydrated.value = true;
+      return;
+    }
     try {
       const { data } = await http.get('/api/user', {
         headers: { 'X-Skip-Auth-Redirect': '1' },
@@ -49,6 +58,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = data.data;
     } catch {
       user.value = null;
+      clearTab(AUTH_KEY);
     } finally {
       isHydrated.value = true;
     }
@@ -58,7 +68,12 @@ export const useAuthStore = defineStore('auth', () => {
     await http.post('/api/logout');
     user.value = null;
     isHydrated.value = false;
+    clearTab(AUTH_KEY);
     window.location.href = '/login';
+  }
+
+  async function checkDuplicate(): Promise<boolean> {
+    return checkTabDuplicate(AUTH_KEY);
   }
 
   function hasPermission(permission: string) {
@@ -77,5 +92,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     fetchUser,
     hasPermission,
+    checkDuplicate,
   };
 });

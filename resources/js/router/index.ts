@@ -129,13 +129,30 @@ router.beforeEach(async (to, from, next) => {
   const auth = useAuthStore();
   const clinicaAuth = useClinicaAuthStore();
 
+  const isPublic = to.matched.some((record) => record.meta.isPublic);
+  const requiresClinicaAuth = to.matched.some((record) => record.meta.requiresClinicaAuth);
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  const requiresGuest = to.matched.some((record) => record.meta.requiresGuest);
+  const permissions = to.matched.flatMap((record) => {
+    if (!record.meta.permissions) return [];
+    return Array.isArray(record.meta.permissions) ? record.meta.permissions : [record.meta.permissions];
+  });
+
   // Rutas totalmente públicas — pasar directo sin hidratar ningún store
-  if (to.meta.isPublic) {
+  if (isPublic) {
     return next();
   }
 
   // Guard para rutas de clínica externa
-  if (to.meta.requiresClinicaAuth) {
+  if (requiresClinicaAuth) {
+    const token = clinicaAuth.getToken();
+    if (!token) {
+      return next({ name: 'login' });
+    }
+    const isOriginal = await clinicaAuth.checkDuplicate();
+    if (!isOriginal) {
+      return next({ name: 'login' });
+    }
     if (!clinicaAuth.isHydrated) {
       await clinicaAuth.fetchClinica();
     }
@@ -146,21 +163,23 @@ router.beforeEach(async (to, from, next) => {
   }
 
   if (!auth.isHydrated) {
+    const isOriginal = await auth.checkDuplicate();
+    if (!isOriginal) {
+      return next({ name: 'login' });
+    }
     await auth.fetchUser();
   }
 
-  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+  if (requiresAuth && !auth.isAuthenticated) {
     return next({ name: 'login' });
   }
 
-  if (to.meta.requiresGuest && auth.isAuthenticated) {
+  if (requiresGuest && auth.isAuthenticated) {
     return next({ name: 'dashboard' });
   }
 
-  if (to.meta.permissions) {
-    const required = Array.isArray(to.meta.permissions)
-      ? to.meta.permissions as string[]
-      : [to.meta.permissions as string];
+  if (permissions.length) {
+    const required = permissions as string[];
     const hasAccess = required.some((p: string) => auth.hasPermission(p));
     if (!hasAccess) {
       ElMessage.error('No tiene permisos para acceder a este módulo.');

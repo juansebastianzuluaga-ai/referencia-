@@ -9,6 +9,16 @@ const http = axios.create({
   },
 });
 
+http.interceptors.request.use((config) => {
+  const token = sessionStorage.getItem('clinica_token');
+
+  if (token && config.url?.startsWith('/api/externo/')) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
 http.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -29,7 +39,9 @@ http.interceptors.response.use(
         }
       }
       // Redirige limpiamente sin mostrar mensajes de error
-      window.location.href = '/login';
+      const isExterno = error.config?.url?.startsWith('/api/externo/');
+      sessionStorage.removeItem('clinica_token');
+      window.location.href = isExterno ? '/login-externo' : '/login';
       return Promise.reject(error); // catch blocks no se ejecutan
     }
 

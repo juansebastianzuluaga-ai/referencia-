@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Clinica;
 use App\Http\Controllers\Controller;
 use App\Mail\NuevaSolicitudReferenciaInterna;
 use App\Models\Clinica;
+use App\Models\ClinicaSession;
 use App\Models\Notification;
 use App\Models\SolicitudReferencia;
 use App\Models\SolicitudReferenciaAdjunto;
@@ -17,9 +18,26 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SolicitudReferenciaController extends Controller
 {
+    private function getClinicaId(Request $request): ?int
+    {
+        $token = $request->bearerToken() ?? $request->header('X-Clinica-Token');
+
+        if (! $token) {
+            return null;
+        }
+
+        $session = ClinicaSession::where('token', hash('sha256', $token))
+            ->where(function ($q): void {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->first();
+
+        return $session?->clinica_id;
+    }
+
     public function index(Request $request): JsonResponse
     {
-        $clinicaId = session('clinica_id');
+        $clinicaId = $this->getClinicaId($request);
 
         if (! $clinicaId) {
             return response()->json(['message' => 'No autenticado'], 401);
@@ -35,7 +53,7 @@ class SolicitudReferenciaController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $clinicaId = session('clinica_id');
+        $clinicaId = $this->getClinicaId($request);
 
         if (! $clinicaId) {
             return response()->json(['message' => 'No autenticado'], 401);
@@ -139,9 +157,9 @@ class SolicitudReferenciaController extends Controller
         }
     }
 
-    public function show(int $id): JsonResponse
+    public function show(int $id, Request $request): JsonResponse
     {
-        $clinicaId = session('clinica_id');
+        $clinicaId = $this->getClinicaId($request);
 
         $solicitud = SolicitudReferencia::where('clinica_id', $clinicaId)
             ->with(['adjuntos', 'eventos'])
@@ -150,9 +168,9 @@ class SolicitudReferenciaController extends Controller
         return response()->json(['data' => $solicitud]);
     }
 
-    public function descargarAdjunto(int $solicitudId, int $adjuntoId): BinaryFileResponse
+    public function descargarAdjunto(int $solicitudId, int $adjuntoId, Request $request): BinaryFileResponse
     {
-        $clinicaId = session('clinica_id');
+        $clinicaId = $this->getClinicaId($request);
 
         if (! $clinicaId) {
             abort(401);

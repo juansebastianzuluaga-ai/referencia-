@@ -69,21 +69,30 @@
                 <div class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all neu-input">
                   <component :is="BuildingIcon" class="w-5 h-5 text-[#16468E] flex-shrink-0" />
                   <input
-                    v-model="nit"
+                    v-model="nitModel"
                     type="text"
-                    placeholder="Ej: 900123456-7"
+                    placeholder="Ej: 900.123.456-7"
                     autocomplete="off"
                     class="flex-1 bg-transparent outline-none text-gray-800 text-sm placeholder:text-gray-400"
                     :disabled="buscando"
                     @keyup.enter="buscarClinica"
                   />
+                  <component
+                    v-if="nit.length > 0"
+                    :is="nitValido ? CheckCircleIcon : XCircleIcon"
+                    class="w-5 h-5 flex-shrink-0"
+                    :class="nitValido ? 'text-green-500' : 'text-red-400'"
+                  />
                 </div>
+                <p v-if="nit.length > 0 && !nitValido" class="text-[10px] text-red-400 mt-1 ml-1">
+                  Dígito de verificación incorrecto
+                </p>
               </div>
               <p v-if="errorClinica" class="text-xs text-red-500 mb-3 text-center">{{ errorClinica }}</p>
               <button
                 class="w-full py-2.5 rounded-xl text-white font-semibold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                 style="background: linear-gradient(135deg, #0D2D6B 0%, #16468E 100%); box-shadow: 4px 4px 10px rgba(163,177,198,0.5), -4px -4px 10px rgba(255,255,255,0.8);"
-                :disabled="buscando"
+                :disabled="buscando || !nitValido"
                 @click="buscarClinica"
               >
                 <span v-if="buscando" class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -225,7 +234,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import {
@@ -240,9 +249,12 @@ import {
   Eye as EyeIcon,
   EyeOff as EyeOffIcon,
   ShieldCheck as ShieldCheckIcon,
+  CheckCircle as CheckCircleIcon,
+  XCircle as XCircleIcon,
 } from '@lucide/vue';
 import { useAuthStore } from '@/stores/auth';
 import { useClinicaAuthStore } from '@/stores/clinicaAuth';
+import { formatearNit, validarNit, normalizarNit } from '@/utils/nit';
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -263,18 +275,28 @@ function cambiarTab(t: 'clinica' | 'interno') {
 // ── Clínica externa ──────────────────────────────────────────────────────────
 const pasoClinoca = ref<1 | 2 | 3>(1);
 const nit = ref('');
+const nitValido = ref(false);
 const metodo = ref<'email' | 'sms' | null>(null);
 const clinicaNombre = ref('');
 const errorClinica = ref('');
 const buscando = ref(false);
 const enviando = ref(false);
 
+const nitModel = computed({
+  get: () => nit.value,
+  set: (val) => {
+    nit.value = formatearNit(val);
+    nitValido.value = validarNit(nit.value);
+  },
+});
+
 async function buscarClinica() {
   if (!nit.value.trim()) { errorClinica.value = 'Ingrese el NIT o cédula'; return; }
+  if (!nitValido.value) { errorClinica.value = 'El dígito de verificación del NIT no es correcto'; return; }
   try {
     buscando.value = true;
     errorClinica.value = '';
-    const resultado = await clinicaAuthStore.buscarClinica(nit.value.trim());
+    const resultado = await clinicaAuthStore.buscarClinica(normalizarNit(nit.value));
     clinicaNombre.value = resultado.nombre;
     pasoClinoca.value = 2;
   } catch (e: any) {

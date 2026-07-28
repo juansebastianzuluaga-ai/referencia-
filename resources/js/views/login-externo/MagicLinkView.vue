@@ -118,6 +118,7 @@ const logoBlanco = '/images/logo-w.png';
 const estado = ref<'esperando' | 'cargando' | 'exito' | 'error'>('esperando');
 const nombreClinica = ref('');
 const mensajeError = ref('El enlace ha expirado o ya fue utilizado. Solicite uno nuevo.');
+const procesando = ref(false);
 
 onMounted(() => {
   const token = route.params.token as string;
@@ -128,11 +129,12 @@ onMounted(() => {
 
 async function acceder() {
   const token = route.params.token as string;
-  if (!token) {
+  if (!token || procesando.value) {
     estado.value = 'error';
     return;
   }
 
+  procesando.value = true;
   estado.value = 'cargando';
   try {
     const resultado = await clinicaAuthStore.verificarMagicLink(token);
@@ -143,6 +145,7 @@ async function acceder() {
     }, 1500);
   } catch (e: any) {
     estado.value = 'error';
+    procesando.value = false;
     mensajeError.value =
       e?.response?.data?.message ?? 'El enlace ha expirado o ya fue utilizado. Solicite uno nuevo.';
   }

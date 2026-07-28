@@ -7,6 +7,7 @@ use App\Mail\ClinicaRegistroConfirmacion;
 use App\Mail\ClinicaRegistroNotificacionInterna;
 use App\Models\Clinica;
 use App\Models\ClinicaAuthToken;
+use App\Models\ClinicaSession;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -91,7 +92,9 @@ class LoginExternoController extends Controller
             'nit' => ['required', 'string', 'max:20'],
         ]);
 
-        $clinica = Clinica::where('nit', $request->nit)
+        $nitNormalizado = preg_replace('/\D/', '', $request->nit);
+
+        $clinica = Clinica::whereRaw("REGEXP_REPLACE(nit, '[^0-9]', '') = ?", [$nitNormalizado])
             ->where('is_active', true)
             ->first();
 
@@ -116,7 +119,9 @@ class LoginExternoController extends Controller
             'metodo' => ['required', 'in:email,sms'],
         ]);
 
-        $clinica = Clinica::where('nit', $request->nit)
+        $nitNormalizado = preg_replace('/\D/', '', $request->nit);
+
+        $clinica = Clinica::whereRaw("REGEXP_REPLACE(nit, '[^0-9]', '') = ?", [$nitNormalizado])
             ->where('is_active', true)
             ->first();
 
@@ -150,7 +155,9 @@ class LoginExternoController extends Controller
             'codigo' => ['required', 'string', 'size:6'],
         ]);
 
-        $clinica = Clinica::where('nit', $request->nit)
+        $nitNormalizado = preg_replace('/\D/', '', $request->nit);
+
+        $clinica = Clinica::whereRaw("REGEXP_REPLACE(nit, '[^0-9]', '') = ?", [$nitNormalizado])
             ->where('is_active', true)
             ->first();
 
@@ -173,10 +180,11 @@ class LoginExternoController extends Controller
 
         $tokenRecord->update(['used_at' => now()]);
 
-        $request->session()->put('clinica_id', $clinica->id);
+        $sessionToken = $this->createSessionToken($clinica);
 
         return response()->json([
             'data' => $this->formatClinica($clinica),
+            'token' => $sessionToken,
         ]);
     }
 
@@ -190,12 +198,12 @@ class LoginExternoController extends Controller
         ]);
 
         $tokenRecord = ClinicaAuthToken::where('tipo', 'magic_link')
+            ->where('token', hash('sha256', $request->token))
             ->whereNull('used_at')
             ->where('expires_at', '>', now())
             ->first();
 
-        // Verificar el token hasheado
-        if (! $tokenRecord || ! hash_equals($tokenRecord->token, hash('sha256', $request->token))) {
+        if (! $tokenRecord) {
             return response()->json([
                 'message' => 'El enlace ha expirado o ya fue utilizado. Solicite uno nuevo.',
             ], 422);
@@ -209,29 +217,22 @@ class LoginExternoController extends Controller
             return response()->json(['message' => 'Clínica no autorizada.'], 403);
         }
 
-        $request->session()->put('clinica_id', $clinica->id);
+        $sessionToken = $this->createSessionToken($clinica);
 
         return response()->json([
             'data' => $this->formatClinica($clinica),
+            'token' => $sessionToken,
         ]);
     }
 
     /**
-     * Retorna los datos de la clínica autenticada en sesión.
+     * Retorna los datos de la clínica autenticada mediante token.
      */
     public function clinicaActual(Request $request): JsonResponse
     {
-        $clinicaId = $request->session()->get('clinica_id');
+        $clinica = $this->clinicaFromToken($request);
 
-        if (! $clinicaId) {
-            return response()->json(['message' => 'No autenticado.'], 401);
-        }
-
-        $clinica = Clinica::find($clinicaId);
-
-        if (! $clinica || ! $clinica->is_active) {
-            $request->session()->forget('clinica_id');
-
+        if (! $clinica) {
             return response()->json(['message' => 'No autenticado.'], 401);
         }
 
@@ -239,16 +240,73 @@ class LoginExternoController extends Controller
     }
 
     /**
-     * Cierra la sesión de la clínica.
+     * Cierra la sesión de la clínica (invalida el token).
      */
     public function logout(Request $request): JsonResponse
     {
-        $request->session()->forget('clinica_id');
+        $token = $this->extractToken($request);
+
+        if ($token) {
+            ClinicaSession::where('token', hash('sha256', $token))->delete();
+        }
 
         return response()->json(['message' => 'Sesión cerrada.']);
     }
 
     // ── Helpers privados ─────────────────────────────────────────────────────
+
+    private function createSessionToken(Clinica $clinica): string
+    {
+        $plain = Str::random(64);
+
+        ClinicaSession::create([
+            'clinica_id' => $clinica->id,
+            'token' => hash('sha256', $plain),
+            'expires_at' => now()->addDays(30),
+        ]);
+
+        return $plain;
+    }
+
+    private function extractToken(Request $request): ?string
+    {
+        $bearer = $request->bearerToken();
+
+        if ($bearer) {
+            return $bearer;
+        }
+
+        return $request->header('X-Clinica-Token');
+    }
+
+    public function clinicaFromToken(Request $request): ?Clinica
+    {
+        $plain = $this->extractToken($request);
+
+        if (! $plain) {
+            return null;
+        }
+
+        $session = ClinicaSession::where('token', hash('sha256', $plain))
+            ->where(function ($q): void {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->first();
+
+        if (! $session) {
+            return null;
+        }
+
+        $clinica = $session->clinica;
+
+        if (! $clinica || ! $clinica->is_active) {
+            $session->delete();
+
+            return null;
+        }
+
+        return $clinica;
+    }
 
     private function enviarMagicLink(Clinica $clinica): void
     {
@@ -258,7 +316,7 @@ class LoginExternoController extends Controller
             'clinica_id' => $clinica->id,
             'tipo' => 'magic_link',
             'token' => hash('sha256', $tokenPlano),
-            'expires_at' => now()->addMinutes(15),
+            'expires_at' => now()->addMinutes(60),
         ]);
 
         $url = url("/login-externo/magic/{$tokenPlano}");
