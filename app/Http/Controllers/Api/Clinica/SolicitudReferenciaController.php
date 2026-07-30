@@ -60,8 +60,8 @@ class SolicitudReferenciaController extends Controller
         }
 
         $validated = $request->validate([
-            'fecha' => ['required', 'date'],
-            'hora' => ['required', 'date_format:H:i'],
+            'fecha' => ['nullable', 'date'],
+            'hora' => ['nullable', 'date_format:H:i'],
             'primer_nombre' => ['required', 'string', 'max:80'],
             'segundo_nombre' => ['nullable', 'string', 'max:80'],
             'primer_apellido' => ['required', 'string', 'max:80'],
@@ -81,10 +81,12 @@ class SolicitudReferenciaController extends Controller
             'gestante' => ['nullable', 'boolean'],
             'condicion_especial' => ['nullable', 'string', 'max:250'],
             'observaciones' => ['nullable', 'string'],
-            'adjuntos' => ['nullable', 'array', 'max:5'],
-            'adjuntos.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'adjuntos' => ['nullable', 'array', 'max:10'],
+            'adjuntos.*' => ['file', 'mimes:pdf,jpg,jpeg,png,gif,webp,bmp,tiff,svg,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,rar', 'max:10240'],
         ]);
 
+        $validated['fecha'] ??= now()->toDateString();
+        $validated['hora'] ??= now()->format('H:i');
         $validated['clinica_id'] = $clinicaId;
         $validated['estado'] = 'pendiente';
 

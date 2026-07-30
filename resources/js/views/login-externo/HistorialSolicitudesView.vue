@@ -22,6 +22,8 @@
         <option value="">Todos los estados</option>
         <option value="pendiente">Pendientes</option>
         <option value="aceptado">Aceptadas</option>
+        <option value="en_espera">En espera</option>
+        <option value="completado">Completadas</option>
         <option value="negado">Negadas</option>
       </select>
       <select v-model="filtroEspecialidad" class="filter-select shrink-0">
@@ -41,35 +43,35 @@
 
     <!-- ── Resumen rápido ── -->
     <div class="grid grid-cols-3 gap-3 mb-4">
-      <div class="resumen-card rounded-xl p-3 flex items-center gap-3 anim-slide-up" style="animation-delay:0.05s">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:#fef3c7; color:#d97706;">
+      <div class="resumen-card resumen-card--amber rounded-xl p-3 flex items-center gap-3 anim-slide-up" style="animation-delay:0.05s">
+        <div class="resumen-icon">
           <component :is="ClockIcon" class="w-5 h-5" />
         </div>
-        <div>
-          <p class="text-[10px]" style="color:#8a9ab5;">Pendientes</p>
-          <p class="text-xl font-extrabold" style="color:#d97706;">{{ resumen.pendientes }}</p>
+        <div class="relative z-10">
+          <p class="resumen-label">Pendientes</p>
+          <p class="resumen-value">{{ resumen.pendientes }}</p>
         </div>
-        <div class="resumen-bar ml-auto" style="background:#fef3c7;"><div class="h-full rounded-full" :style="{ width: Math.round(resumen.pendientes / Math.max(1, solicitudes.length) * 100) + '%', background:'#fbbf24' }"></div></div>
+        <div class="resumen-bar ml-auto"><div class="h-full rounded-full" :style="{ width: Math.round(resumen.pendientes / Math.max(1, solicitudes.length) * 100) + '%' }"></div></div>
       </div>
-      <div class="resumen-card rounded-xl p-3 flex items-center gap-3 anim-slide-up" style="animation-delay:0.1s">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:#dcfce7; color:#16a34a;">
+      <div class="resumen-card resumen-card--green rounded-xl p-3 flex items-center gap-3 anim-slide-up" style="animation-delay:0.1s">
+        <div class="resumen-icon">
           <component :is="CheckCircleIcon" class="w-5 h-5" />
         </div>
-        <div>
-          <p class="text-[10px]" style="color:#8a9ab5;">Aceptadas</p>
-          <p class="text-xl font-extrabold" style="color:#16a34a;">{{ resumen.aceptadas }}</p>
+        <div class="relative z-10">
+          <p class="resumen-label">Aceptadas</p>
+          <p class="resumen-value">{{ resumen.aceptadas }}</p>
         </div>
-        <div class="resumen-bar ml-auto" style="background:#dcfce7;"><div class="h-full rounded-full" :style="{ width: Math.round(resumen.aceptadas / Math.max(1, solicitudes.length) * 100) + '%', background:'#22c55e' }"></div></div>
+        <div class="resumen-bar ml-auto"><div class="h-full rounded-full" :style="{ width: Math.round(resumen.aceptadas / Math.max(1, solicitudes.length) * 100) + '%' }"></div></div>
       </div>
-      <div class="resumen-card rounded-xl p-3 flex items-center gap-3 anim-slide-up" style="animation-delay:0.15s">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:#fee2e2; color:#dc2626;">
+      <div class="resumen-card resumen-card--red rounded-xl p-3 flex items-center gap-3 anim-slide-up" style="animation-delay:0.15s">
+        <div class="resumen-icon">
           <component :is="XCircleIcon" class="w-5 h-5" />
         </div>
-        <div>
-          <p class="text-[10px]" style="color:#8a9ab5;">Negadas</p>
-          <p class="text-xl font-extrabold" style="color:#dc2626;">{{ resumen.negadas }}</p>
+        <div class="relative z-10">
+          <p class="resumen-label">Negadas</p>
+          <p class="resumen-value">{{ resumen.negadas }}</p>
         </div>
-        <div class="resumen-bar ml-auto" style="background:#fee2e2;"><div class="h-full rounded-full" :style="{ width: Math.round(resumen.negadas / Math.max(1, solicitudes.length) * 100) + '%', background:'#f87171' }"></div></div>
+        <div class="resumen-bar ml-auto"><div class="h-full rounded-full" :style="{ width: Math.round(resumen.negadas / Math.max(1, solicitudes.length) * 100) + '%' }"></div></div>
       </div>
     </div>
 
@@ -139,9 +141,9 @@
               <td class="px-4 py-3 hidden lg:table-cell text-xs" style="color:#475569;">{{ formatFecha(sol.created_at) }}</td>
               <td class="px-4 py-3">
                 <span class="estado-badge text-[10px] font-bold px-2.5 py-1 rounded-full"
-                  :class="sol.estado === 'pendiente' ? 'estado-pendiente' : sol.estado === 'aceptado' ? 'estado-aceptado' : 'estado-negado'"
+                  :class="'estado-' + sol.estado"
                 >
-                  {{ sol.estado === 'pendiente' ? 'Pendiente' : sol.estado === 'aceptado' ? 'Aceptada' : 'Negada' }}
+                  {{ estadoLabel(sol.estado) }}
                 </span>
               </td>
               <td class="px-4 py-3 text-right">
@@ -173,7 +175,7 @@
         >
           <div class="flex items-center gap-2.5 mb-2">
             <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-bold"
-              :style="{ background: sol.estado === 'pendiente' ? '#fef3c7' : sol.estado === 'aceptado' ? '#dcfce7' : '#fee2e2', color: sol.estado === 'pendiente' ? '#d97706' : sol.estado === 'aceptado' ? '#16a34a' : '#dc2626' }">
+              :style="{ background: sol.estado === 'pendiente' ? '#fef3c7' : sol.estado === 'aceptado' ? '#dcfce7' : sol.estado === 'en_espera' ? '#dbeafe' : sol.estado === 'completado' ? '#e0e7ff' : '#fee2e2', color: sol.estado === 'pendiente' ? '#d97706' : sol.estado === 'aceptado' ? '#16a34a' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#dc2626' }">
               {{ initialesPaciente(sol) }}
             </div>
             <div class="min-w-0 flex-1">
@@ -181,9 +183,9 @@
               <p class="text-[10px] truncate" style="color:#8a9ab5;">{{ sol.tipo_documento }} {{ sol.numero_documento }}</p>
             </div>
             <span class="estado-badge text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0"
-              :class="sol.estado === 'pendiente' ? 'estado-pendiente' : sol.estado === 'aceptado' ? 'estado-aceptado' : 'estado-negado'"
+              :class="'estado-' + sol.estado"
             >
-              {{ sol.estado === 'pendiente' ? 'Pendiente' : sol.estado === 'aceptado' ? 'Aceptada' : 'Negada' }}
+              {{ estadoLabel(sol.estado) }}
             </span>
           </div>
           <div class="flex items-center gap-3 text-[10px]" style="color:#64748b;">
@@ -211,7 +213,7 @@
             <div class="detalle-head-glow"></div>
             <div class="detalle-head-icon">
               <component
-                :is="solicitudSeleccionada.estado === 'aceptado' ? CheckCircleIcon : solicitudSeleccionada.estado === 'negado' ? XCircleIcon : ClockIcon"
+                :is="solicitudSeleccionada.estado === 'aceptado' ? CheckCircleIcon : solicitudSeleccionada.estado === 'negado' ? XCircleIcon : solicitudSeleccionada.estado === 'en_espera' ? ClockIcon : solicitudSeleccionada.estado === 'completado' ? CheckCircleIcon : ClockIcon"
                 class="w-7 h-7"
               />
             </div>
@@ -220,7 +222,7 @@
               <p class="detalle-head-sub">#{{ solicitudSeleccionada.id }} · {{ formatFecha(solicitudSeleccionada.created_at) }}</p>
             </div>
             <div class="detalle-head-badge" :class="'badge-' + solicitudSeleccionada.estado">
-              {{ solicitudSeleccionada.estado === 'pendiente' ? 'Pendiente' : solicitudSeleccionada.estado === 'aceptado' ? 'Aceptado' : 'Negado' }}
+              {{ estadoLabel(solicitudSeleccionada.estado) }}
             </div>
             <button class="detalle-head-pdf" @click="exportarPdf">
               <component :is="FileDownIcon" class="w-4 h-4" />
@@ -443,12 +445,16 @@ function initialesPaciente(solicitud: any): string {
   return `${solicitud.primer_nombre?.[0] ?? ''}${solicitud.primer_apellido?.[0] ?? ''}`.toUpperCase();
 }
 
+function estadoLabel(estado: string): string {
+  return { pendiente: 'Pendiente', aceptado: 'Aceptada', en_espera: 'En espera', completado: 'Completada', negado: 'Negada' }[estado] ?? estado;
+}
+
 function exportarPdf() {
   const s = solicitudSeleccionada.value;
   if (!s) return;
 
-  const estadoText = s.estado === 'pendiente' ? 'Pendiente' : s.estado === 'aceptado' ? 'Aceptado' : 'Negado';
-  const estadoColor = s.estado === 'pendiente' ? '#f59e0b' : s.estado === 'aceptado' ? '#22c55e' : '#ef4444';
+  const estadoText = estadoLabel(s.estado);
+  const estadoColor = s.estado === 'pendiente' ? '#f59e0b' : s.estado === 'aceptado' ? '#22c55e' : s.estado === 'en_espera' ? '#3b82f6' : s.estado === 'completado' ? '#6366f1' : '#ef4444';
   const paciente = `${s.primer_nombre} ${s.segundo_nombre ?? ''} ${s.primer_apellido} ${s.segundo_apellido ?? ''}`.trim();
 
   const win = window.open('', '_blank', 'width=800,height=900');
@@ -601,37 +607,99 @@ onUnmounted(() => {
 
 /* ── Resumen ── */
 .resumen-card {
-  background: #fff;
-  border: 1px solid #d4deea;
-  box-shadow: 0 4px 16px rgba(22, 70, 142, .08);
   border-radius: 14px;
   position: relative;
   overflow: hidden;
-  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1), border-color .3s ease;
+  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1), border-color .3s ease;
+  border: 2px solid transparent;
+  min-height: 72px;
 }
 .resumen-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #0d2d6b, #16468e, #2f70bb);
-  opacity: .6;
-  transition: opacity .28s ease, height .28s ease;
+  top: 0; left: 0; width: 5px; height: 100%;
+  opacity: .95;
 }
+.resumen-card::after {
+  content: '';
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  filter: blur(18px);
+  opacity: .25;
+}
+.resumen-card--amber {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: rgba(251, 191, 36, .5);
+  box-shadow: 0 10px 28px rgba(217, 119, 6, .15), 0 0 0 1px rgba(255,255,255,.5) inset;
+}
+.resumen-card--amber::before { background: #d97706; }
+.resumen-card--amber::after { background: #fbbf24; }
+.resumen-card--amber .resumen-icon { background: #fef3c7; color: #d97706; box-shadow: 0 4px 14px rgba(217,119,6,.25); }
+.resumen-card--amber .resumen-value { color: #b45309; }
+.resumen-card--amber .resumen-bar { background: rgba(251,191,36,.3); }
+.resumen-card--amber .resumen-bar > div { background: linear-gradient(90deg, #f59e0b, #fbbf24); box-shadow: 0 0 8px rgba(245,158,11,.5); }
+.resumen-card--green {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-color: rgba(74, 222, 128, .5);
+  box-shadow: 0 10px 28px rgba(22, 163, 74, .15), 0 0 0 1px rgba(255,255,255,.5) inset;
+}
+.resumen-card--green::before { background: #16a34a; }
+.resumen-card--green::after { background: #4ade80; }
+.resumen-card--green .resumen-icon { background: #dcfce7; color: #16a34a; box-shadow: 0 4px 14px rgba(22,163,74,.25); }
+.resumen-card--green .resumen-value { color: #15803d; }
+.resumen-card--green .resumen-bar { background: rgba(74,222,128,.3); }
+.resumen-card--green .resumen-bar > div { background: linear-gradient(90deg, #22c55e, #4ade80); box-shadow: 0 0 8px rgba(34,197,94,.5); }
+.resumen-card--red {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: rgba(248, 113, 113, .5);
+  box-shadow: 0 10px 28px rgba(220, 38, 38, .15), 0 0 0 1px rgba(255,255,255,.5) inset;
+}
+.resumen-card--red::before { background: #dc2626; }
+.resumen-card--red::after { background: #f87171; }
+.resumen-card--red .resumen-icon { background: #fee2e2; color: #dc2626; box-shadow: 0 4px 14px rgba(220,38,38,.25); }
+.resumen-card--red .resumen-value { color: #b91c1c; }
+.resumen-card--red .resumen-bar { background: rgba(248,113,113,.3); }
+.resumen-card--red .resumen-bar > div { background: linear-gradient(90deg, #ef4444, #f87171); box-shadow: 0 0 8px rgba(239,68,68,.5); }
 .resumen-card:hover {
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 18px 34px rgba(22, 70, 142, .15);
-  border-color: #b8c8de;
+  transform: translateY(-10px) scale(1.04);
+  border-color: transparent;
 }
-.resumen-card:hover::before {
-  opacity: 1;
-  height: 5px;
+.resumen-card--amber:hover { box-shadow: 0 28px 56px rgba(217, 119, 6, .22); }
+.resumen-card--green:hover { box-shadow: 0 28px 56px rgba(22, 163, 74, .22); }
+.resumen-card--red:hover { box-shadow: 0 28px 56px rgba(220, 38, 38, .22); }
+.resumen-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.resumen-card:hover .resumen-icon {
+  transform: scale(1.18) rotate(-6deg);
+}
+.resumen-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.resumen-value {
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.8);
 }
 .resumen-bar {
-  width: 36px;
-  height: 4px;
+  width: 42px;
+  height: 6px;
   border-radius: 999px;
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.08);
 }
 .resumen-bar > div {
   transition: width .7s cubic-bezier(.22,1,.36,1);
@@ -718,7 +786,29 @@ onUnmounted(() => {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #f87171;
+  background: #ef4444;
+}
+.estado-en_espera {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.estado-en_espera::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #3b82f6;
+}
+.estado-completado {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+.estado-completado::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #6366f1;
 }
 
 /* ── Skeleton ── */
@@ -968,6 +1058,8 @@ onUnmounted(() => {
 }
 .badge-pendiente { background: #f59e0b; color: #fff; }
 .badge-aceptado { background: #22c55e; color: #fff; }
+.badge-en_espera { background: #3b82f6; color: #fff; }
+.badge-completado { background: #6366f1; color: #fff; }
 .badge-negado { background: #ef4444; color: #fff; }
 
 .detalle-head-pdf {

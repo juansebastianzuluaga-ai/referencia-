@@ -2,8 +2,12 @@
   <div class="ph-solicitudes h-full flex flex-col gap-2 p-3 sm:p-4 overflow-hidden">
 
     <!-- ── Header ── -->
-    <div class="flex items-center justify-between shrink-0">
-      <h1 class="text-lg font-bold text-gray-900">Solicitudes de referencia</h1>
+    <div class="sol-header shrink-0">
+      <div class="sol-header-icon">
+        <component :is="ClipboardListIcon" class="w-5 h-5" />
+      </div>
+      <h1 class="sol-header-title">Solicitudes de referencia</h1>
+      <div class="sol-header-spacer"></div>
       <el-button type="primary" size="small" @click="cargar">
         <component :is="RefreshIcon" class="w-3.5 h-3.5 mr-1" :class="{ 'animate-spin': cargando }" />
         Actualizar
@@ -11,7 +15,7 @@
     </div>
 
     <!-- ── Tabs + Búsqueda ── -->
-    <div class="flex items-center gap-3 shrink-0 flex-wrap">
+    <div class="sol-filter-bar shrink-0">
       <div class="sol-tabs">
         <button
           v-for="tab in tabs"
@@ -24,6 +28,7 @@
           <span class="sol-tab-count">{{ tab.count }}</span>
         </button>
       </div>
+      <div class="sol-filter-divider"></div>
       <el-input
         v-model="filtro.buscar"
         placeholder="Buscar paciente, EPS, especialidad..."
@@ -35,6 +40,10 @@
           <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
         </template>
       </el-input>
+      <el-button v-if="filtro.buscar || tabActiva !== 'todas'" type="danger" size="small" round @click="limpiarFiltros">
+        <component :is="RefreshIcon" class="w-3.5 h-3.5 mr-1" />
+        Borrar filtros
+      </el-button>
     </div>
 
     <!-- ── Tabla ── -->
@@ -85,14 +94,14 @@
                   <div class="sol-table-paciente">
                     <div class="sol-table-avatar"
                       :style="{
-                        background: s.estado === 'pendiente' ? '#fef3c7' : s.estado === 'aceptado' ? '#dcfce7' : '#fee2e2',
-                        color: s.estado === 'pendiente' ? '#d97706' : s.estado === 'aceptado' ? '#16a34a' : '#dc2626'
+                        background: s.estado === 'pendiente' ? '#fef3c7' : s.estado === 'aceptado' ? '#dcfce7' : s.estado === 'en_espera' ? '#dbeafe' : s.estado === 'completado' ? '#e0e7ff' : '#fee2e2',
+                        color: s.estado === 'pendiente' ? '#d97706' : s.estado === 'aceptado' ? '#16a34a' : s.estado === 'en_espera' ? '#2563eb' : s.estado === 'completado' ? '#4f46e5' : '#dc2626'
                       }">
                       {{ inicialesPaciente(s) }}
                     </div>
                     <div>
                       <p class="sol-table-name">{{ nombreCompleto(s) }}</p>
-                      <p class="sol-table-doc">{{ s.tipo_documento }} {{ s.numero_documento }} · {{ s.eps }}</p>
+                      <p class="sol-table-doc">{{ formatFecha(s.created_at) }} · {{ s.hora }}</p>
                     </div>
                   </div>
                 </td>
@@ -101,6 +110,8 @@
                   <span class="sol-table-status" :class="{
                     'sol-status-pending': s.estado === 'pendiente',
                     'sol-status-accepted': s.estado === 'aceptado',
+                    'sol-status-waiting': s.estado === 'en_espera',
+                    'sol-status-completed': s.estado === 'completado',
                     'sol-status-rejected': s.estado === 'negado',
                   }">
                     <span class="sol-status-dot"></span>
@@ -113,11 +124,19 @@
                       <component :is="EyeIcon" class="w-3 h-3 mr-0.5" />
                       Ver
                     </el-button>
-                    <el-button v-if="s.estado !== 'aceptado'" type="success" size="small" @click="abrirAceptar(s)">
+                    <el-button v-if="s.estado === 'pendiente'" type="success" size="small" @click="abrirAceptar(s)">
                       <component :is="CheckIcon" class="w-3 h-3 mr-0.5" />
                       Aceptar
                     </el-button>
-                    <el-button v-if="s.estado !== 'negado'" type="danger" size="small" @click="abrirNegar(s)">
+                    <el-button v-if="s.estado === 'aceptado'" type="primary" size="small" @click="marcarEnEspera(s)">
+                      <component :is="ClockIcon" class="w-3 h-3 mr-0.5" />
+                      En espera
+                    </el-button>
+                    <el-button v-if="s.estado === 'en_espera'" type="primary" size="small" @click="marcarCompletado(s)">
+                      <component :is="CheckCircleIcon" class="w-3 h-3 mr-0.5" />
+                      Completar
+                    </el-button>
+                    <el-button v-if="s.estado !== 'negado' && s.estado !== 'completado'" type="danger" size="small" @click="abrirNegar(s)">
                       <component :is="XIcon" class="w-3 h-3 mr-0.5" />
                       Negar
                     </el-button>
@@ -139,7 +158,7 @@
             <div class="detalle-head-glow"></div>
             <div class="detalle-head-icon">
               <component
-                :is="solicitudSeleccionada.estado === 'aceptado' ? CheckCircleIcon : solicitudSeleccionada.estado === 'negado' ? XCircleIcon : ClockIcon"
+                :is="solicitudSeleccionada.estado === 'aceptado' ? CheckCircleIcon : solicitudSeleccionada.estado === 'negado' ? XCircleIcon : solicitudSeleccionada.estado === 'en_espera' ? ClockIcon : solicitudSeleccionada.estado === 'completado' ? CheckCircleIcon : ClockIcon"
                 class="w-6 h-6"
               />
             </div>
@@ -289,14 +308,10 @@
         </div>
       </template>
       <div class="space-y-3 px-4 py-4">
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 gap-3">
           <div>
             <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Hora de respuesta <span class="text-red-400">*</span></label>
             <el-time-select v-model="formAceptar.hora_respuesta" placeholder="HH:MM" start="00:00" step="00:05" end="23:55" class="w-full" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold mb-1" style="color:#334e70;">N.° de ingreso</label>
-            <el-input v-model.number="formAceptar.numero_ingreso" type="number" placeholder="Opcional" />
           </div>
         </div>
         <div>
@@ -410,7 +425,7 @@ interface Solicitud {
   gestante?: boolean;
   condicion_especial?: string;
   observaciones?: string;
-  estado: 'pendiente' | 'aceptado' | 'negado';
+  estado: 'pendiente' | 'aceptado' | 'en_espera' | 'completado' | 'negado';
   codigo_aceptacion?: string;
   hora_respuesta?: string;
   motivo_negacion?: string;
@@ -425,7 +440,7 @@ const solicitudes = ref<Solicitud[]>([]);
 const cargando = ref(false);
 const procesando = ref(false);
 const filtro = ref({ buscar: '' });
-const tabActiva = ref<'todas' | 'pendiente' | 'aceptado' | 'negado'>('todas');
+const tabActiva = ref<'todas' | 'pendiente' | 'aceptado' | 'en_espera' | 'completado' | 'negado'>('todas');
 
 const modalDetalle = ref(false);
 const modalHistoriaClinica = ref(false);
@@ -433,13 +448,15 @@ const modalAceptar = ref(false);
 const modalNegar = ref(false);
 const solicitudSeleccionada = ref<Solicitud | null>(null);
 
-const formAceptar = ref({ hora_respuesta: '', nombre_quien_responde: '', numero_ingreso: null as number | null, observaciones_respuesta: '' });
+const formAceptar = ref({ hora_respuesta: '', nombre_quien_responde: '', observaciones_respuesta: '' });
 const formNegar = ref({ hora_respuesta: '', motivo_negacion: '', nombre_quien_responde: '', observaciones_respuesta: '' });
 
 const resumen = computed(() => ({
   total: solicitudes.value.length,
   pendientes: solicitudes.value.filter(s => s.estado === 'pendiente').length,
   aceptadas: solicitudes.value.filter(s => s.estado === 'aceptado').length,
+  enEspera: solicitudes.value.filter(s => s.estado === 'en_espera').length,
+  completadas: solicitudes.value.filter(s => s.estado === 'completado').length,
   negadas: solicitudes.value.filter(s => s.estado === 'negado').length,
 }));
 
@@ -447,6 +464,8 @@ const tabs = computed(() => [
   { label: 'Todas', value: 'todas', count: resumen.value.total },
   { label: 'Pendientes', value: 'pendiente', count: resumen.value.pendientes },
   { label: 'Aceptadas', value: 'aceptado', count: resumen.value.aceptadas },
+  { label: 'En espera', value: 'en_espera', count: resumen.value.enEspera },
+  { label: 'Completadas', value: 'completado', count: resumen.value.completadas },
   { label: 'Negadas', value: 'negado', count: resumen.value.negadas },
 ]);
 
@@ -519,7 +538,7 @@ function nombreCompleto(s: Solicitud) {
 }
 
 function estadoLabel(estado: string) {
-  return { pendiente: 'Pendiente', aceptado: 'Aceptado', negado: 'Negado' }[estado] ?? estado;
+  return { pendiente: 'Pendiente', aceptado: 'Aceptado', en_espera: 'En espera', completado: 'Completado', negado: 'Negado' }[estado] ?? estado;
 }
 
 function formatFecha(fecha: string) {
@@ -536,6 +555,11 @@ function formatFileSize(bytes: number): string {
   let size = bytes;
   while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
   return size.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+}
+
+function limpiarFiltros() {
+  filtro.value.buscar = '';
+  tabActiva.value = 'todas';
 }
 
 async function cargar() {
@@ -570,7 +594,7 @@ function horaActual(): string {
 
 function abrirAceptar(s: Solicitud) {
   solicitudSeleccionada.value = s;
-  formAceptar.value = { hora_respuesta: horaActual(), nombre_quien_responde: '', numero_ingreso: null, observaciones_respuesta: '' };
+  formAceptar.value = { hora_respuesta: horaActual(), nombre_quien_responde: '', observaciones_respuesta: '' };
   modalAceptar.value = true;
 }
 
@@ -618,22 +642,101 @@ async function negar() {
   }
 }
 
+async function marcarEnEspera(s: Solicitud) {
+  try {
+    procesando.value = true;
+    const { data } = await http.post(`/api/solicitudes-referencia/${s.id}/en-espera`, {});
+    ElMessage.success('Solicitud marcada en espera de llegada del paciente');
+    const idx = solicitudes.value.findIndex(x => x.id === s.id);
+    if (idx !== -1) solicitudes.value[idx] = data.data;
+  } catch {
+    ElMessage.error('Error al marcar en espera');
+  } finally {
+    procesando.value = false;
+  }
+}
+
+async function marcarCompletado(s: Solicitud) {
+  try {
+    procesando.value = true;
+    const { data } = await http.post(`/api/solicitudes-referencia/${s.id}/completado`, {});
+    ElMessage.success('Solicitud completada');
+    const idx = solicitudes.value.findIndex(x => x.id === s.id);
+    if (idx !== -1) solicitudes.value[idx] = data.data;
+  } catch {
+    ElMessage.error('Error al completar la solicitud');
+  } finally {
+    procesando.value = false;
+  }
+}
+
 onMounted(cargar);
 </script>
 
 <style scoped>
 .ph-solicitudes {
-  background:
-    radial-gradient(circle at 95% 0%, rgba(188, 218, 255, 0.45), transparent 24rem),
-    radial-gradient(circle at 5% 100%, rgba(208, 242, 226, 0.35), transparent 22rem);
+  background: linear-gradient(160deg, #eef4fc 0%, #e3edf8 40%, #f0f5fa 100%);
+}
+
+/* ── Header ── */
+.sol-header {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .75rem 1rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0D2D6B 0%, #16468E 60%, #1e3a7a 100%);
+  box-shadow: 0 6px 24px rgba(13, 45, 107, .25), inset 0 1px 0 rgba(255,255,255,0.08);
+  position: relative; overflow: hidden;
+}
+.sol-header::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #2563eb, #60a5fa, #2563eb);
+  background-size: 200% 100%;
+  animation: solHeaderShimmer 3s linear infinite;
+}
+@keyframes solHeaderShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.sol-header-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
+  color: #fff; flex-shrink: 0;
+}
+.sol-header-title {
+  font-size: 16px; font-weight: 800; color: #fff;
+  letter-spacing: 0.01em; white-space: nowrap;
+}
+.sol-header-spacer { flex: 1; }
+
+/* ── Filter bar ── */
+.sol-filter-bar {
+  display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+  padding: .65rem .9rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f0f6ff 0%, #e6efff 50%, #f0f9ff 100%);
+  border: 1px solid #b8c8e0;
+  box-shadow: 0 3px 16px rgba(13, 45, 107, 0.07), inset 0 1px 0 rgba(255,255,255,0.6);
+  position: relative; overflow: hidden;
+  transition: box-shadow .3s ease, transform .3s ease;
+}
+.sol-filter-bar:hover {
+  box-shadow: 0 5px 24px rgba(13, 45, 107, 0.11), inset 0 1px 0 rgba(255,255,255,0.6);
+  transform: translateY(-1px);
+}
+.sol-filter-divider {
+  width: 1px; height: 24px;
+  background: linear-gradient(180deg, transparent, #b8c8e0, transparent);
+  flex-shrink: 0;
 }
 
 /* ── Tabs ── */
 .sol-tabs {
   display: flex; gap: 4px;
   padding: 3px;
-  background: rgba(255,255,255,0.8);
-  border: 1px solid #e2e8f0;
+  background: rgba(255,255,255,0.7);
+  border: 1px solid #d4deea;
   border-radius: 10px;
 }
 .sol-tab {
@@ -645,11 +748,11 @@ onMounted(cargar);
   border: none; cursor: pointer;
   transition: all .2s ease;
 }
-.sol-tab:hover { color: #1e2d55; background: rgba(13,45,107,.04); }
+.sol-tab:hover { color: #1e2d55; background: rgba(13,45,107,.06); transform: translateY(-1px); }
 .sol-tab-active {
-  background: #0d2d6b;
+  background: linear-gradient(135deg, #0D2D6B, #16468E);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(13,45,107,.25);
+  box-shadow: 0 2px 10px rgba(13,45,107,.28);
 }
 .sol-tab-count {
   padding: 1px 6px; border-radius: 999px;
@@ -659,7 +762,17 @@ onMounted(cargar);
 .sol-tab-active .sol-tab-count { background: rgba(255,255,255,.2); color: #fff; }
 
 /* ── Search ── */
-.sol-search { max-width: 280px; }
+.sol-search { flex: 1; min-width: 200px; max-width: 400px; }
+.sol-filter-bar :deep(.el-input__wrapper) {
+  background: rgba(255,255,255,0.75) !important;
+  border: 1px solid #d4deea !important;
+  border-radius: 10px !important;
+  transition: all .2s ease;
+}
+.sol-filter-bar :deep(.el-input__wrapper:hover) {
+  border-color: #16468E !important;
+  box-shadow: 0 0 0 2px rgba(22,70,142,0.08) !important;
+}
 
 /* ── Table panel ── */
 .sol-table-panel {
@@ -731,9 +844,37 @@ onMounted(cargar);
 .sol-status-pending .sol-status-dot { background: #fbbf24; }
 .sol-status-accepted { background: #dcfce7; color: #15966a; }
 .sol-status-accepted .sol-status-dot { background: #22c55e; }
+.sol-status-waiting { background: #dbeafe; color: #1d4ed8; }
+.sol-status-waiting .sol-status-dot { background: #3b82f6; }
+.sol-status-completed { background: #e0e7ff; color: #4338ca; }
+.sol-status-completed .sol-status-dot { background: #6366f1; }
 .sol-status-rejected { background: #fee2e2; color: #dc2626; }
 .sol-status-rejected .sol-status-dot { background: #ef4444; }
-.sol-table-actions { display: flex; justify-content: flex-end; gap: 4px; }
+.sol-table-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.sol-table-actions .el-button {
+  margin-left: 0 !important;
+  min-width: 96px;
+  transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s ease, filter .2s ease;
+}
+.sol-table-actions .el-button:hover {
+  transform: translateY(-2px) scale(1.05);
+  filter: brightness(1.08);
+}
+.sol-table-actions .el-button:active {
+  transform: translateY(0) scale(.98);
+}
+.sol-table-actions .el-button--success:hover {
+  box-shadow: 0 6px 16px rgba(22,163,74,.30);
+}
+.sol-table-actions .el-button--primary:hover {
+  box-shadow: 0 6px 16px rgba(37,99,235,.30);
+}
+.sol-table-actions .el-button--danger:hover {
+  box-shadow: 0 6px 16px rgba(220,38,38,.30);
+}
+.sol-table-actions .el-button--default:hover {
+  box-shadow: 0 6px 16px rgba(13,45,107,.15);
+}
 
 /* ── Empty state ── */
 .sol-empty-wrap {
@@ -812,6 +953,8 @@ onMounted(cargar);
 }
 .badge-pendiente { background: #f59e0b; color: #fff; }
 .badge-aceptado { background: #22c55e; color: #fff; }
+.badge-en_espera { background: #3b82f6; color: #fff; }
+.badge-completado { background: #6366f1; color: #fff; }
 .badge-negado { background: #ef4444; color: #fff; }
 
 /* Body */
@@ -896,6 +1039,16 @@ onMounted(cargar);
   border-radius: 12px; padding: .55rem .8rem;
 }
 .detalle-code-value { margin-left: auto; font-family: monospace; font-size: .9rem; font-weight: 800; color: #166534; background: #fff; padding: .2rem .6rem; border-radius: 6px; border: 1px solid #86efac; }
+
+.detalle-actions-bar {
+  display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center;
+  padding: 1rem 1.25rem; border-top: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.detalle-footer-actions {
+  display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center;
+}
 
 .detalle-adjuntos-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .detalle-adjunto-item {

@@ -84,6 +84,8 @@ Route::prefix('api')->name('api.')->group(function (): void {
         Route::post('solicitudes-referencia/{solicitud}/aceptar', [SolicitudReferenciaController::class, 'aceptar'])->name('solicitudes-referencia.aceptar');
         Route::post('solicitudes-referencia/{solicitud}/negar', [SolicitudReferenciaController::class, 'negar'])->name('solicitudes-referencia.negar');
         Route::post('solicitudes-referencia/{solicitud}/pendiente', [SolicitudReferenciaController::class, 'pendiente'])->name('solicitudes-referencia.pendiente');
+        Route::post('solicitudes-referencia/{solicitud}/en-espera', [SolicitudReferenciaController::class, 'enEspera'])->name('solicitudes-referencia.en-espera');
+        Route::post('solicitudes-referencia/{solicitud}/completado', [SolicitudReferenciaController::class, 'completado'])->name('solicitudes-referencia.completado');
         Route::get('solicitudes-referencia/{solicitud}/adjuntos/{adjunto}/descargar', [SolicitudReferenciaController::class, 'descargarAdjunto'])->name('solicitudes-referencia.adjuntos.descargar');
 
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');

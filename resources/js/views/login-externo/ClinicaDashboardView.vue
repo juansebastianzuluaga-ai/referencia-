@@ -8,164 +8,246 @@
       <div class="hero-card rounded-2xl p-3 sm:p-4 flex items-center gap-4 relative overflow-hidden shrink-0 anim-fade-down">
         <div class="hero-glow"></div>
         <div class="hero-pattern"></div>
+        <div class="hero-glow-2"></div>
+        <div class="flex items-center gap-3 z-10 shrink-0">
+          <div class="hero-logo">
+            <component :is="ClipboardListIcon" class="w-6 h-6" />
+          </div>
+        </div>
         <div class="flex-1 min-w-0 z-10">
           <div class="flex items-center gap-2 mb-1">
             <span class="hero-live-dot"></span>
-            <p class="text-[10px] font-semibold uppercase tracking-wider" style="color:rgba(255,255,255,0.6);">{{ fechaHoy }}</p>
+            <p class="text-[10px] font-semibold uppercase tracking-wider" style="color:rgba(255,255,255,0.6);">Sistema de referencia · En línea</p>
           </div>
           <h1 class="text-sm sm:text-lg font-bold leading-tight text-white">
             {{ saludoTexto }}, <span class="clinic-name font-extrabold">{{ clinicaAuth.clinica?.nombre }}</span>
           </h1>
-          <p class="text-[11px] sm:text-xs mt-1" style="color:rgba(255,255,255,0.65);">Gestione sus remisiones de pacientes al centro de referencia.</p>
+          <p class="text-[11px] sm:text-xs mt-1" style="color:rgba(255,255,255,0.65);">{{ fechaHoy }} · Gestione sus remisiones al centro de referencia.</p>
         </div>
-        <button @click="abrirFormulario" class="hero-link shrink-0 z-10">
-          <component :is="PlusIcon" class="w-5 h-5" />
-          <span>Nueva solicitud</span>
-        </button>
-        <span class="hero-pill" style="top:12%; right:22%; background:rgba(255,255,255,0.15);"></span>
-        <span class="hero-pill" style="top:55%; right:9%; background:rgba(126,179,255,0.25); width:14px; height:14px;"></span>
-        <span class="hero-pill" style="bottom:14%; right:30%; background:rgba(255,255,255,0.1); width:10px; height:10px;"></span>
+        <div class="hero-right z-10 shrink-0 hidden sm:flex flex-col items-end gap-2">
+          <button @click="abrirFormulario" class="hero-link">
+            <component :is="PlusIcon" class="w-4 h-4" />
+            <span>Nueva solicitud</span>
+          </button>
+          <div class="hero-mini-stats">
+            <div class="hero-mini-stat">
+              <span class="hero-mini-stat-num">{{ stats.total }}</span>
+              <span class="hero-mini-stat-label">Total</span>
+            </div>
+            <div class="hero-mini-divider"></div>
+            <div class="hero-mini-stat">
+              <span class="hero-mini-stat-num">{{ stats.aceptadas }}</span>
+              <span class="hero-mini-stat-label">Aceptadas</span>
+            </div>
+            <div class="hero-mini-divider"></div>
+            <div class="hero-mini-stat">
+              <span class="hero-mini-stat-num">{{ tiempoPromedio }}</span>
+              <span class="hero-mini-stat-label">Respuesta</span>
+            </div>
+          </div>
+        </div>
+        <span class="hero-pill" style="top:18%; right:28%; background:rgba(255,255,255,0.12); width:8px; height:8px;"></span>
+        <span class="hero-pill" style="top:62%; right:12%; background:rgba(126,179,255,0.3); width:16px; height:16px;"></span>
+        <span class="hero-pill" style="bottom:20%; right:35%; background:rgba(255,255,255,0.08); width:10px; height:10px;"></span>
       </div>
 
-      <!-- ── Tarjetas tipo "órganos" ── -->
+      <!-- ── Stat cards ── -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 shrink-0">
         <template v-if="cargando">
-          <div v-for="i in 4" :key="i" class="organ-card rounded-xl p-2.5 flex flex-col gap-1">
+          <div v-for="i in 4" :key="i" class="stat-card rounded-2xl p-3 flex flex-col gap-1.5">
             <div class="flex items-center gap-2 mb-1">
-              <div class="shimmer-box" style="width:32px; height:32px; border-radius:8px;"></div>
+              <div class="shimmer-box" style="width:36px; height:36px; border-radius:12px;"></div>
               <div class="shimmer-bar" style="width:50px; height:12px;"></div>
             </div>
-            <div class="shimmer-bar" style="width:70%; height:9px;"></div>
-            <div class="flex items-center gap-2 mt-auto">
-              <div class="shimmer-bar flex-1" style="height:6px; border-radius:999px;"></div>
-              <div class="shimmer-box" style="width:24px; height:16px; border-radius:4px;"></div>
-            </div>
+            <div class="shimmer-bar" style="width:70%; height:22px;"></div>
+            <div class="shimmer-bar" style="width:40%; height:6px; border-radius:999px;"></div>
           </div>
         </template>
         <template v-else>
           <div
             v-for="(card, i) in statCards" :key="i"
-            class="organ-card rounded-xl p-2.5 flex flex-col gap-1 anim-slide-up"
-            :style="{ animationDelay: (i * 0.08) + 's' }"
+            class="stat-card rounded-2xl p-3 flex flex-col gap-1 anim-slide-up"
+            :style="{ animationDelay: (i * 0.08) + 's', '--accent': card.color, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
           >
-            <div class="flex items-center gap-2">
-              <div class="organ-icon w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                :style="{ background: card.iconBackground, color: card.color }">
+            <div class="stat-card-glow" :style="{ background: 'radial-gradient(circle at 80% 20%, ' + card.color + '15, transparent 60%)' }"></div>
+            <div class="flex items-center justify-between relative z-10">
+              <div class="stat-icon-wrap">
                 <component :is="card.icon" class="w-4 h-4" />
               </div>
-              <p class="text-xs font-bold" style="color:#1e2d55;">{{ card.label }}</p>
+              <span class="stat-delta-badge">{{ card.delta }}</span>
             </div>
-            <p class="text-[10px]" style="color:#8a9ab5;">{{ card.sub(i === 0 ? stats.total : i === 1 ? stats.pendientes : i === 2 ? stats.aceptadas : stats.negadas) }}</p>
-            <div class="flex items-center gap-2 mt-auto">
-              <div class="h-1.5 rounded-full overflow-hidden flex-1" style="background:#edf2f7;">
-                <div class="h-full rounded-full transition-all duration-700"
-                  :style="{ width: statPercents[i] + '%', background: card.color }" />
-              </div>
-              <span class="text-sm font-extrabold" style="color:#16468e;">{{ displayStats[i] }}</span>
+            <div class="mt-auto relative z-10">
+              <p class="stat-value">{{ displayStats[i] }}</p>
+              <p class="stat-label">{{ card.label }}</p>
+            </div>
+            <div class="stat-progress-track relative z-10">
+              <div class="stat-progress-fill" :style="{ width: statPercents[i] + '%' }"></div>
             </div>
           </div>
         </template>
       </div>
 
-      <!-- ── Distribución de estados ── -->
-      <div v-if="cargando" class="distrib-card rounded-xl p-3 flex items-center gap-4 shrink-0">
-        <div class="flex-1">
-          <div class="flex items-center justify-between mb-2">
-            <div class="shimmer-bar" style="width:140px; height:12px;"></div>
-            <div class="shimmer-bar" style="width:60px; height:10px;"></div>
-          </div>
-          <div class="shimmer-bar w-full" style="height:10px; border-radius:999px;"></div>
-          <div class="flex items-center gap-4 mt-2.5">
-            <div v-for="i in 3" :key="i" class="flex items-center gap-1.5">
-              <div class="shimmer-box" style="width:10px; height:10px; border-radius:50%;"></div>
-              <div class="shimmer-bar" style="width:50px; height:9px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div v-else class="distrib-card rounded-xl p-3 flex items-center gap-4 shrink-0 anim-slide-up" style="animation-delay:0.15s">
-        <div class="flex-1">
-          <div class="flex items-center justify-between mb-2">
-            <p class="text-xs font-bold" style="color:#1e2d55;">Distribución de solicitudes</p>
-            <p class="text-[10px]" style="color:#8a9ab5;">{{ stats.total }} en total</p>
-          </div>
-          <div class="flex h-2.5 rounded-full overflow-hidden" style="background:#edf2f7;">
-            <div v-if="stats.pendientes" class="distrib-segment transition-all duration-700" :style="{ width: (stats.pendientes / Math.max(1, stats.total)) * 100 + '%', background: '#fbbf24' }"
-              :data-tooltip="`${stats.pendientes} pendientes (${Math.round(stats.pendientes / Math.max(1, stats.total) * 100)}%)`"></div>
-            <div v-if="stats.aceptadas" class="distrib-segment transition-all duration-700" :style="{ width: (stats.aceptadas / Math.max(1, stats.total)) * 100 + '%', background: '#22c55e' }"
-              :data-tooltip="`${stats.aceptadas} aceptadas (${Math.round(stats.aceptadas / Math.max(1, stats.total) * 100)}%)`"></div>
-            <div v-if="stats.negadas" class="distrib-segment transition-all duration-700" :style="{ width: (stats.negadas / Math.max(1, stats.total)) * 100 + '%', background: '#f87171' }"
-              :data-tooltip="`${stats.negadas} negadas (${Math.round(stats.negadas / Math.max(1, stats.total) * 100)}%)`"></div>
-          </div>
-          <div class="flex items-center gap-4 mt-2.5">
-            <div class="flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full" style="background:#fbbf24;"></span>
-              <span class="text-[10px] font-medium" style="color:#8a9ab5;">Pendientes <strong style="color:#d97706;">{{ stats.pendientes }}</strong></span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full" style="background:#22c55e;"></span>
-              <span class="text-[10px] font-medium" style="color:#8a9ab5;">Aceptadas <strong style="color:#16a34a;">{{ stats.aceptadas }}</strong></span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full" style="background:#f87171;"></span>
-              <span class="text-[10px] font-medium" style="color:#8a9ab5;">Negadas <strong style="color:#dc2626;">{{ stats.negadas }}</strong></span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Métricas y accesos rápidos ── -->
+      <!-- ── Distribución + Donut ── -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 shrink-0">
-        <template v-if="cargando">
-          <div v-for="i in 3" :key="i" class="metric-card rounded-xl p-3 flex items-center gap-3">
-            <div class="shimmer-box" style="width:44px; height:44px; border-radius:12px;"></div>
-            <div class="flex-1 space-y-1.5">
-              <div class="shimmer-bar" style="width:60%; height:11px;"></div>
-              <div class="shimmer-bar" style="width:40%; height:9px;"></div>
+        <div v-if="cargando" class="distrib-card rounded-2xl p-3 flex items-center gap-4 lg:col-span-2">
+          <div class="flex-1">
+            <div class="flex items-center justify-between mb-2">
+              <div class="shimmer-bar" style="width:140px; height:12px;"></div>
+              <div class="shimmer-bar" style="width:60px; height:10px;"></div>
+            </div>
+            <div class="shimmer-bar w-full" style="height:10px; border-radius:999px;"></div>
+          </div>
+        </div>
+        <div v-else class="distrib-card rounded-2xl p-3 flex items-center gap-4 anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
+          <div class="distrib-card-glow"></div>
+          <div class="flex-1 relative z-10">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-xs font-bold" style="color:#1e2d55;">Distribución de solicitudes</p>
+              <p class="text-[10px]" style="color:#8a9ab5;">{{ stats.total }} en total</p>
+            </div>
+            <div class="flex h-2.5 rounded-full overflow-hidden" style="background:#edf2f7;">
+              <div v-if="stats.pendientes" class="distrib-segment transition-all duration-700" :style="{ width: (stats.pendientes / Math.max(1, stats.total)) * 100 + '%', background: 'linear-gradient(90deg, #fbbf24, #f59e0b)' }"
+                :data-tooltip="`${stats.pendientes} pendientes (${Math.round(stats.pendientes / Math.max(1, stats.total) * 100)}%)`"></div>
+              <div v-if="stats.aceptadas" class="distrib-segment transition-all duration-700" :style="{ width: (stats.aceptadas / Math.max(1, stats.total)) * 100 + '%', background: 'linear-gradient(90deg, #4ade80, #22c55e)' }"
+                :data-tooltip="`${stats.aceptadas} aceptadas (${Math.round(stats.aceptadas / Math.max(1, stats.total) * 100)}%)`"></div>
+              <div v-if="stats.negadas" class="distrib-segment transition-all duration-700" :style="{ width: (stats.negadas / Math.max(1, stats.total)) * 100 + '%', background: 'linear-gradient(90deg, #f87171, #ef4444)' }"
+                :data-tooltip="`${stats.negadas} negadas (${Math.round(stats.negadas / Math.max(1, stats.total) * 100)}%)`"></div>
+            </div>
+            <div class="flex items-center gap-4 mt-2.5">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full" style="background:#fbbf24;"></span>
+                <span class="text-[10px] font-medium" style="color:#8a9ab5;">Pendientes <strong style="color:#d97706;">{{ stats.pendientes }}</strong></span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full" style="background:#22c55e;"></span>
+                <span class="text-[10px] font-medium" style="color:#8a9ab5;">Aceptadas <strong style="color:#16a34a;">{{ stats.aceptadas }}</strong></span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full" style="background:#f87171;"></span>
+                <span class="text-[10px] font-medium" style="color:#8a9ab5;">Negadas <strong style="color:#dc2626;">{{ stats.negadas }}</strong></span>
+              </div>
             </div>
           </div>
-        </template>
-        <template v-else>
-        <!-- Tasa de aceptación -->
-        <div class="metric-card rounded-xl p-3 flex items-center gap-3 anim-slide-up" style="animation-delay:0.2s">
-          <div class="metric-ring shrink-0">
-            <svg class="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
-              <circle cx="28" cy="28" r="24" stroke="#edf2f7" stroke-width="5" fill="none" />
-              <circle cx="28" cy="28" r="24" :stroke="tasaAceptacion > 60 ? '#16a34a' : tasaAceptacion > 30 ? '#d97706' : '#dc2626'" stroke-width="5" fill="none" stroke-linecap="round"
-                :stroke-dasharray="150.8" :stroke-dashoffset="150.8 - (150.8 * tasaAceptacion / 100)" class="metric-ring-fill" />
-            </svg>
-            <span class="metric-ring-text">{{ tasaAceptacion }}%</span>
-          </div>
-          <div>
-            <p class="text-xs font-bold" style="color:#1e2d55;">Tasa de aceptación</p>
-            <p class="text-[10px] mt-0.5" style="color:#8a9ab5;">{{ stats.aceptadas }} de {{ stats.total }} solicitudes</p>
-          </div>
         </div>
 
-        <!-- Tiempo promedio -->
-        <div class="metric-card rounded-xl p-3 flex items-center gap-3 anim-slide-up" style="animation-delay:0.28s">
-          <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style="background:#e0f2fe; color:#0284c7;">
-            <component :is="ClockIcon" class="w-5 h-5" />
+        <!-- Donut chart CSS -->
+        <div v-if="!cargando" class="distrib-card rounded-2xl p-3 flex items-center justify-center gap-4 anim-slide-up" style="animation-delay:0.2s">
+          <div class="donut-chart relative z-10" :style="donutStyle">
+            <div class="donut-center">
+              <span class="donut-num">{{ stats.total }}</span>
+              <span class="donut-label">Total</span>
+            </div>
           </div>
-          <div>
-            <p class="text-xs font-bold" style="color:#1e2d55;">Tiempo de respuesta</p>
-            <p class="text-lg font-extrabold" style="color:#0284c7;">{{ tiempoPromedio }}</p>
-            <p class="text-[10px] mt-0.5" style="color:#8a9ab5;">promedio del centro</p>
+          <div class="flex flex-col gap-1.5 relative z-10">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" style="background:#fbbf24;"></span>
+              <span class="text-[10px] font-semibold" style="color:#d97706;">{{ Math.round(donutPercents[0]) }}%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" style="background:#22c55e;"></span>
+              <span class="text-[10px] font-semibold" style="color:#16a34a;">{{ Math.round(donutPercents[1]) }}%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" style="background:#f87171;"></span>
+              <span class="text-[10px] font-semibold" style="color:#dc2626;">{{ Math.round(donutPercents[2]) }}%</span>
+            </div>
           </div>
         </div>
+      </div>
 
-        <!-- Acceso rápido historial -->
-        <div class="metric-card rounded-xl p-3 flex items-center gap-3 anim-slide-up cursor-pointer" style="animation-delay:0.36s" @click="irHistorial">
-          <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style="background:#dbeafe; color:#2563eb;">
-            <component :is="ClipboardListIcon" class="w-5 h-5" />
+      <!-- ── Accesos rápidos + Flujo ── -->
+      <div class="operations-grid anim-slide-up" style="animation-delay:0.24s">
+        <section class="operations-card">
+          <div class="operations-glow"></div>
+          <div class="operations-heading">
+            <div>
+              <p class="panel-eyebrow">Navegación operativa</p>
+              <h3 class="panel-title">Accesos rápidos</h3>
+            </div>
+            <span class="operations-hint">Gestione sus remisiones desde un solo lugar</span>
           </div>
-          <div>
-            <p class="text-xs font-bold" style="color:#1e2d55;">Ver historial completo</p>
-            <p class="text-[10px] mt-0.5" style="color:#8a9ab5;">{{ stats.total }} solicitudes registradas</p>
+
+          <div class="quick-actions">
+            <button @click="abrirFormulario" class="quick-action quick-action-blue">
+              <div class="quick-action-icon">
+                <component :is="PlusIcon" />
+              </div>
+              <div class="quick-action-copy">
+                <strong>Nueva solicitud</strong>
+                <span>Registrar una remisión</span>
+              </div>
+              <component :is="ArrowRightIcon" class="quick-action-arrow" />
+            </button>
+
+            <button @click="irHistorial" class="quick-action quick-action-green">
+              <div class="quick-action-icon">
+                <component :is="ClipboardListIcon" />
+              </div>
+              <div class="quick-action-copy">
+                <strong>Historial</strong>
+                <span>{{ stats.total }} solicitudes registradas</span>
+              </div>
+              <component :is="ArrowRightIcon" class="quick-action-arrow" />
+            </button>
+
+            <button @click="cargar" class="quick-action quick-action-purple">
+              <div class="quick-action-icon">
+                <component :is="RefreshCwIcon" :class="{ 'animate-spin': cargando }" />
+              </div>
+              <div class="quick-action-copy">
+                <strong>Actualizar</strong>
+                <span>Sincronizar información</span>
+              </div>
+              <component :is="ArrowRightIcon" class="quick-action-arrow" />
+            </button>
           </div>
-          <component :is="ChevronRightIcon" class="w-5 h-5 ml-auto shrink-0" style="color:#b0bccf;" />
-        </div>
-        </template>
+        </section>
+
+        <section class="flow-card">
+          <div class="flow-orbit flow-orbit-one"></div>
+          <div class="flow-orbit flow-orbit-two"></div>
+          <div class="flow-content">
+            <div class="flow-heading">
+              <div>
+                <p class="flow-eyebrow">Proceso asistencial</p>
+                <h3>Flujo de referencia</h3>
+              </div>
+              <span class="flow-live"><i></i> En línea</span>
+            </div>
+
+            <div class="flow-steps">
+              <div class="flow-step">
+                <div class="flow-step-icon">
+                  <component :is="ClipboardListIcon" />
+                </div>
+                <div>
+                  <strong>Recepción</strong>
+                  <span>Ingreso de solicitud</span>
+                </div>
+              </div>
+              <div class="flow-connector"><span></span></div>
+              <div class="flow-step">
+                <div class="flow-step-icon">
+                  <component :is="StethoscopeIcon" />
+                </div>
+                <div>
+                  <strong>Evaluación</strong>
+                  <span>Revisión clínica</span>
+                </div>
+              </div>
+              <div class="flow-connector"><span></span></div>
+              <div class="flow-step">
+                <div class="flow-step-icon flow-step-success">
+                  <component :is="CheckCircle2Icon" />
+                </div>
+                <div>
+                  <strong>Respuesta</strong>
+                  <span>Decisión asistencial</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
       <!-- ── Solicitudes recientes ── -->
@@ -210,13 +292,13 @@
             :key="sol.id"
             class="med-row rounded-xl px-3 py-2 flex items-center gap-3 cursor-pointer transition-all anim-row-in"
             :style="[
-          { borderLeftColor: sol.estado === 'pendiente' ? '#fbbf24' : sol.estado === 'aceptado' ? '#22c55e' : '#f87171' },
+          { borderLeftColor: sol.estado === 'pendiente' ? '#fbbf24' : sol.estado === 'aceptado' ? '#22c55e' : sol.estado === 'en_espera' ? '#3b82f6' : sol.estado === 'completado' ? '#6366f1' : '#f87171' },
           { animationDelay: (idx * 0.06) + 's' }
         ]"
             @click="verDetalle(sol)"
           >
             <div class="med-icon w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-              :style="{ background: sol.estado === 'pendiente' ? '#fef3c7' : sol.estado === 'aceptado' ? '#dcfce7' : '#fee2e2', color: sol.estado === 'pendiente' ? '#d97706' : sol.estado === 'aceptado' ? '#16a34a' : '#dc2626' }">
+              :style="{ background: sol.estado === 'pendiente' ? '#fef3c7' : sol.estado === 'aceptado' ? '#dcfce7' : sol.estado === 'en_espera' ? '#dbeafe' : sol.estado === 'completado' ? '#e0e7ff' : '#fee2e2', color: sol.estado === 'pendiente' ? '#d97706' : sol.estado === 'aceptado' ? '#16a34a' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#dc2626' }">
               {{ initialesPaciente(sol) }}
             </div>
             <div class="flex-1 min-w-0">
@@ -229,15 +311,15 @@
             </div>
             <svg class="w-16 h-6 shrink-0" viewBox="0 0 64 24" fill="none">
               <path :d="sparklinePath(idx)" stroke-width="2" stroke-linecap="round" fill="none"
-                :stroke="sol.estado === 'pendiente' ? '#eab308' : sol.estado === 'aceptado' ? '#22c55e' : '#f87171'" />
+                :stroke="sol.estado === 'pendiente' ? '#eab308' : sol.estado === 'aceptado' ? '#22c55e' : sol.estado === 'en_espera' ? '#3b82f6' : sol.estado === 'completado' ? '#6366f1' : '#f87171'" />
             </svg>
             <span class="text-[10px] font-bold px-2 py-1 rounded-full shrink-0"
               :style="{
-                background: sol.estado === 'pendiente' ? '#fff3cd' : sol.estado === 'aceptado' ? '#d3f9d8' : '#ffe0e0',
-                color: sol.estado === 'pendiente' ? '#b96800' : sol.estado === 'aceptado' ? '#2f9e44' : '#c92a2a',
+                background: sol.estado === 'pendiente' ? '#fff3cd' : sol.estado === 'aceptado' ? '#d3f9d8' : sol.estado === 'en_espera' ? '#d0e3ff' : sol.estado === 'completado' ? '#e0e0ff' : '#ffe0e0',
+                color: sol.estado === 'pendiente' ? '#b96800' : sol.estado === 'aceptado' ? '#2f9e44' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#c92a2a',
               }"
             >
-              {{ sol.estado === 'pendiente' ? 'Pendiente' : sol.estado === 'aceptado' ? 'Aceptada' : 'Negada' }}
+              {{ estadoLabel(sol.estado) }}
             </span>
           </div>
         </div>
@@ -274,32 +356,11 @@
         <el-form :model="form" :rules="rules" ref="formRef" label-position="top" size="default">
 
           <div v-show="pasoFormulario === 1" class="mb-0">
-            <div class="flex items-center gap-2 mb-1.5">
+            <div class="flex items-center gap-2 mb-1">
               <div class="w-5 h-5 rounded-full bg-[#0D2D6B] text-white text-[10px] flex items-center justify-center font-bold shrink-0">1</div>
               <p class="font-semibold text-gray-700 text-xs">Datos del paciente</p>
             </div>
-            <div class="grid grid-cols-4 gap-x-3 gap-y-0 form-patient-grid">
-              <el-form-item label="Fecha" prop="fecha" required>
-                <el-date-picker v-model="form.fecha" type="date" format="DD/MM/YYYY" value-format="YYYY-MM-DD" class="w-full" placeholder="Seleccione" />
-              </el-form-item>
-              <el-form-item label="Hora" prop="hora" required>
-                <el-time-picker v-model="form.hora" format="HH:mm" value-format="HH:mm" class="w-full" placeholder="HH:MM" />
-              </el-form-item>
-              <el-form-item label="Edad" prop="edad" required>
-                <el-input-number v-model="form.edad" :min="0" :max="120" class="w-full" controls-position="right" />
-              </el-form-item>
-              <el-form-item label="Primer nombre" prop="primer_nombre" required>
-                <el-input v-model="form.primer_nombre" autocomplete="off" />
-              </el-form-item>
-              <el-form-item label="Segundo nombre">
-                <el-input v-model="form.segundo_nombre" autocomplete="off" />
-              </el-form-item>
-              <el-form-item label="Primer apellido" prop="primer_apellido" required>
-                <el-input v-model="form.primer_apellido" autocomplete="off" />
-              </el-form-item>
-              <el-form-item label="Segundo apellido">
-                <el-input v-model="form.segundo_apellido" autocomplete="off" />
-              </el-form-item>
+            <div class="grid grid-cols-4 gap-x-3 gap-y-2 items-start form-patient-grid">
               <el-form-item label="Tipo de documento" prop="tipo_documento" required>
                 <el-select v-model="form.tipo_documento" class="w-full" placeholder="Tipo">
                   <el-option v-for="t in TIPOS_DOCUMENTO" :key="t" :label="t" :value="t" />
@@ -308,11 +369,29 @@
               <el-form-item label="Número de documento" prop="numero_documento" required>
                 <el-input v-model="form.numero_documento" autocomplete="off" />
               </el-form-item>
+              <el-form-item label="Primer nombre" prop="primer_nombre" required>
+                <el-input v-model="form.primer_nombre" autocomplete="off" @input="capitalizar('primer_nombre')" />
+              </el-form-item>
+              <el-form-item label="Segundo nombre">
+                <el-input v-model="form.segundo_nombre" autocomplete="off" @input="capitalizar('segundo_nombre')" />
+              </el-form-item>
+              <el-form-item label="Primer apellido" prop="primer_apellido" required>
+                <el-input v-model="form.primer_apellido" autocomplete="off" @input="capitalizar('primer_apellido')" />
+              </el-form-item>
+              <el-form-item label="Segundo apellido">
+                <el-input v-model="form.segundo_apellido" autocomplete="off" @input="capitalizar('segundo_apellido')" />
+              </el-form-item>
+              <el-form-item label="Edad" prop="edad" required>
+                <el-input-number v-model="form.edad" :min="0" :max="120" class="w-full" controls-position="right" />
+              </el-form-item>
               <el-form-item label="Género" prop="genero" required>
                 <el-select v-model="form.genero" class="w-full" placeholder="Seleccione">
                   <el-option label="Masculino" value="M" />
                   <el-option label="Femenino" value="F" />
                 </el-select>
+              </el-form-item>
+              <el-form-item label="Municipio" prop="municipio_capita" required>
+                <el-input v-model="form.municipio_capita" autocomplete="off" @input="capitalizar('municipio_capita')" />
               </el-form-item>
               <el-form-item label="EPS / Aseguradora" prop="eps" required class="col-span-2">
                 <el-select v-model="form.eps" filterable class="w-full" placeholder="Seleccione o escriba">
@@ -325,22 +404,21 @@
           <el-divider class="form-section-divider" />
 
           <div v-show="pasoFormulario === 2" class="mb-0">
-            <div class="flex items-center gap-2 mb-1.5">
+            <div class="flex items-center gap-2 mb-1">
               <div class="w-5 h-5 rounded-full bg-[#0D2D6B] text-white text-[10px] flex items-center justify-center font-bold shrink-0">2</div>
               <p class="font-semibold text-gray-700 text-xs">Datos de la remisión</p>
             </div>
-            <div class="grid grid-cols-3 gap-x-3 gap-y-0">
-              <el-form-item label="Diagnóstico (CIE-10)" prop="diagnostico" required class="col-span-3">
+            <div class="grid grid-cols-3 gap-x-3 gap-y-2 items-start">
+              <el-form-item label="Diagnóstico (CIE-10)" prop="diagnostico" required class="col-span-2">
                 <el-select
                   v-model="form.diagnostico"
                   filterable
-                  allow-create
-                  default-first-option
                   class="w-full"
-                  placeholder="Escriba el código (ej: J18.9) o el nombre del diagnóstico"
+                  placeholder="Seleccione o busque diagnóstico"
                   :filter-method="filtrarCIE10"
                   @change="onDiagnosticoSelect"
                 >
+                  <el-option key="__otro_dx" label="➕ Otro diagnóstico..." value="__otro_dx" />
                   <el-option
                     v-for="item in cie10Filtrados"
                     :key="item.codigo"
@@ -349,14 +427,48 @@
                   />
                 </el-select>
               </el-form-item>
-              <el-form-item label="Municipio de origen" prop="municipio_capita" required>
-                <el-input v-model="form.municipio_capita" autocomplete="off" />
-              </el-form-item>
               <el-form-item label="Especialidad requerida" prop="especialidad_requerida" required>
-                <el-select v-model="form.especialidad_requerida" filterable class="w-full" placeholder="Seleccione">
+                <el-select v-model="form.especialidad_requerida" filterable class="w-full" placeholder="Seleccione" @change="onEspecialidadSelect">
+                  <el-option key="__otra_esp" label="➕ Otra especialidad..." value="__otra_esp" />
                   <el-option v-for="e in ESPECIALIDADES" :key="e" :label="e" :value="e" />
                 </el-select>
               </el-form-item>
+              <el-form-item label="Historia clínica" prop="resumen_historia_clinica" required class="col-span-2">
+                <el-input v-model="form.resumen_historia_clinica" type="textarea" :rows="2"
+                  placeholder="Motivo de remisión, antecedentes, estado actual..." @input="capitalizar('resumen_historia_clinica')" />
+              </el-form-item>
+              <div class="attachments-card rounded-xl p-2 flex flex-col"
+                :class="{ 'dropzone-active': dragOver }"
+                @dragover.prevent="dragOver = true"
+                @dragleave.prevent="dragOver = false"
+                @drop.prevent="onDrop"
+              >
+                <div class="flex items-center gap-1.5 mb-1">
+                  <div class="attach-header-icon" style="width:20px;height:20px;border-radius:6px;"><component :is="PaperclipIcon" class="w-3 h-3" /></div>
+                  <p class="text-[11px] font-semibold text-slate-700">Adjuntar soportes</p>
+                  <span v-if="adjuntos.length" class="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:#dbeafe; color:#1d4ed8;">{{ adjuntos.length }}/10</span>
+                </div>
+                <div class="dropzone rounded-lg flex-1 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-0.5 min-h-[52px]"
+                  @click="fileInput?.click()"
+                >
+                  <component :is="UploadCloudIcon" class="w-4 h-4 text-[#3174c4]" />
+                  <p class="text-[10px] font-semibold text-slate-600">Clic o arrastre aquí</p>
+                  <p class="text-[8px] text-slate-400">PDF/img/Word · 10MB c/u</p>
+                  <input ref="fileInput" class="hidden" type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.svg,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" multiple @change="seleccionarAdjuntos" />
+                </div>
+                <transition-group v-if="adjuntos.length" name="file-list" tag="div" class="mt-1 space-y-0.5">
+                  <div v-for="(archivo, i) in adjuntos" :key="archivo.name + i"
+                    class="file-chip rounded-lg px-1.5 py-0.5 flex items-center gap-1.5">
+                    <span class="file-type-badge" :class="getFileTypeClass(archivo)">{{ getFileTypeLabel(archivo) }}</span>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-[9px] font-semibold text-slate-700 truncate">{{ archivo.name }}</p>
+                    </div>
+                    <button type="button" class="file-remove-btn" @click.stop="removerAdjunto(i)">
+                      <component :is="XCircleIcon" class="w-3 h-3" />
+                    </button>
+                  </div>
+                </transition-group>
+              </div>
               <el-form-item label="Servicio / Ubicación actual" prop="servicio_ubicacion_actual" required>
                 <el-select v-model="form.servicio_ubicacion_actual" class="w-full" placeholder="Seleccione">
                   <el-option v-for="s in SERVICIOS" :key="s" :label="s" :value="s" />
@@ -380,8 +492,8 @@
                   <el-option label="No" :value="false" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="Condición especial" class="col-span-3">
-                <el-input v-model="form.condicion_especial" placeholder="Ej: Paciente con discapacidad, obesidad mórbida..." autocomplete="off" />
+              <el-form-item label="Condición especial" class="col-span-2">
+                <el-input v-model="form.condicion_especial" placeholder="Ej: discapacidad, obesidad mórbida..." autocomplete="off" />
               </el-form-item>
             </div>
           </div>
@@ -389,37 +501,76 @@
           <el-divider class="form-section-divider" />
 
           <div v-show="pasoFormulario === 3" class="mb-0">
-            <div class="flex items-center gap-2 mb-1.5">
+            <div class="flex items-center gap-2 mb-1">
               <div class="w-5 h-5 rounded-full bg-[#0D2D6B] text-white text-[10px] flex items-center justify-center font-bold shrink-0">3</div>
-              <p class="font-semibold text-gray-700 text-xs">Resumen clínico</p>
+              <p class="font-semibold text-gray-700 text-xs">Resumen de la solicitud</p>
             </div>
-            <div class="grid grid-cols-2 gap-x-3 gap-y-0">
-              <el-form-item label="Resumen de la historia clínica" prop="resumen_historia_clinica" required class="col-span-2">
-                <el-input v-model="form.resumen_historia_clinica" type="textarea" :rows="2"
-                  placeholder="Describa el motivo de remisión, antecedentes relevantes, estado actual del paciente..." />
-              </el-form-item>
-              <el-form-item label="Observaciones adicionales" class="col-span-2">
-                <el-input v-model="form.observaciones" type="textarea" :rows="1" placeholder="Información adicional relevante..." />
-              </el-form-item>
+            <div class="grid grid-cols-3 gap-2 mb-2">
+              <div class="summary-card">
+                <span class="summary-label">Tipo de documento</span>
+                <strong class="summary-value">{{ form.tipo_documento || '—' }}</strong>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">Número de documento</span>
+                <strong class="summary-value">{{ form.numero_documento || '—' }}</strong>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">Edad</span>
+                <strong class="summary-value">{{ form.edad ?? '—' }}</strong>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">Género</span>
+                <strong class="summary-value">{{ form.genero === 'M' ? 'Masculino' : form.genero === 'F' ? 'Femenino' : '—' }}</strong>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">Municipio</span>
+                <strong class="summary-value">{{ form.municipio_capita || '—' }}</strong>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">EPS / Aseguradora</span>
+                <strong class="summary-value">{{ form.eps || '—' }}</strong>
+              </div>
+              <div class="summary-card col-span-3">
+                <span class="summary-label">Nombre del paciente</span>
+                <strong class="summary-value">{{ nombreCompleto }}</strong>
+              </div>
+              <div class="summary-card col-span-3">
+                <span class="summary-label">Diagnóstico</span>
+                <strong class="summary-value">{{ form.diagnostico || '—' }}</strong>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">Especialidad requerida</span>
+                <strong class="summary-value">{{ form.especialidad_requerida || '—' }}</strong>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">Servicio / Ubicación actual</span>
+                <strong class="summary-value">{{ form.servicio_ubicacion_actual || '—' }}</strong>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">Servicio al que se remite</span>
+                <strong class="summary-value">{{ form.servicio_remision || '—' }}</strong>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">Vía de contacto</span>
+                <strong class="summary-value">{{ form.via_contacto || '—' }}</strong>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">¿Paciente gestante?</span>
+                <strong class="summary-value">{{ form.gestante === true ? 'Sí' : form.gestante === false ? 'No' : '—' }}</strong>
+              </div>
+              <div class="summary-card">
+                <span class="summary-label">Condición especial</span>
+                <strong class="summary-value">{{ form.condicion_especial || '—' }}</strong>
+              </div>
+              <div class="summary-card col-span-3">
+                <span class="summary-label">Historia clínica</span>
+                <strong class="summary-value">{{ form.resumen_historia_clinica || '—' }}</strong>
+              </div>
             </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div class="review-card">
-                <p class="review-title">Revise antes de enviar</p>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                  <div><span>Paciente</span><strong>{{ form.primer_nombre }} {{ form.primer_apellido }}</strong></div>
-                  <div><span>Documento</span><strong>{{ form.tipo_documento }} {{ form.numero_documento }}</strong></div>
-                  <div><span>Especialidad</span><strong>{{ form.especialidad_requerida }}</strong></div>
-                  <div><span>Servicio</span><strong>{{ form.servicio_ubicacion_actual }}</strong></div>
-                </div>
-              </div>
-              <div class="attachments-card rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2">
-                <div class="flex items-center gap-2"><span class="attachments-icon">+</span><p class="text-xs font-semibold text-slate-700">Soportes clínicos</p></div>
-                <p class="text-[10px] text-slate-500 mt-0.5">Adjunte resultados u órdenes. Hasta 5 archivos de 10 MB.</p>
-                <input class="mt-1.5 block w-full text-xs text-slate-600" type="file" accept=".pdf,.jpg,.jpeg,.png" multiple @change="seleccionarAdjuntos" />
-                <ul v-if="adjuntos.length" class="mt-1 space-y-0.5 text-[10px] text-slate-600">
-                  <li v-for="archivo in adjuntos" :key="archivo.name">{{ archivo.name }}</li>
-                </ul>
-              </div>
+            <div class="grid grid-cols-1 gap-3">
+              <el-form-item label="Observaciones adicionales" class="mb-0">
+                <el-input v-model="form.observaciones" type="textarea" :rows="2" placeholder="Información adicional relevante..." />
+              </el-form-item>
             </div>
           </div>
 
@@ -442,7 +593,7 @@
             <div class="detalle-head-glow"></div>
             <div class="detalle-head-icon">
               <component
-                :is="solicitudSeleccionada.estado === 'aceptado' ? CheckCircleIcon : solicitudSeleccionada.estado === 'negado' ? XCircleIcon : ClockIcon"
+                :is="solicitudSeleccionada.estado === 'aceptado' ? CheckCircleIcon : solicitudSeleccionada.estado === 'negado' ? XCircleIcon : solicitudSeleccionada.estado === 'en_espera' ? ClockIcon : solicitudSeleccionada.estado === 'completado' ? CheckCircleIcon : ClockIcon"
                 class="w-7 h-7"
               />
             </div>
@@ -451,7 +602,7 @@
               <p class="detalle-head-sub">#{{ solicitudSeleccionada.id }} · {{ formatFecha(solicitudSeleccionada.created_at) }}</p>
             </div>
             <div class="detalle-head-badge" :class="'badge-' + solicitudSeleccionada.estado">
-              {{ solicitudSeleccionada.estado === 'pendiente' ? 'Pendiente' : solicitudSeleccionada.estado === 'aceptado' ? 'Aceptado' : 'Negado' }}
+              {{ estadoLabel(solicitudSeleccionada.estado) }}
             </div>
           </div>
 
@@ -541,7 +692,7 @@
                 <div v-if="solicitudSeleccionada.adjuntos?.length">
                   <div v-for="adj in solicitudSeleccionada.adjuntos" :key="adj.id" class="adjunto-item">
                     <a :href="`/api/externo/solicitudes/${solicitudSeleccionada.id}/adjuntos/${adj.id}/descargar`" target="_blank" class="adjunto-link">
-                      <span class="adjunto-icon" :class="adj.mime_type?.includes('pdf') ? 'adjunto-pdf' : 'adjunto-img'">{{ adj.mime_type?.includes('pdf') ? 'PDF' : 'IMG' }}</span>
+                      <span class="adjunto-icon" :class="getAdjuntoBadgeClass(adj.mime_type, adj.nombre_original)">{{ getAdjuntoBadgeLabel(adj.mime_type, adj.nombre_original) }}</span>
                       <span class="adjunto-name">{{ adj.nombre_original }}</span>
                     </a>
                   </div>
@@ -552,6 +703,26 @@
           </div>
         </div>
       </template>
+    </el-dialog>
+
+    <!-- ── Modal: Éxito envío ─────────────────────────────────────────── -->
+    <el-dialog v-model="modalExito" width="480px" class="exito-dialog" :show-close="false" align-center @close="onCerrarExito">
+      <div class="exito-content">
+        <div class="exito-icon-circle">
+          <component :is="CheckCircleIcon" class="w-10 h-10" />
+        </div>
+        <h2 class="exito-title">¡Solicitud enviada!</h2>
+        <p class="exito-subtitle">Su solicitud de referencia ha sido registrada correctamente</p>
+        <div class="exito-details">
+          <div class="exito-detail-row"><span>Paciente</span><strong>{{ ultimoEnviado.paciente }}</strong></div>
+          <div class="exito-detail-row"><span>Documento</span><strong>{{ ultimoEnviado.documento }}</strong></div>
+          <div class="exito-detail-row"><span>Especialidad</span><strong>{{ ultimoEnviado.especialidad }}</strong></div>
+          <div class="exito-detail-row"><span>Diagnóstico</span><strong>{{ ultimoEnviado.diagnostico }}</strong></div>
+          <div class="exito-detail-row"><span>Servicio actual</span><strong>{{ ultimoEnviado.servicio }}</strong></div>
+          <div class="exito-detail-row" v-if="ultimoEnviado.adjuntos"><span>Adjuntos</span><strong>{{ ultimoEnviado.adjuntos }}</strong></div>
+        </div>
+        <el-button type="primary" class="exito-btn !bg-[#0D2D6B] w-full" @click="modalExito = false">Entendido</el-button>
+      </div>
     </el-dialog>
 
   </div>
@@ -569,6 +740,11 @@ import {
   XCircle as XCircleIcon,
   RefreshCw as RefreshCwIcon,
   ChevronRight as ChevronRightIcon,
+  ArrowRight as ArrowRightIcon,
+  Paperclip as PaperclipIcon,
+  UploadCloud as UploadCloudIcon,
+  Stethoscope as StethoscopeIcon,
+  CheckCircle2 as CheckCircle2Icon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 import { useClinicaAuthStore } from '@/stores/clinicaAuth';
@@ -585,6 +761,8 @@ const formRef = ref();
 const modalDetalle = ref(false);
 const solicitudSeleccionada = ref<any>(null);
 const adjuntos = ref<File[]>([]);
+const dragOver = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
 const pasoFormulario = ref(1);
 const cie10Filtrados = ref(CIE10.slice(0, 20));
 
@@ -599,11 +777,51 @@ function filtrarCIE10(query: string) {
   ).slice(0, 30);
 }
 
-function onDiagnosticoSelect(val: string) {
+async function onDiagnosticoSelect(val: string) {
+  if (val === '__otro_dx') {
+    form.value.diagnostico = '';
+    try {
+      const { value } = await ElMessageBox.prompt('Escriba el código CIE-10', 'Nuevo diagnóstico', {
+        confirmButtonText: 'Continuar',
+        cancelButtonText: 'Cancelar',
+        inputPlaceholder: 'Ej: J18.9',
+        inputValidator: (v) => v?.trim() ? true : 'El código es requerido',
+      });
+      const codigo = value.trim();
+      const { value: descVal } = await ElMessageBox.prompt('Escriba el nombre del diagnóstico', 'Descripción', {
+        confirmButtonText: 'Agregar',
+        cancelButtonText: 'Cancelar',
+        inputPlaceholder: 'Ej: Neumonía no especificada',
+        inputValidator: (v) => v?.trim() ? true : 'La descripción es requerida',
+      });
+      form.value.diagnostico = `${codigo} ${descVal.trim()}`;
+    } catch {
+      form.value.diagnostico = '';
+    }
+    return;
+  }
   if (!val) return;
   const match = CIE10.find(c => `${c.codigo} ${c.descripcion}` === val);
   if (match) {
     form.value.diagnostico = `${match.codigo} ${match.descripcion}`;
+  }
+}
+
+async function onEspecialidadSelect(val: string) {
+  if (val === '__otra_esp') {
+    form.value.especialidad_requerida = '';
+    try {
+      const { value } = await ElMessageBox.prompt('Escriba el nombre de la especialidad', 'Nueva especialidad', {
+        confirmButtonText: 'Agregar',
+        cancelButtonText: 'Cancelar',
+        inputPlaceholder: 'Ej: Cardiología pediátrica',
+        inputValidator: (v) => v?.trim() ? true : 'El nombre es requerido',
+      });
+      form.value.especialidad_requerida = value.trim();
+    } catch {
+      form.value.especialidad_requerida = '';
+    }
+    return;
   }
 }
 const formSteps = [
@@ -613,12 +831,33 @@ const formSteps = [
 ];
 
 // ── Stat cards config ───────────────────────────────────────────────────────
-const statCards = [
-  { iconBackground: '#dbeafe', color: '#2563eb', icon: ClipboardListIcon, label: 'Solicitudes', sub: (n: number) => n ? `${n} enviadas` : 'sin envíos' },
-  { iconBackground: '#fef3c7', color: '#d97706', icon: ClockIcon, label: 'Pendientes', sub: (n: number) => n ? `${n} en espera` : 'sin pendientes' },
-  { iconBackground: '#dcfce7', color: '#16a34a', icon: CheckCircleIcon, label: 'Aceptadas', sub: (n: number) => n ? `${n} aprobadas` : 'sin aprobadas' },
-  { iconBackground: '#fee2e2', color: '#dc2626', icon: XCircleIcon, label: 'Negadas', sub: (n: number) => n ? `${n} rechazadas` : 'sin rechazos' },
-];
+const statCards = computed(() => [
+  { label: 'Solicitudes totales', icon: ClipboardListIcon, color: '#2563c4', iconBg: '#dbe1ff', delta: stats.value.pendientes ? `${stats.value.pendientes} pend.` : 'sin pendientes', deltaBg: '#dbeafe', deltaColor: '#2563c4' },
+  { label: 'Pendientes', icon: ClockIcon, color: '#e67700', iconBg: '#fff3cd', delta: stats.value.pendientes ? 'En espera' : 'Al día', deltaBg: '#fef3c7', deltaColor: '#e67700' },
+  { label: 'Aceptadas', icon: CheckCircleIcon, color: '#15966a', iconBg: '#d3f9d8', delta: `${tasaAceptacion.value}% tasa`, deltaBg: '#dcfce7', deltaColor: '#15966a' },
+  { label: 'Negadas', icon: XCircleIcon, color: '#c92a2a', iconBg: '#ffe3e3', delta: stats.value.negadas ? 'Revisar' : 'Sin rechazos', deltaBg: '#fee2e2', deltaColor: '#c92a2a' },
+]);
+
+const donutPercents = computed(() => {
+  const total = Math.max(1, stats.value.total);
+  return [
+    (stats.value.pendientes / total) * 100,
+    (stats.value.aceptadas / total) * 100,
+    (stats.value.negadas / total) * 100,
+  ];
+});
+
+const donutStyle = computed(() => {
+  const [p, a, n] = donutPercents.value;
+  return {
+    background: `conic-gradient(
+      #fbbf24 0% ${p}%,
+      #22c55e ${p}% ${p + a}%,
+      #f87171 ${p + a}% ${p + a + n}%,
+      #edf2f7 ${p + a + n}% 100%
+    )`,
+  };
+});
 
 // Contador animado
 const displayStats = ref([0, 0, 0, 0]);
@@ -650,6 +889,8 @@ const stats = computed(() => ({
   total: solicitudes.value.length,
   pendientes: solicitudes.value.filter(s => s.estado === 'pendiente').length,
   aceptadas: solicitudes.value.filter(s => s.estado === 'aceptado').length,
+  enEspera: solicitudes.value.filter(s => s.estado === 'en_espera').length,
+  completadas: solicitudes.value.filter(s => s.estado === 'completado').length,
   negadas: solicitudes.value.filter(s => s.estado === 'negado').length,
 }));
 
@@ -695,10 +936,7 @@ function sparklinePath(idx: number): string {
 }
 
 function emptyForm() {
-  const now = new Date();
   return {
-    fecha: now.toISOString().slice(0, 10),
-    hora: now.toTimeString().slice(0, 5),
     primer_nombre: '', segundo_nombre: '', primer_apellido: '', segundo_apellido: '',
     genero: '', edad: null as number | null, tipo_documento: '', numero_documento: '',
     eps: '', diagnostico: '', municipio_capita: '', especialidad_requerida: '',
@@ -710,9 +948,22 @@ function emptyForm() {
 
 const form = ref(emptyForm());
 
+function capitalizar(campo: 'primer_nombre' | 'segundo_nombre' | 'primer_apellido' | 'segundo_apellido' | 'municipio_capita' | 'resumen_historia_clinica') {
+  const val = form.value[campo];
+  if (val && val.length === 1) {
+    form.value[campo] = val.charAt(0).toUpperCase();
+  } else if (val && val.length > 1) {
+    form.value[campo] = val.charAt(0).toUpperCase() + val.slice(1);
+  }
+}
+
+const nombreCompleto = computed(() =>
+  [form.value.primer_nombre, form.value.segundo_nombre, form.value.primer_apellido, form.value.segundo_apellido]
+    .filter(Boolean)
+    .join(' ') || '—'
+);
+
 const rules = {
-  fecha: [{ required: true, message: 'Requerido', trigger: 'change' }],
-  hora: [{ required: true, message: 'Requerido', trigger: 'change' }],
   primer_nombre: [{ required: true, message: 'Requerido', trigger: 'blur' }],
   primer_apellido: [{ required: true, message: 'Requerido', trigger: 'blur' }],
   genero: [{ required: true, message: 'Requerido', trigger: 'change' }],
@@ -767,12 +1018,91 @@ function onKeydown(e: KeyboardEvent) {
     abrirFormulario();
   }
 }
-function seleccionarAdjuntos(event: Event) { adjuntos.value = Array.from((event.target as HTMLInputElement).files ?? []).slice(0, 5); }
+function seleccionarAdjuntos(event: Event) {
+  const files = Array.from((event.target as HTMLInputElement).files ?? []);
+  agregarAdjuntos(files);
+  if (fileInput.value) fileInput.value.value = '';
+}
+
+function onDrop(event: DragEvent) {
+  dragOver.value = false;
+  const files = Array.from(event.dataTransfer?.files ?? []);
+  agregarAdjuntos(files);
+}
+
+function agregarAdjuntos(files: File[]) {
+  const restantes = 10 - adjuntos.value.length;
+  if (restantes <= 0) {
+    ElMessage.warning('Máximo 10 archivos permitidos');
+    return;
+  }
+  const nuevos = files.slice(0, restantes);
+  if (files.length > restantes) {
+    ElMessage.warning(`Solo se agregaron ${restantes} de ${files.length} archivos (límite 10)`);
+  }
+  adjuntos.value = [...adjuntos.value, ...nuevos];
+}
+
+function removerAdjunto(index: number) {
+  adjuntos.value.splice(index, 1);
+}
+
+function getFileTypeLabel(file: File): string {
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  if (['pdf'].includes(ext)) return 'PDF';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg'].includes(ext)) return 'IMG';
+  if (['doc', 'docx'].includes(ext)) return 'DOC';
+  if (['xls', 'xlsx', 'csv'].includes(ext)) return 'XLS';
+  if (['ppt', 'pptx'].includes(ext)) return 'PPT';
+  if (['zip', 'rar'].includes(ext)) return 'ZIP';
+  if (['txt'].includes(ext)) return 'TXT';
+  return ext.toUpperCase().slice(0, 3);
+}
+
+function getFileTypeClass(file: File): string {
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  if (['pdf'].includes(ext)) return 'ft-pdf';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg'].includes(ext)) return 'ft-img';
+  if (['doc', 'docx'].includes(ext)) return 'ft-doc';
+  if (['xls', 'xlsx', 'csv'].includes(ext)) return 'ft-xls';
+  if (['ppt', 'pptx'].includes(ext)) return 'ft-ppt';
+  if (['zip', 'rar'].includes(ext)) return 'ft-zip';
+  return 'ft-default';
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getAdjuntoBadgeLabel(mime: string, nombre: string): string {
+  const ext = nombre.split('.').pop()?.toLowerCase() ?? '';
+  if (ext === 'pdf' || mime?.includes('pdf')) return 'PDF';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg'].includes(ext) || mime?.startsWith('image/')) return 'IMG';
+  if (['doc', 'docx'].includes(ext)) return 'DOC';
+  if (['xls', 'xlsx', 'csv'].includes(ext)) return 'XLS';
+  if (['ppt', 'pptx'].includes(ext)) return 'PPT';
+  if (['zip', 'rar'].includes(ext)) return 'ZIP';
+  if (['txt'].includes(ext)) return 'TXT';
+  return ext.toUpperCase().slice(0, 3) || 'FILE';
+}
+
+function getAdjuntoBadgeClass(mime: string, nombre: string): string {
+  const ext = nombre.split('.').pop()?.toLowerCase() ?? '';
+  if (ext === 'pdf' || mime?.includes('pdf')) return 'adjunto-pdf';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg'].includes(ext) || mime?.startsWith('image/')) return 'adjunto-img';
+  if (['doc', 'docx'].includes(ext)) return 'adjunto-doc';
+  if (['xls', 'xlsx', 'csv'].includes(ext)) return 'adjunto-xls';
+  if (['ppt', 'pptx'].includes(ext)) return 'adjunto-ppt';
+  if (['zip', 'rar'].includes(ext)) return 'adjunto-zip';
+  return 'adjunto-default';
+}
 
 async function avanzarPaso(): Promise<void> {
   const camposPorPaso = [
-    ['fecha', 'hora', 'primer_nombre', 'primer_apellido', 'genero', 'edad', 'tipo_documento', 'numero_documento', 'eps'],
-    ['diagnostico', 'municipio_capita', 'especialidad_requerida', 'servicio_ubicacion_actual'],
+    ['primer_nombre', 'primer_apellido', 'genero', 'edad', 'tipo_documento', 'numero_documento', 'municipio_capita', 'eps'],
+    ['diagnostico', 'resumen_historia_clinica', 'especialidad_requerida', 'servicio_ubicacion_actual'],
   ];
 
   try {
@@ -792,6 +1122,10 @@ function initialesPaciente(solicitud: any): string {
   return `${solicitud.primer_nombre?.[0] ?? ''}${solicitud.primer_apellido?.[0] ?? ''}`.toUpperCase();
 }
 
+function estadoLabel(estado: string): string {
+  return { pendiente: 'Pendiente', aceptado: 'Aceptada', en_espera: 'En espera', completado: 'Completada', negado: 'Negada' }[estado] ?? estado;
+}
+
 function tiempoRelativo(fecha: string): string {
   const minutos = Math.max(1, Math.round((Date.now() - new Date(fecha).getTime()) / 60000));
   if (minutos < 60) return `Hace ${minutos} min`;
@@ -800,12 +1134,24 @@ function tiempoRelativo(fecha: string): string {
   return `Hace ${Math.round(horas / 24)} días`;
 }
 
+const modalExito = ref(false);
+const ultimoEnviado = ref({
+  paciente: '', documento: '', especialidad: '', diagnostico: '', servicio: '', adjuntos: '',
+});
+
+function onCerrarExito() {
+  ultimoEnviado.value = { paciente: '', documento: '', especialidad: '', diagnostico: '', servicio: '', adjuntos: '' };
+}
+
 async function guardar() {
   try { await formRef.value?.validate(); }
   catch { ElMessage.error('Por favor complete todos los campos requeridos'); return; }
   guardando.value = true;
   try {
+    const now = new Date();
     const payload = new FormData();
+    payload.append('fecha', now.toISOString().slice(0, 10));
+    payload.append('hora', now.toTimeString().slice(0, 5));
     Object.entries(form.value).forEach(([key, value]) => {
       if (value !== null && value !== '') {
         payload.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
@@ -813,8 +1159,16 @@ async function guardar() {
     });
     adjuntos.value.forEach((archivo) => payload.append('adjuntos[]', archivo));
     await http.post('/api/externo/solicitudes', payload);
-    ElMessage.success('Solicitud enviada correctamente');
+    ultimoEnviado.value = {
+      paciente: nombreCompleto.value,
+      documento: `${form.value.tipo_documento} ${form.value.numero_documento}`,
+      especialidad: form.value.especialidad_requerida || '—',
+      diagnostico: form.value.diagnostico || '—',
+      servicio: form.value.servicio_ubicacion_actual || '—',
+      adjuntos: adjuntos.value.length ? `${adjuntos.value.length} archivo(s)` : '',
+    };
     drawerVisible.value = false;
+    modalExito.value = true;
     await cargar();
   } catch (e: any) {
     const errors = e.response?.data?.data?.errors || e.response?.data?.errors;
@@ -890,23 +1244,75 @@ onUnmounted(() => {
 :deep(.request-dialog .el-dialog__title) { color: #fff; font-weight: 800; letter-spacing: .01em; }
 :deep(.request-dialog .el-dialog__headerbtn .el-dialog__close) { color: #e1f7ff; }
 :deep(.request-dialog .el-dialog__headerbtn:hover .el-dialog__close) { color: #fff; }
-:global(.request-dialog .el-dialog__body) { max-height: calc(100vh - 5.5rem); padding: .5rem .9rem .6rem; overflow: hidden !important; background: linear-gradient(180deg, #f7faff, #fff); display: flex; flex-direction: column; }
+:global(.request-dialog .el-dialog__body) { max-height: calc(100vh - 4rem); padding: .5rem .9rem .6rem; overflow-y: auto; background: linear-gradient(180deg, #f7faff, #fff); display: flex; flex-direction: column; }
 :global(.request-dialog .el-dialog) {
-  max-height: calc(100vh - 1.5rem);
+  max-height: calc(100vh - 1rem);
   overflow: hidden;
+  margin-top: .5rem !important;
+  margin-bottom: .5rem !important;
 }
 :global(html:has(.request-dialog)),
 :global(body:has(.request-dialog)) {
   height: 100%;
   overflow: hidden !important;
 }
-:deep(.request-form .el-form-item) { margin-bottom: .25rem; }
+:deep(.request-form .el-form-item) { margin-bottom: 0; display: flex; flex-direction: column; }
+:deep(.request-form .el-form-item__label) { min-height: 16px; padding-bottom: 1px; line-height: 1.1; display: flex; align-items: center; }
 :deep(.request-form .el-form-item__error) { padding-top: 0; font-size: .6rem; line-height: 1.1; }
 :deep(.request-form .el-divider) { display: none; }
-:deep(.request-form .el-textarea__inner) { min-height: 40px !important; }
+:deep(.request-form .el-textarea__inner) { min-height: 34px !important; }
 :deep(.request-form .el-input__wrapper),
-:deep(.request-form .el-select__wrapper) { min-height: 32px; }
+:deep(.request-form .el-select__wrapper) { min-height: 30px; }
+:deep(.request-form .el-input-number) { width: 100%; }
+:deep(.request-form .el-input-number .el-input__wrapper) { min-height: 30px; }
 :deep(.el-overlay) { background-color: rgba(8, 27, 58, .56); backdrop-filter: blur(4px); }
+
+/* ── Modal Éxito ── */
+:deep(.exito-dialog) { border-radius: 20px; overflow: hidden; box-shadow: 0 28px 70px rgba(11, 35, 73, .35); }
+:deep(.exito-dialog .el-dialog__header) { display: none; }
+:deep(.exito-dialog .el-dialog__body) { padding: 0; }
+.exito-content {
+  padding: 2rem 1.8rem 1.6rem;
+  text-align: center;
+  background: linear-gradient(180deg, #f0f5ff 0%, #f8faff 40%, #ffffff 100%);
+}
+.exito-icon-circle {
+  width: 64px; height: 64px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(34, 197, 94, .3);
+  animation: exito-pop .4s cubic-bezier(.22, 1, .36, 1);
+}
+@keyframes exito-pop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.exito-title { font-size: 1.3rem; font-weight: 800; color: #0d2d5e; margin: 0 0 .3rem; }
+.exito-subtitle { font-size: .8rem; color: #61748d; margin: 0 0 1.3rem; }
+.exito-details {
+  text-align: left;
+  background: #fff;
+  border: 1px solid #e0e8f5;
+  border-radius: 14px;
+  padding: .8rem 1rem;
+  margin-bottom: 1.3rem;
+}
+.exito-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .35rem 0;
+  border-bottom: 1px solid #f0f4fa;
+  font-size: .78rem;
+}
+.exito-detail-row:last-child { border-bottom: none; }
+.exito-detail-row span { color: #61748d; font-weight: 600; }
+.exito-detail-row strong { color: #0d2d5e; font-weight: 700; text-align: right; max-width: 60%; word-break: break-word; }
+.exito-btn { border-radius: 10px; font-weight: 700; height: 40px; }
 
 /* ── Modal Detalle ── */
 :deep(.detalle-dialog) {
@@ -988,6 +1394,8 @@ onUnmounted(() => {
 }
 .badge-pendiente { background: #f59e0b; color: #fff; }
 .badge-aceptado { background: #22c55e; color: #fff; }
+.badge-en_espera { background: #3b82f6; color: #fff; }
+.badge-completado { background: #6366f1; color: #fff; }
 .badge-negado { background: #ef4444; color: #fff; }
 
 /* Cards */
@@ -1102,6 +1510,92 @@ onUnmounted(() => {
 }
 
 /* Adjuntos */
+.attachments-card {
+  border: 2px dashed #cbd5e1;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+}
+.attachments-card.dropzone-active {
+  border-color: #16468e;
+  background: #eff6ff;
+  box-shadow: 0 0 0 3px rgba(22, 70, 142, 0.1);
+}
+.attach-header-icon {
+  width: 24px; height: 24px;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  background: #e0e8f5;
+  color: #16468e;
+  flex-shrink: 0;
+}
+.dropzone {
+  border: 2px dashed #cbd5e1;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+.dropzone:hover {
+  border-color: #16468e;
+  background: #f0f7ff;
+}
+.dropzone-circle {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #e0e8f5 0%, #cdd9ee 100%);
+  color: #16468e;
+  transition: all 0.2s ease;
+}
+.dropzone:hover .dropzone-circle {
+  background: linear-gradient(135deg, #16468e 0%, #0D2D6B 100%);
+  color: #fff;
+  transform: scale(1.08);
+}
+.file-chip {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  transition: all 0.15s ease;
+}
+.file-chip:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+.file-type-badge {
+  font-size: 8px;
+  font-weight: 800;
+  color: #fff;
+  padding: 3px 6px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+.ft-pdf { background: #dc2626; }
+.ft-img { background: #2563eb; }
+.ft-doc { background: #1d4ed8; }
+.ft-xls { background: #16a34a; }
+.ft-ppt { background: #ea580c; }
+.ft-zip { background: #7c3aed; }
+.ft-default { background: #64748b; }
+.file-remove-btn {
+  color: #cbd5e1;
+  transition: color 0.15s ease;
+  flex-shrink: 0;
+  display: flex; align-items: center;
+}
+.file-remove-btn:hover { color: #ef4444; }
+
+/* File list transition */
+.file-list-enter-active, .file-list-leave-active {
+  transition: all 0.25s ease;
+}
+.file-list-enter-from {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+.file-list-leave-to {
+  opacity: 0;
+  transform: translateX(12px);
+}
+
 .adjunto-item { padding: .15rem 0; }
 .adjunto-item:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
 .adjunto-link {
@@ -1123,6 +1617,11 @@ onUnmounted(() => {
 }
 .adjunto-pdf { background: #dc2626; }
 .adjunto-img { background: #2563eb; }
+.adjunto-doc { background: #1d4ed8; }
+.adjunto-xls { background: #16a34a; }
+.adjunto-ppt { background: #ea580c; }
+.adjunto-zip { background: #7c3aed; }
+.adjunto-default { background: #64748b; }
 .adjunto-name {
   font-size: .66rem;
   color: #334e70;
@@ -1171,7 +1670,44 @@ onUnmounted(() => {
 .form-hero p { margin: 0 0 .05rem; color: #0d2d5e; font-size: .75rem; font-weight: 800; }
 .form-hero span { color: #61748d; font-size: .6rem; line-height: 1.2; }
 
-.attachments-card { border-color: #bcd7f3; background: linear-gradient(135deg, #f4faff, #fbfdff); }
+.attachments-card { border: 1.5px solid #4a8fdb; background: linear-gradient(135deg, #eef5ff, #f8fbff); box-shadow: 0 2px 6px rgba(74,143,219,.12); }
+
+.summary-card {
+  background: linear-gradient(135deg, #e8f1ff, #d6e8fa);
+  border: 1.5px solid #4a8fdb;
+  border-radius: 10px;
+  padding: .4rem .6rem;
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  min-height: 44px;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(74, 143, 219, .15);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.summary-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74, 143, 219, .25);
+}
+.summary-card.col-span-3 {
+  background: linear-gradient(135deg, #dbeafe, #c7dffc);
+  border-color: #2563eb;
+}
+.summary-label {
+  font-size: .52rem;
+  font-weight: 800;
+  color: #1e40af;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  line-height: 1.1;
+}
+.summary-value {
+  font-size: .64rem;
+  color: #0d2d5e;
+  font-weight: 700;
+  line-height: 1.25;
+  word-break: break-word;
+}
 
 @media (max-height: 650px) {
   :global(.request-dialog .el-dialog__header) { margin: .45rem .65rem 0; padding-block: .7rem; }
@@ -1248,7 +1784,10 @@ onUnmounted(() => {
 }
 
 .ph-dashboard {
-  background: #f5f7fb;
+  background:
+    radial-gradient(ellipse at 90% 0%, rgba(188, 218, 255, 0.5), transparent 30rem),
+    radial-gradient(ellipse at 10% 100%, rgba(208, 230, 255, 0.4), transparent 28rem),
+    linear-gradient(160deg, #e8f0fc 0%, #dbe7f6 40%, #eef4fc 100%);
 }
 
 /* ── Hero banner ── */
@@ -1256,7 +1795,20 @@ onUnmounted(() => {
   background: linear-gradient(115deg, #0d2d6b 0%, #16468e 55%, #1e3a7a 100%);
   border: 1px solid #1e3a7a;
   box-shadow: 0 8px 24px rgba(13, 45, 107, .25);
-  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+.hero-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #2563eb, #60a5fa, #2563eb);
+  background-size: 200% 100%;
+  animation: heroShimmer 3s linear infinite;
+  z-index: 20;
+}
+@keyframes heroShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .hero-pattern {
@@ -1339,146 +1891,481 @@ onUnmounted(() => {
   opacity: .85;
 }
 
+.hero-logo {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(8px);
+}
+.hero-mini-stats {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .4rem .75rem;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.hero-mini-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.hero-mini-stat-num {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+.hero-mini-stat-label {
+  font-size: 8px;
+  color: rgba(255,255,255,0.5);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+.hero-mini-divider {
+  width: 1px; height: 20px;
+  background: rgba(255,255,255,0.12);
+}
+
 .clinic-name::first-letter {
   font-size: 1.6em;
   font-weight: 900;
 }
 
-/* ── Tarjetas tipo órganos ── */
-.organ-card {
-  background: #fff;
-  border: 1px solid #d4deea;
-  box-shadow: 0 4px 16px rgba(22, 70, 142, .08);
-  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1), border-color .3s ease;
-  min-height: 76px;
+/* ── Stat cards ── */
+.stat-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, color-mix(in srgb, var(--accent) 12%, white) 100%);
+  border: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 18%, transparent), 0 0 0 1px rgba(255,255,255,0.5) inset;
+  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1), border-color .3s ease;
   position: relative;
   overflow: hidden;
 }
-.organ-card::before {
+.stat-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  opacity: 1;
-  transition: opacity .28s ease, height .28s ease;
+  top: 0; left: 0; width: 5px; height: 100%;
+  background: var(--accent);
+  opacity: .9;
 }
-.organ-card:nth-child(1)::before { background: linear-gradient(90deg, #2563eb, #60a5fa); }
-.organ-card:nth-child(2)::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
-.organ-card:nth-child(3)::before { background: linear-gradient(90deg, #16a34a, #4ade80); }
-.organ-card:nth-child(4)::before { background: linear-gradient(90deg, #dc2626, #f87171); }
-.organ-card:hover::before { opacity: 1; height: 5px; }
-.organ-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 20px 38px rgba(22, 70, 142, .16);
-  border-color: #b8c8de;
-}
-
-.organ-card--active {
-  background: linear-gradient(135deg, #16468e, #0d2d6b) !important;
-  box-shadow: 0 14px 30px rgba(13, 45, 107, .35);
-}
-.organ-card--active::before { opacity: 0; }
-
-.organ-icon {
-  background: #fff;
-  color: #16468e;
-  box-shadow: 0 3px 8px rgba(22, 70, 142, .10);
-  transition: transform .2s ease;
-}
-.organ-card:hover .organ-icon { transform: scale(1.1); }
-.organ-icon--active {
-  background: rgba(255,255,255,.18);
-  color: #fff;
-}
-
-/* ── Distribución ── */
-.distrib-card {
-  background: #fff;
-  border: 1px solid #d4deea;
-  box-shadow: 0 4px 16px rgba(22, 70, 142, .08);
-  border-radius: 14px;
-  position: relative;
-  overflow: hidden;
-}
-.distrib-card::before {
+.stat-card-glow {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #fbbf24, #22c55e, #f87171);
-  opacity: .6;
-  transition: opacity .28s ease, height .28s ease;
+  top: -30px; right: -30px;
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  filter: blur(20px);
+  pointer-events: none;
 }
-.distrib-card {
-  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1), border-color .3s ease;
+.stat-card:hover {
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 24px 48px color-mix(in srgb, var(--accent) 26%, transparent);
+  border-color: var(--accent);
 }
-.distrib-card:hover {
-  transform: translateY(-5px) scale(1.01);
-  box-shadow: 0 18px 34px rgba(22, 70, 142, .15);
-  border-color: #b8c8de;
-}
-.distrib-card:hover::before {
-  opacity: 1;
-  height: 5px;
-}
-
-/* ── Métricas ── */
-.metric-card {
-  background: #fff;
-  border: 1px solid #d4deea;
-  box-shadow: 0 4px 16px rgba(22, 70, 142, .08);
-  border-radius: 14px;
-  position: relative;
-  overflow: hidden;
-  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1), border-color .3s ease;
-}
-.metric-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #0d2d6b, #16468e, #2f70bb);
-  opacity: .6;
-  transition: opacity .28s ease, height .28s ease;
-}
-.metric-card:hover {
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 18px 34px rgba(22, 70, 142, .15);
-  border-color: #b8c8de;
-}
-.metric-card:hover::before {
-  opacity: 1;
-  height: 5px;
-}
-
-.metric-ring {
-  position: relative;
-  width: 48px;
-  height: 48px;
-}
-.metric-ring-text {
-  position: absolute;
-  inset: 0;
+.stat-icon-wrap {
+  width: 36px; height: 36px;
+  border-radius: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: .72rem;
-  font-weight: 800;
-  color: #1e2d55;
+  flex-shrink: 0;
+  background: var(--icon-bg);
+  color: var(--icon-color);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--icon-color) 25%, transparent);
+  transition: transform .25s ease, box-shadow .25s ease;
 }
-.metric-ring-fill {
-  transition: stroke-dashoffset 1s cubic-bezier(.22,1,.36,1);
+.stat-card:hover .stat-icon-wrap {
+  transform: scale(1.15) rotate(-6deg);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--icon-color) 40%, transparent);
+}
+.stat-delta-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--delta-bg);
+  color: var(--delta-color);
+  box-shadow: 0 2px 6px rgba(0,0,0,.06);
+}
+.stat-value {
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.02em;
+  color: #1e293b;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.8);
+}
+.stat-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: #475569;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.stat-progress-track {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.6);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.08);
+}
+.stat-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, white));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
+  transition: width .8s cubic-bezier(.22,1,.36,1);
+}
+
+/* ── Distribución + Donut ── */
+.distrib-card {
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(212, 222, 234, 0.6);
+  box-shadow: 0 4px 16px rgba(22, 70, 142, .08);
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1);
+}
+.distrib-card-glow {
+  position: absolute; top: -40px; right: -40px; width: 140px; height: 140px;
+  border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(126,179,255,0.12), transparent 70%);
+}
+.distrib-card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(22,70,142,.14); }
+.distrib-segment { position: relative; cursor: pointer; transition: opacity .2s ease; }
+.distrib-segment:hover { opacity: .85; }
+.distrib-segment::after {
+  content: attr(data-tooltip); position: absolute; bottom: calc(100% + 6px); left: 50%;
+  transform: translateX(-50%); background: #1e2d55; color: #fff;
+  font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 6px;
+  white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 20;
+}
+.distrib-segment:hover::after { opacity: 1; }
+
+.donut-chart {
+  width: 64px; height: 64px; border-radius: 50%;
+  position: relative;
+  transition: transform .3s ease;
+  box-shadow: 0 4px 14px rgba(22,70,142,.14);
+}
+.donut-chart:hover { transform: scale(1.08) rotate(5deg); }
+.donut-center {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 46px; height: 46px; border-radius: 50%; background: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  box-shadow: inset 0 2px 6px rgba(22,70,142,.08);
+}
+.donut-num { font-size: 14px; font-weight: 800; color: #1e2d55; line-height: 1; }
+.donut-label { font-size: 7px; color: #8a9ab5; margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
+
+/* ── Operations / Accesos rápidos ── */
+.operations-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+  gap: .5rem;
+  flex-shrink: 0;
+}
+.operations-card,
+.flow-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+}
+.operations-card {
+  padding: .85rem;
+  background: rgba(255, 255, 255, .92);
+  border: 1px solid rgba(212, 222, 234, .65);
+  box-shadow: 0 4px 16px rgba(22, 70, 142, .08);
+}
+.operations-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, #0D2D6B, #3978cf, #8dbdff);
+}
+.operations-glow {
+  position: absolute;
+  right: -55px;
+  bottom: -70px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(126, 179, 255, .16), transparent 70%);
+  pointer-events: none;
+}
+.operations-heading,
+.flow-heading {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .6rem;
+}
+.operations-hint {
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.quick-actions {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .5rem;
+}
+.quick-action {
+  --quick-color: #2563c4;
+  --quick-bg: #e7efff;
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: .5rem;
+  padding: .6rem;
+  border: 1px solid rgba(226, 232, 240, .85);
+  border-radius: .75rem;
+  background: linear-gradient(145deg, #fff, #f8fafc);
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform .25s cubic-bezier(.22,1,.36,1), border-color .25s ease, box-shadow .25s ease;
+}
+.quick-action::after {
+  content: '';
+  position: absolute;
+  inset: auto .8rem 0;
+  height: 2px;
+  border-radius: 999px 999px 0 0;
+  background: var(--quick-color);
+  opacity: 0;
+  transform: scaleX(.4);
+  transition: opacity .25s ease, transform .25s ease;
+}
+.quick-action:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--quick-color) 30%, white);
+  box-shadow: 0 10px 22px rgba(22, 70, 142, .11);
+}
+.quick-action:hover::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+.quick-action-green { --quick-color: #15966a; --quick-bg: #dcfce7; }
+.quick-action-purple { --quick-color: #7048e8; --quick-bg: #ede9fe; }
+.quick-action-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--quick-color);
+  background: var(--quick-bg);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
+}
+.quick-action-icon svg { width: 14px; height: 14px; }
+.quick-action-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  text-align: left;
+}
+.quick-action-copy strong {
+  color: #1e2d55;
+  font-size: 10px;
+  font-weight: 800;
+}
+.quick-action-copy span {
+  overflow: hidden;
+  margin-top: 1px;
+  color: #8a9ab5;
+  font-size: 8px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.quick-action-arrow {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  color: #c3ccda;
+  transition: color .2s ease, transform .2s ease;
+}
+.quick-action:hover .quick-action-arrow {
+  color: var(--quick-color);
+  transform: translateX(3px);
+}
+.flow-card {
+  padding: .85rem;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(212, 222, 234, 0.6);
+  box-shadow: 0 4px 16px rgba(22, 70, 142, .08);
+}
+.flow-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #15966a, #4ade80, #86efac);
+}
+.flow-orbit {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.flow-orbit-one {
+  top: -60px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(74,222,128,.10), transparent 70%);
+}
+.flow-orbit-two {
+  right: 30px;
+  bottom: -70px;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(126,179,255,.08), transparent 70%);
+}
+.flow-content { position: relative; z-index: 1; }
+.flow-eyebrow {
+  margin: 0;
+  color: #8a9ab5;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.flow-heading h3 {
+  margin: 2px 0 0;
+  color: #1e2d55;
+  font-size: 13px;
+  font-weight: 800;
+}
+.flow-live {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .22rem .5rem;
+  border: 1px solid rgba(74,222,128,.2);
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15966a;
+  font-size: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.flow-live i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(74,222,128,.16);
+  animation: livePulse 2s ease-in-out infinite;
+}
+.flow-steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .4rem;
+}
+.flow-step {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: .4rem;
+}
+.flow-step-icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #e7efff;
+  color: #2563c4;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.flow-step:hover .flow-step-icon {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(37,99,196,.15);
+}
+.flow-step-icon svg { width: 13px; height: 13px; }
+.flow-step-success {
+  background: #dcfce7;
+  color: #15966a;
+}
+.flow-step div:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.flow-step strong {
+  color: #1e2d55;
+  font-size: 9px;
+  font-weight: 700;
+}
+.flow-step span {
+  overflow: hidden;
+  margin-top: 1px;
+  color: #8a9ab5;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.flow-connector {
+  position: relative;
+  min-width: 14px;
+  height: 2px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+.flow-connector span {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, #2563c4, transparent);
+  animation: flowMove 2.6s linear infinite;
+}
+@keyframes flowMove {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+@media (max-width: 1100px) {
+  .operations-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .quick-actions { grid-template-columns: 1fr; }
+  .operations-hint { display: none; }
+  .flow-steps { align-items: stretch; flex-direction: column; }
+  .flow-connector { width: 1px; min-width: 1px; height: 10px; margin-left: 13px; flex: 0 0 auto; }
 }
 
 /* ── Filas tipo medicamento ── */
 .med-row {
-  background: #fff;
-  border: 1px solid #edf1f7;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f6ff 100%);
+  border: 1px solid #c5d5e8;
   border-left: 3px solid transparent;
-  box-shadow: 0 3px 10px rgba(22, 70, 142, .04);
+  box-shadow: 0 3px 10px rgba(22, 70, 142, .06);
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
-.med-row:hover { transform: translateX(3px); box-shadow: 0 10px 22px rgba(22, 70, 142, .11); }
+.med-row:hover { transform: translateX(3px); box-shadow: 0 10px 22px rgba(22, 70, 142, .13); border-color: #94a3c4; }
 
 .med-row--active {
   background: linear-gradient(135deg, #16468e, #0d2d6b);
@@ -1530,12 +2417,15 @@ onUnmounted(() => {
 .recent-header-icon {
   width: 26px; height: 26px;
   border-radius: 7px;
-  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-  color: #16468e;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(22, 70, 142, .12);
+  background: linear-gradient(135deg, #0D2D6B, #16468E);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 10px rgba(13, 45, 107, 0.25);
+  animation: recentIconPulse 2.5s ease-in-out infinite;
+}
+@keyframes recentIconPulse {
+  0%, 100% { box-shadow: 0 3px 10px rgba(13, 45, 107, 0.25); }
+  50% { box-shadow: 0 3px 18px rgba(13, 45, 107, 0.40); }
 }
 .recent-count-badge {
   font-size: 10px;

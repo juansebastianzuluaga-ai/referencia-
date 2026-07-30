@@ -50,29 +50,79 @@
       <span class="hero-pill" style="top:35%; right:8%; background:rgba(126,179,255,0.15); width:12px; height:12px;"></span>
     </div>
 
+    <!-- ── Barra de filtros ── -->
+    <div class="filter-bar rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap shrink-0 anim-slide-up" style="animation-delay:0.05s">
+      <div class="filter-bar-icon shrink-0">
+        <component :is="FilterIcon" class="w-4 h-4" />
+      </div>
+      <span class="filter-bar-title shrink-0">Filtros de consulta</span>
+      <div class="filter-divider shrink-0"></div>
+      <el-date-picker
+        v-model="filtros.desde"
+        type="date"
+        placeholder="Desde"
+        format="DD/MM/YYYY"
+        value-format="YYYY-MM-DD"
+        size="small"
+        clearable
+        class="filter-picker"
+        @change="aplicarFiltros"
+      />
+      <span class="filter-arrow shrink-0">→</span>
+      <el-date-picker
+        v-model="filtros.hasta"
+        type="date"
+        placeholder="Hasta"
+        format="DD/MM/YYYY"
+        value-format="YYYY-MM-DD"
+        size="small"
+        clearable
+        class="filter-picker"
+        @change="aplicarFiltros"
+      />
+      <el-select v-model="filtros.estado" placeholder="Estado" size="small" clearable class="filter-select" @change="aplicarFiltros">
+        <el-option label="Todas" value="todas" />
+        <el-option label="Pendientes" value="pendiente" />
+        <el-option label="Aceptadas" value="aceptado" />
+        <el-option label="En espera" value="en_espera" />
+        <el-option label="Completadas" value="completado" />
+        <el-option label="Negadas" value="negado" />
+      </el-select>
+      <el-select v-model="filtros.especialidad" placeholder="Especialidad" size="small" clearable filterable class="filter-select" @change="aplicarFiltros">
+        <el-option v-for="e in especialidadesOpciones" :key="e" :label="e" :value="e" />
+      </el-select>
+      <el-select v-model="filtros.eps" placeholder="EPS" size="small" clearable filterable class="filter-select" @change="aplicarFiltros">
+        <el-option v-for="e in epsOpciones" :key="e" :label="e" :value="e" />
+      </el-select>
+      <el-button v-if="hayFiltrosActivos" size="small" type="danger" round @click="limpiarFiltros">
+        <component :is="XIcon" class="w-3 h-3 mr-1" />
+        Limpiar filtros
+      </el-button>
+    </div>
+
     <!-- ── Stat cards ── -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
       <div
         v-for="(card, i) in statCards" :key="i"
         class="stat-card rounded-2xl p-4 flex flex-col gap-2 anim-slide-up"
-        :style="{ animationDelay: (i * 0.08) + 's', '--accent': card.color }"
+        :style="{ animationDelay: (i * 0.08) + 's', '--accent': card.color, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
       >
         <div class="stat-card-top-bar"></div>
         <div class="stat-card-glow" :style="{ background: 'radial-gradient(circle at 80% 20%, ' + card.color + '15, transparent 60%)' }"></div>
         <div class="flex items-center justify-between relative z-10">
-          <div class="stat-icon-wrap" :style="{ background: card.iconBg, color: card.color }">
-            <component :is="card.icon" class="w-4 h-4" />
+          <div class="stat-icon-wrap">
+            <component :is="card.icon" class="w-5 h-5" />
           </div>
-          <span class="stat-delta-badge" :style="{ background: card.deltaBg, color: card.deltaColor }">
+          <span class="stat-delta-badge">
             {{ card.delta }}
           </span>
         </div>
         <div class="mt-auto relative z-10">
-          <p class="stat-value" :style="{ color: card.color }">{{ card.value }}</p>
+          <p class="stat-value">{{ card.value }}</p>
           <p class="stat-label">{{ card.label }}</p>
         </div>
         <div class="stat-progress-track relative z-10">
-          <div class="stat-progress-fill" :style="{ width: card.percent + '%', background: card.color }"></div>
+          <div class="stat-progress-fill" :style="{ width: card.percent + '%' }"></div>
         </div>
       </div>
     </div>
@@ -252,6 +302,8 @@ import {
   Building2 as Building2Icon,
   ClipboardList as ClipboardListIcon,
   Hospital as HospitalIcon,
+  Filter as FilterIcon,
+  X as XIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 
@@ -268,13 +320,40 @@ const todayShort = new Intl.DateTimeFormat('es-CO', {
 
 const cargando = ref(true);
 const stats = ref({
-  solicitudes: { total: 0, pendientes: 0, aceptadas: 0, negadas: 0 },
+  solicitudes: { total: 0, pendientes: 0, aceptadas: 0, negadas: 0, en_espera: 0, completadas: 0 },
   clinicas: { total: 0, activas: 0, pendientes: 0 },
   usuarios: { total: 0, activos: 0 },
   solicitudes_recientes: [] as Array<{
     id: number; paciente: string; estado: string; especialidad: string; clinica: string | null; created_at: string | null;
   }>,
+  filtros: { especialidades: [] as string[], eps: [] as string[] },
 });
+
+const filtros = ref({
+  desde: '',
+  hasta: '',
+  estado: 'todas',
+  especialidad: '',
+  eps: '',
+});
+
+const especialidadesOpciones = computed(() => stats.value.filtros?.especialidades ?? []);
+const epsOpciones = computed(() => stats.value.filtros?.eps ?? []);
+
+const hayFiltrosActivos = computed(() =>
+  filtros.value.desde || filtros.value.hasta ||
+  (filtros.value.estado && filtros.value.estado !== 'todas') ||
+  filtros.value.especialidad || filtros.value.eps
+);
+
+function limpiarFiltros() {
+  filtros.value = { desde: '', hasta: '', estado: 'todas', especialidad: '', eps: '' };
+  cargarStats();
+}
+
+function aplicarFiltros() {
+  cargarStats();
+}
 
 const displayStats = ref([0, 0, 0, 0]);
 
@@ -405,7 +484,13 @@ function timeAgo(iso: string): string {
 async function cargarStats() {
   try {
     cargando.value = true;
-    const { data } = await http.get('/api/dashboard/stats');
+    const params: Record<string, string> = {};
+    if (filtros.value.desde) params.desde = filtros.value.desde;
+    if (filtros.value.hasta) params.hasta = filtros.value.hasta;
+    if (filtros.value.estado && filtros.value.estado !== 'todas') params.estado = filtros.value.estado;
+    if (filtros.value.especialidad) params.especialidad = filtros.value.especialidad;
+    if (filtros.value.eps) params.eps = filtros.value.eps;
+    const { data } = await http.get('/api/dashboard/stats', { params });
     stats.value = data.data;
     animateCounters([
       stats.value.solicitudes.total,
@@ -429,6 +514,85 @@ onMounted(cargarStats);
   background:
     radial-gradient(ellipse at 90% 0%, rgba(188, 218, 255, 0.35), transparent 30rem),
     radial-gradient(ellipse at 10% 100%, rgba(208, 242, 226, 0.25), transparent 28rem);
+}
+
+/* ── Filter bar ── */
+.filter-bar {
+  background: linear-gradient(135deg, #f0f6ff 0%, #e6efff 50%, #f0f9ff 100%);
+  border: 1px solid #b8c8e0;
+  box-shadow: 0 4px 20px rgba(13, 45, 107, 0.08), inset 0 1px 0 rgba(255,255,255,0.6);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow .3s ease, transform .3s ease;
+}
+.filter-bar:hover {
+  box-shadow: 0 6px 28px rgba(13, 45, 107, 0.12), inset 0 1px 0 rgba(255,255,255,0.6);
+  transform: translateY(-1px);
+}
+.filter-bar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0D2D6B, #16468E, #2563eb, #16468E, #0D2D6B);
+  background-size: 200% 100%;
+  animation: filterBarShimmer 3s linear infinite;
+}
+@keyframes filterBarShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.filter-bar-icon {
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #0D2D6B, #16468E);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(13, 45, 107, 0.25);
+  animation: filterIconPulse 2.5s ease-in-out infinite;
+}
+@keyframes filterIconPulse {
+  0%, 100% { box-shadow: 0 3px 10px rgba(13, 45, 107, 0.25); }
+  50% { box-shadow: 0 3px 18px rgba(13, 45, 107, 0.40); }
+}
+.filter-bar-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0D2D6B;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.filter-divider {
+  width: 1px; height: 24px;
+  background: linear-gradient(180deg, transparent, #b8c8e0, transparent);
+}
+.filter-arrow {
+  font-size: 14px;
+  font-weight: 700;
+  color: #94a3b8;
+  animation: filterArrowBounce 2s ease-in-out infinite;
+}
+@keyframes filterArrowBounce {
+  0%, 100% { transform: translateX(0); opacity: 0.5; }
+  50% { transform: translateX(3px); opacity: 1; }
+}
+.filter-picker {
+  width: 140px !important;
+}
+.filter-select {
+  width: 150px !important;
+}
+.filter-bar :deep(.el-input__wrapper),
+.filter-bar :deep(.el-select__wrapper) {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid #d4deea !important;
+  border-radius: 10px !important;
+  transition: all .2s ease;
+}
+.filter-bar :deep(.el-input__wrapper:hover),
+.filter-bar :deep(.el-select__wrapper:hover) {
+  border-color: #16468E !important;
+  box-shadow: 0 0 0 2px rgba(22, 70, 142, 0.08) !important;
 }
 
 /* ── Hero ── */
@@ -538,73 +702,98 @@ onMounted(cargarStats);
 
 /* ── Stat cards ── */
 .stat-card {
-  background: rgba(255,255,255,0.9);
-  border: 1px solid rgba(212, 222, 234, 0.6);
-  box-shadow: 0 4px 20px rgba(22, 70, 142, .07);
-  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1);
+  background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, color-mix(in srgb, var(--accent) 12%, white) 100%);
+  border: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 18%, transparent), 0 0 0 1px rgba(255,255,255,0.5) inset;
+  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1), border-color .3s ease;
   position: relative;
   overflow: hidden;
-  backdrop-filter: blur(10px);
 }
-.stat-card-top-bar {
+.stat-card::before {
+  content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--accent, #0D2D6B);
-  opacity: .85;
-  transition: height .28s ease, opacity .28s ease;
+  top: 0; left: 0; width: 6px; height: 100%;
+  background: var(--accent);
+  opacity: .9;
 }
-.stat-card-glow {
-  position: absolute; inset: 0; pointer-events: none; opacity: .6;
-  transition: opacity .3s ease;
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  filter: blur(24px);
 }
 .stat-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 20px 40px rgba(22, 70, 142, .16);
-}
-.stat-card:hover .stat-card-top-bar {
-  height: 5px;
-  opacity: 1;
-}
-.stat-card:hover .stat-card-glow {
-  opacity: 1;
+  transform: translateY(-10px) scale(1.04);
+  box-shadow: 0 28px 56px color-mix(in srgb, var(--accent) 26%, transparent);
+  border-color: var(--accent);
 }
 .stat-icon-wrap {
-  width: 36px; height: 36px;
-  border-radius: 11px;
+  width: 48px; height: 48px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: var(--icon-bg);
+  color: var(--icon-color);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--icon-color) 25%, transparent);
+  transition: transform .25s ease, box-shadow .25s ease;
+  position: relative;
+  z-index: 10;
+}
+.stat-card:hover .stat-icon-wrap {
+  transform: scale(1.18) rotate(-6deg);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--icon-color) 40%, transparent);
 }
 .stat-delta-badge {
   font-size: 10px;
-  font-weight: 700;
-  padding: 3px 8px;
+  font-weight: 800;
+  padding: 5px 12px;
   border-radius: 999px;
   white-space: nowrap;
+  background: var(--delta-bg);
+  color: var(--delta-color);
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  position: relative;
+  z-index: 10;
 }
 .stat-value {
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -.02em;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.03em;
+  color: #1e293b;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.8);
+  position: relative;
+  z-index: 10;
 }
 .stat-label {
   font-size: 11px;
-  font-weight: 600;
-  color: #64748b;
+  font-weight: 800;
+  color: #475569;
   margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  position: relative;
+  z-index: 10;
 }
 .stat-progress-track {
-  height: 4px;
+  height: 6px;
   border-radius: 999px;
-  background: #edf2f7;
+  background: rgba(255,255,255,0.6);
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.08);
+  position: relative;
+  z-index: 10;
 }
 .stat-progress-fill {
   height: 100%;
   border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, white));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent);
   transition: width .8s cubic-bezier(.22,1,.36,1);
 }
 

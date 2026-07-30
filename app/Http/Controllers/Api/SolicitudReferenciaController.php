@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\SolicitudReferencia;
 use App\Models\SolicitudReferenciaAdjunto;
+use App\Models\SolicitudReferenciaEvento;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -15,7 +16,7 @@ class SolicitudReferenciaController extends Controller
     public function index(): JsonResponse
     {
         $solicitudes = SolicitudReferencia::with(['clinica', 'adjuntos'])
-            ->orderByRaw("FIELD(estado, 'pendiente', 'aceptado', 'negado')")
+            ->orderByRaw("FIELD(estado, 'pendiente', 'aceptado', 'en_espera', 'completado', 'negado')")
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -111,6 +112,52 @@ class SolicitudReferenciaController extends Controller
         ]);
 
         return response()->json(['data' => $solicitud, 'message' => 'Solicitud marcada como pendiente']);
+    }
+
+    public function enEspera(Request $request, SolicitudReferencia $solicitud): JsonResponse
+    {
+        $validated = $request->validate([
+            'observaciones_respuesta' => ['nullable', 'string'],
+        ]);
+
+        $solicitud->update([
+            'estado' => 'en_espera',
+            'observaciones_respuesta' => $validated['observaciones_respuesta'] ?? null,
+        ]);
+
+        $solicitud->load('clinica');
+
+        SolicitudReferenciaEvento::create([
+            'solicitud_referencia_id' => $solicitud->id,
+            'tipo' => 'en_espera',
+            'titulo' => 'Paciente en espera',
+            'descripcion' => 'La solicitud fue aceptada y el paciente está en espera de llegada.',
+        ]);
+
+        return response()->json(['data' => $solicitud, 'message' => 'Solicitud marcada en espera de llegada del paciente']);
+    }
+
+    public function completado(Request $request, SolicitudReferencia $solicitud): JsonResponse
+    {
+        $validated = $request->validate([
+            'observaciones_respuesta' => ['nullable', 'string'],
+        ]);
+
+        $solicitud->update([
+            'estado' => 'completado',
+            'observaciones_respuesta' => $validated['observaciones_respuesta'] ?? null,
+        ]);
+
+        $solicitud->load('clinica');
+
+        SolicitudReferenciaEvento::create([
+            'solicitud_referencia_id' => $solicitud->id,
+            'tipo' => 'completado',
+            'titulo' => 'Paciente atendido',
+            'descripcion' => 'El paciente llegó a la institución y fue atendido.',
+        ]);
+
+        return response()->json(['data' => $solicitud, 'message' => 'Solicitud completada']);
     }
 
     public function descargarAdjunto(SolicitudReferencia $solicitud, SolicitudReferenciaAdjunto $adjunto): BinaryFileResponse

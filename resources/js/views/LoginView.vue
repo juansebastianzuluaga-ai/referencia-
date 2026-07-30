@@ -254,7 +254,7 @@ import {
 } from '@lucide/vue';
 import { useAuthStore } from '@/stores/auth';
 import { useClinicaAuthStore } from '@/stores/clinicaAuth';
-import { formatearNit, validarNit, normalizarNit } from '@/utils/nit';
+import { normalizarNit } from '@/utils/nit';
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -285,14 +285,14 @@ const enviando = ref(false);
 const nitModel = computed({
   get: () => nit.value,
   set: (val) => {
-    nit.value = formatearNit(val);
-    nitValido.value = validarNit(nit.value);
+    nit.value = val;
+    nitValido.value = normalizarNit(val).length >= 5;
   },
 });
 
 async function buscarClinica() {
   if (!nit.value.trim()) { errorClinica.value = 'Ingrese el NIT o cédula'; return; }
-  if (!nitValido.value) { errorClinica.value = 'El dígito de verificación del NIT no es correcto'; return; }
+  if (!nitValido.value) { errorClinica.value = 'Ingrese un NIT válido (mínimo 5 dígitos)'; return; }
   try {
     buscando.value = true;
     errorClinica.value = '';

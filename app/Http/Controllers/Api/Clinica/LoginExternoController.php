@@ -95,13 +95,34 @@ class LoginExternoController extends Controller
         $nitNormalizado = preg_replace('/\D/', '', $request->nit);
 
         $clinica = Clinica::whereRaw("REGEXP_REPLACE(nit, '[^0-9]', '') = ?", [$nitNormalizado])
-            ->where('is_active', true)
             ->first();
 
         if (! $clinica) {
             return response()->json([
                 'message' => 'Clínica no encontrada o no autorizada para acceder al sistema.',
             ], 404);
+        }
+
+        if ($clinica->estado === 'pendiente') {
+            return response()->json([
+                'message' => 'Su clínica está pendiente de aceptación por el equipo de referencia. Le notificaremos cuando sea aprobada.',
+            ], 403);
+        }
+
+        if ($clinica->estado === 'rechazada') {
+            $mensaje = 'Clínica no autorizada para acceder al sistema.';
+
+            if ($clinica->motivo_rechazo) {
+                $mensaje .= " Motivo: {$clinica->motivo_rechazo}";
+            }
+
+            return response()->json(['message' => $mensaje], 403);
+        }
+
+        if (! $clinica->is_active) {
+            return response()->json([
+                'message' => 'Clínica no autorizada para acceder al sistema.',
+            ], 403);
         }
 
         return response()->json([
@@ -122,13 +143,24 @@ class LoginExternoController extends Controller
         $nitNormalizado = preg_replace('/\D/', '', $request->nit);
 
         $clinica = Clinica::whereRaw("REGEXP_REPLACE(nit, '[^0-9]', '') = ?", [$nitNormalizado])
-            ->where('is_active', true)
             ->first();
 
         if (! $clinica) {
             return response()->json([
-                'message' => 'Clínica no encontrada o no autorizada.',
+                'message' => 'Clínica no encontrada o no autorizada para acceder al sistema.',
             ], 404);
+        }
+
+        if ($clinica->estado === 'pendiente') {
+            return response()->json([
+                'message' => 'Su clínica está pendiente de aceptación por el equipo de referencia.',
+            ], 403);
+        }
+
+        if ($clinica->estado === 'rechazada' || ! $clinica->is_active) {
+            return response()->json([
+                'message' => 'Clínica no autorizada para acceder al sistema.',
+            ], 403);
         }
 
         // Invalidar tokens anteriores no usados de esta clínica
@@ -158,11 +190,22 @@ class LoginExternoController extends Controller
         $nitNormalizado = preg_replace('/\D/', '', $request->nit);
 
         $clinica = Clinica::whereRaw("REGEXP_REPLACE(nit, '[^0-9]', '') = ?", [$nitNormalizado])
-            ->where('is_active', true)
             ->first();
 
         if (! $clinica) {
-            return response()->json(['message' => 'Clínica no encontrada.'], 404);
+            return response()->json(['message' => 'Clínica no encontrada o no autorizada para acceder al sistema.'], 404);
+        }
+
+        if ($clinica->estado === 'pendiente') {
+            return response()->json([
+                'message' => 'Su clínica está pendiente de aceptación por el equipo de referencia.',
+            ], 403);
+        }
+
+        if ($clinica->estado === 'rechazada' || ! $clinica->is_active) {
+            return response()->json([
+                'message' => 'Clínica no autorizada para acceder al sistema.',
+            ], 403);
         }
 
         $tokenRecord = ClinicaAuthToken::where('clinica_id', $clinica->id)
@@ -199,17 +242,14 @@ class LoginExternoController extends Controller
 
         $tokenRecord = ClinicaAuthToken::where('tipo', 'magic_link')
             ->where('token', hash('sha256', $request->token))
-            ->whereNull('used_at')
             ->where('expires_at', '>', now())
             ->first();
 
         if (! $tokenRecord) {
             return response()->json([
-                'message' => 'El enlace ha expirado o ya fue utilizado. Solicite uno nuevo.',
+                'message' => 'El enlace ha expirado. Solicite uno nuevo.',
             ], 422);
         }
-
-        $tokenRecord->update(['used_at' => now()]);
 
         $clinica = $tokenRecord->clinica;
 
@@ -316,7 +356,7 @@ class LoginExternoController extends Controller
             'clinica_id' => $clinica->id,
             'tipo' => 'magic_link',
             'token' => hash('sha256', $tokenPlano),
-            'expires_at' => now()->addMinutes(60),
+            'expires_at' => now()->endOfDay(),
         ]);
 
         $url = url("/login-externo/magic/{$tokenPlano}");

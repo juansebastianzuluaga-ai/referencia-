@@ -63,7 +63,7 @@
               <el-alert
                 v-if="error"
                 :title="error"
-                type="error"
+                :type="errorType"
                 show-icon
                 :closable="false"
                 class="mb-4"
@@ -149,7 +149,7 @@
             <el-alert
               v-if="error"
               :title="error"
-              type="error"
+              :type="errorType"
               show-icon
               :closable="false"
               class="mt-4"
@@ -237,6 +237,7 @@ const nit = ref('');
 const metodo = ref<'email' | 'sms' | null>(null);
 const clinicaNombre = ref('');
 const error = ref('');
+const errorType = ref<'error' | 'warning'>('error');
 const buscando = ref(false);
 const enviando = ref(false);
 
@@ -249,11 +250,13 @@ async function buscarClinica() {
   try {
     buscando.value = true;
     error.value = '';
+    errorType.value = 'error';
     const resultado = await clinicaAuthStore.buscarClinica(nit.value.trim());
     clinicaNombre.value = resultado.nombre;
     paso.value = 2;
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? 'Clínica no encontrada o no activa';
+    errorType.value = e?.response?.status === 403 ? 'warning' : 'error';
+    error.value = e?.response?.data?.message ?? 'Clínica no encontrada o no autorizada para acceder al sistema.';
   } finally {
     buscando.value = false;
   }
@@ -265,6 +268,7 @@ async function seleccionarMetodo(m: 'email' | 'sms') {
   try {
     enviando.value = true;
     error.value = '';
+    errorType.value = 'error';
     await clinicaAuthStore.solicitarAcceso(nit.value.trim(), m);
 
     if (m === 'email') {
@@ -283,6 +287,7 @@ function volverPaso1() {
   paso.value = 1;
   metodo.value = null;
   error.value = '';
+  errorType.value = 'error';
   clinicaNombre.value = '';
 }
 </script>

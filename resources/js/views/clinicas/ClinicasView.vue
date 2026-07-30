@@ -2,16 +2,21 @@
   <div class="h-full flex flex-col gap-2 p-3 sm:p-4 overflow-hidden clinic-page">
 
     <!-- ── Header ── -->
-    <div class="flex items-center justify-between shrink-0">
-      <h1 class="text-lg font-bold text-gray-900">Clínicas</h1>
+    <div class="clinic-header shrink-0">
+      <div class="clinic-header-icon">
+        <component :is="BuildingIcon" class="w-5 h-5" />
+      </div>
+      <h1 class="clinic-header-title">Clínicas registradas</h1>
+      <div class="clinic-header-spacer"></div>
       <el-button type="primary" size="small" @click="cargar">
         <component :is="RefreshIcon" class="w-3.5 h-3.5 mr-1" />
         Actualizar
       </el-button>
     </div>
 
-    <!-- ── Tabs ── -->
-    <div class="clinic-tabs shrink-0">
+    <!-- ── Tabs + Búsqueda ── -->
+    <div class="clinic-filter-bar shrink-0">
+      <div class="clinic-tabs">
       <button
         v-for="tab in tabs"
         :key="tab.value"
@@ -22,6 +27,23 @@
         {{ tab.label }}
         <span class="clinic-tab-count">{{ tab.count }}</span>
       </button>
+      </div>
+      <div class="clinic-filter-divider"></div>
+      <el-input
+        v-model="filtroBuscar"
+        placeholder="Buscar por NIT, ciudad, nombre..."
+        class="clinic-search"
+        clearable
+        size="small"
+      >
+        <template #prefix>
+          <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
+        </template>
+      </el-input>
+      <el-button v-if="filtroBuscar || tabActiva !== 'todas'" type="danger" size="small" round @click="limpiarFiltros">
+        <component :is="XIcon" class="w-3 h-3 mr-1" />
+        Borrar filtros
+      </el-button>
     </div>
 
     <!-- ── Tabla ── -->
@@ -291,18 +313,80 @@
 
 <style scoped>
 .clinic-page {
-  background:
-    radial-gradient(circle at 95% 0%, rgba(188, 218, 255, 0.45), transparent 24rem),
-    radial-gradient(circle at 5% 100%, rgba(208, 242, 226, 0.35), transparent 22rem);
+  background: linear-gradient(160deg, #eef4fc 0%, #e3edf8 40%, #f0f5fa 100%);
 }
 
+/* ── Header ── */
+.clinic-header {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .75rem 1rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0D2D6B 0%, #16468E 60%, #1e3a7a 100%);
+  box-shadow: 0 6px 24px rgba(13, 45, 107, .25), inset 0 1px 0 rgba(255,255,255,0.08);
+  position: relative; overflow: hidden;
+}
+.clinic-header::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #2563eb, #60a5fa, #2563eb);
+  background-size: 200% 100%;
+  animation: clinicHeaderShimmer 3s linear infinite;
+}
+@keyframes clinicHeaderShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.clinic-header-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
+  color: #fff; flex-shrink: 0;
+}
+.clinic-header-title {
+  font-size: 16px; font-weight: 800; color: #fff;
+  letter-spacing: 0.01em; white-space: nowrap;
+}
+.clinic-header-spacer { flex: 1; }
+
+/* ── Filter bar ── */
+.clinic-filter-bar {
+  display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+  padding: .65rem .9rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f0f6ff 0%, #e6efff 50%, #f0f9ff 100%);
+  border: 1px solid #b8c8e0;
+  box-shadow: 0 3px 16px rgba(13, 45, 107, 0.07), inset 0 1px 0 rgba(255,255,255,0.6);
+  transition: box-shadow .3s ease, transform .3s ease;
+}
+.clinic-filter-bar:hover {
+  box-shadow: 0 5px 24px rgba(13, 45, 107, 0.11), inset 0 1px 0 rgba(255,255,255,0.6);
+  transform: translateY(-1px);
+}
+.clinic-filter-divider {
+  width: 1px; height: 24px;
+  background: linear-gradient(180deg, transparent, #b8c8e0, transparent);
+  flex-shrink: 0;
+}
+
+/* ── Search ── */
+.clinic-search { flex: 1; min-width: 200px; max-width: 400px; }
+.clinic-filter-bar :deep(.el-input__wrapper) {
+  background: rgba(255,255,255,0.75) !important;
+  border: 1px solid #d4deea !important;
+  border-radius: 10px !important;
+  transition: all .2s ease;
+}
+.clinic-filter-bar :deep(.el-input__wrapper:hover) {
+  border-color: #16468E !important;
+  box-shadow: 0 0 0 2px rgba(22,70,142,0.08) !important;
+}
 
 /* ── Tabs ── */
 .clinic-tabs {
   display: flex; gap: 4px;
   padding: 3px;
-  background: rgba(255,255,255,0.8);
-  border: 1px solid #e2e8f0;
+  background: rgba(255,255,255,0.7);
+  border: 1px solid #d4deea;
   border-radius: 10px;
   width: fit-content;
 }
@@ -315,11 +399,11 @@
   border: none; cursor: pointer;
   transition: all .2s ease;
 }
-.clinic-tab:hover { color: #1e2d55; background: rgba(13,45,107,.04); }
+.clinic-tab:hover { color: #1e2d55; background: rgba(13,45,107,.06); transform: translateY(-1px); }
 .clinic-tab-active {
-  background: #0d2d6b;
+  background: linear-gradient(135deg, #0D2D6B, #16468E);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(13,45,107,.25);
+  box-shadow: 0 2px 10px rgba(13,45,107,.28);
 }
 .clinic-tab-count {
   padding: 1px 6px; border-radius: 999px;
@@ -602,6 +686,7 @@ import {
   Hospital as HospitalIcon,
   ShieldCheck,
   AlertTriangle,
+  Search as SearchIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 
@@ -632,6 +717,12 @@ const modalDetalle = ref(false);
 const clinicaSeleccionada = ref<Clinica | null>(null);
 const tabActiva = ref<'todas' | 'pendiente' | 'activa' | 'rechazada'>('todas');
 const motivoRechazo = ref('');
+const filtroBuscar = ref('');
+
+function limpiarFiltros() {
+  filtroBuscar.value = '';
+  tabActiva.value = 'todas';
+}
 
 const resumen = computed(() => ({
   pendientes: clinicas.value.filter(c => c.estado === 'pendiente').length,
@@ -693,8 +784,20 @@ function avatarStyle(estado: string) {
 }
 
 const clinicasFiltradas = computed(() => {
-  if (tabActiva.value === 'todas') return clinicas.value;
-  return clinicas.value.filter(c => c.estado === tabActiva.value);
+  let result = clinicas.value;
+  if (tabActiva.value !== 'todas') {
+    result = result.filter(c => c.estado === tabActiva.value);
+  }
+  if (filtroBuscar.value.trim()) {
+    const q = filtroBuscar.value.toLowerCase().trim();
+    result = result.filter(c =>
+      c.nit.toLowerCase().includes(q) ||
+      c.ciudad.toLowerCase().includes(q) ||
+      c.nombre.toLowerCase().includes(q) ||
+      c.estado.toLowerCase().includes(q)
+    );
+  }
+  return result;
 });
 
 async function cargar() {
