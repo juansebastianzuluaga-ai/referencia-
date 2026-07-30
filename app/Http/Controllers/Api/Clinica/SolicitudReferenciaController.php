@@ -44,7 +44,7 @@ class SolicitudReferenciaController extends Controller
         }
 
         $solicitudes = SolicitudReferencia::where('clinica_id', $clinicaId)
-            ->with(['adjuntos', 'eventos'])
+            ->with(['adjuntos', 'eventos', 'diagnosticos'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -71,11 +71,17 @@ class SolicitudReferenciaController extends Controller
             'tipo_documento' => ['required', 'string', 'max:5'],
             'numero_documento' => ['required', 'string', 'max:30'],
             'eps' => ['required', 'string', 'max:120'],
-            'diagnostico' => ['required', 'string', 'max:400'],
+            'diagnostico' => ['nullable', 'string', 'max:400'],
+            'diagnosticos' => ['nullable', 'array'],
+            'diagnosticos.*.codigo_cie10' => ['required', 'string', 'max:20'],
+            'diagnosticos.*.descripcion' => ['required', 'string', 'max:400'],
             'municipio_capita' => ['required', 'string', 'max:120'],
             'especialidad_requerida' => ['required', 'string', 'max:120'],
             'servicio_ubicacion_actual' => ['required', 'string', 'max:60'],
             'servicio_remision' => ['nullable', 'string', 'max:60'],
+            'quien_remitente' => ['nullable', 'string', 'max:200'],
+            'telefono_contacto' => ['nullable', 'string', 'max:30'],
+            'correo_contacto' => ['nullable', 'email', 'max:150'],
             'resumen_historia_clinica' => ['required', 'string'],
             'via_contacto' => ['nullable', 'string', 'max:20'],
             'gestante' => ['nullable', 'boolean'],
@@ -91,9 +97,17 @@ class SolicitudReferenciaController extends Controller
         $validated['estado'] = 'pendiente';
 
         $adjuntos = $validated['adjuntos'] ?? [];
-        unset($validated['adjuntos']);
+        $diagnosticos = $validated['diagnosticos'] ?? [];
+        unset($validated['adjuntos'], $validated['diagnosticos']);
 
         $solicitud = SolicitudReferencia::create($validated);
+
+        foreach ($diagnosticos as $dx) {
+            $solicitud->diagnosticos()->create([
+                'codigo_cie10' => $dx['codigo_cie10'],
+                'descripcion' => $dx['descripcion'],
+            ]);
+        }
 
         foreach ($adjuntos as $adjunto) {
             $ruta = $adjunto->store("solicitudes-referencia/{$solicitud->id}", 'local');
@@ -135,7 +149,7 @@ class SolicitudReferenciaController extends Controller
 
         Mail::to($destinatarios)->send(new NuevaSolicitudReferenciaInterna($clinica, $solicitud));
 
-        return response()->json(['data' => $solicitud->load(['adjuntos', 'eventos']), 'message' => 'Solicitud enviada correctamente'], 201);
+        return response()->json(['data' => $solicitud->load(['adjuntos', 'eventos', 'diagnosticos']), 'message' => 'Solicitud enviada correctamente'], 201);
     }
 
     private function notificarUsuarios(string $titulo, string $mensaje, string $tipo = 'info', ?string $link = null): void
@@ -164,7 +178,7 @@ class SolicitudReferenciaController extends Controller
         $clinicaId = $this->getClinicaId($request);
 
         $solicitud = SolicitudReferencia::where('clinica_id', $clinicaId)
-            ->with(['adjuntos', 'eventos'])
+            ->with(['adjuntos', 'eventos', 'diagnosticos'])
             ->findOrFail($id);
 
         return response()->json(['data' => $solicitud]);

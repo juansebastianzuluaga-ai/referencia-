@@ -2,7 +2,10 @@
   <div class="ph-solicitudes h-full flex flex-col gap-2 p-3 sm:p-4 overflow-hidden">
 
     <!-- ── Header ── -->
-    <div class="sol-header shrink-0">
+    <div class="sol-header shrink-0"
+      v-motion
+      :initial="{ opacity: 0, y: 20 }"
+      :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
       <div class="sol-header-icon">
         <component :is="ClipboardListIcon" class="w-5 h-5" />
       </div>
@@ -78,6 +81,7 @@
             <thead class="sol-table-thead">
               <tr>
                 <th class="sol-th sol-th-paciente">Paciente</th>
+                <th class="sol-th">Clínica</th>
                 <th class="sol-th">Especialidad</th>
                 <th class="sol-th">Estado</th>
                 <th class="sol-th sol-th-actions">Acciones</th>
@@ -99,11 +103,17 @@
                       }">
                       {{ inicialesPaciente(s) }}
                     </div>
-                    <div>
+                    <div class="sol-table-paciente-info">
                       <p class="sol-table-name">{{ nombreCompleto(s) }}</p>
                       <p class="sol-table-doc">{{ formatFecha(s.created_at) }} · {{ s.hora }}</p>
                     </div>
                   </div>
+                </td>
+                <td class="sol-td">
+                  <p class="sol-table-clinica-name">{{ s.clinica?.nombre ?? '—' }}</p>
+                  <p class="sol-table-remitente" v-if="s.quien_remitente || s.telefono_contacto">
+                    {{ s.quien_remitente || '—' }}<span v-if="s.telefono_contacto"> · {{ s.telefono_contacto }}</span>
+                  </p>
                 </td>
                 <td class="sol-td">{{ s.especialidad_requerida }}</td>
                 <td class="sol-td">
@@ -120,26 +130,31 @@
                 </td>
                 <td class="sol-td">
                   <div class="sol-table-actions">
-                    <el-button size="small" @click="verDetalle(s)">
-                      <component :is="EyeIcon" class="w-3 h-3 mr-0.5" />
-                      Ver
-                    </el-button>
-                    <el-button v-if="s.estado === 'pendiente'" type="success" size="small" @click="abrirAceptar(s)">
-                      <component :is="CheckIcon" class="w-3 h-3 mr-0.5" />
-                      Aceptar
-                    </el-button>
-                    <el-button v-if="s.estado === 'aceptado'" type="primary" size="small" @click="marcarEnEspera(s)">
-                      <component :is="ClockIcon" class="w-3 h-3 mr-0.5" />
-                      En espera
-                    </el-button>
-                    <el-button v-if="s.estado === 'en_espera'" type="primary" size="small" @click="marcarCompletado(s)">
-                      <component :is="CheckCircleIcon" class="w-3 h-3 mr-0.5" />
-                      Completar
-                    </el-button>
-                    <el-button v-if="s.estado !== 'negado' && s.estado !== 'completado'" type="danger" size="small" @click="abrirNegar(s)">
-                      <component :is="XIcon" class="w-3 h-3 mr-0.5" />
-                      Negar
-                    </el-button>
+                    <el-tooltip content="Ver detalle" placement="top">
+                      <el-button circle size="small" @click="verDetalle(s)">
+                        <component :is="EyeIcon" class="w-3.5 h-3.5" />
+                      </el-button>
+                    </el-tooltip>
+                    <el-tooltip v-if="s.estado === 'pendiente'" content="Aceptar" placement="top">
+                      <el-button type="success" circle size="small" @click="abrirAceptar(s)">
+                        <component :is="CheckIcon" class="w-3.5 h-3.5" />
+                      </el-button>
+                    </el-tooltip>
+                    <el-tooltip v-if="s.estado === 'aceptado'" content="Marcar en espera" placement="top">
+                      <el-button type="primary" circle size="small" @click="marcarEnEspera(s)">
+                        <component :is="ClockIcon" class="w-3.5 h-3.5" />
+                      </el-button>
+                    </el-tooltip>
+                    <el-tooltip v-if="s.estado === 'en_espera'" content="Completar" placement="top">
+                      <el-button type="primary" circle size="small" @click="marcarCompletado(s)">
+                        <component :is="CheckCircleIcon" class="w-3.5 h-3.5" />
+                      </el-button>
+                    </el-tooltip>
+                    <el-tooltip v-if="s.estado !== 'negado' && s.estado !== 'completado'" content="Negar" placement="top">
+                      <el-button type="danger" circle size="small" @click="abrirNegar(s)">
+                        <component :is="XIcon" class="w-3.5 h-3.5" />
+                      </el-button>
+                    </el-tooltip>
                   </div>
                 </td>
               </tr>
@@ -164,8 +179,9 @@
             </div>
             <div class="detalle-head-info">
               <p class="detalle-head-title">Detalle de solicitud</p>
-              <p class="detalle-head-sub">#{{ solicitudSeleccionada.id }} · {{ nombreCompleto(solicitudSeleccionada) }}</p>
+              <p class="detalle-head-sub">{{ nombreCompleto(solicitudSeleccionada) }}</p>
             </div>
+            <div class="detalle-head-id-badge">ID #{{ solicitudSeleccionada.id }}</div>
             <div class="detalle-head-badge" :class="'badge-' + solicitudSeleccionada.estado">
               {{ estadoLabel(solicitudSeleccionada.estado) }}
             </div>
@@ -199,16 +215,26 @@
                   <div class="detalle-card-row"><span class="detalle-row-label">Especialidad</span><span class="detalle-row-value">{{ solicitudSeleccionada.especialidad_requerida }}</span></div>
                   <div class="detalle-card-row"><span class="detalle-row-label">Municipio</span><span class="detalle-row-value">{{ solicitudSeleccionada.municipio_capita }}</span></div>
                   <div class="detalle-card-row"><span class="detalle-row-label">Fecha</span><span class="detalle-row-value">{{ formatFecha(solicitudSeleccionada.fecha) }} · {{ solicitudSeleccionada.hora }}</span></div>
+                  <div v-if="solicitudSeleccionada.quien_remitente" class="detalle-card-row"><span class="detalle-row-label">Remite</span><span class="detalle-row-value">{{ solicitudSeleccionada.quien_remitente }}</span></div>
+                  <div v-if="solicitudSeleccionada.telefono_contacto" class="detalle-card-row"><span class="detalle-row-label">Teléfono</span><span class="detalle-row-value font-mono">{{ solicitudSeleccionada.telefono_contacto }}</span></div>
+                  <div v-if="solicitudSeleccionada.correo_contacto" class="detalle-card-row"><span class="detalle-row-label">Correo</span><span class="detalle-row-value">{{ solicitudSeleccionada.correo_contacto }}</span></div>
                 </div>
               </div>
 
-              <!-- Card: Diagnóstico -->
+              <!-- Card: Diagnósticos -->
               <div class="detalle-card detalle-card-purple">
                 <div class="detalle-card-header">
                   <component :is="FileTextIcon" class="w-4 h-4" />
-                  <span>DIAGNÓSTICO</span>
+                  <span>DIAGNÓSTICOS</span>
                 </div>
-                <p class="detalle-card-text">{{ solicitudSeleccionada.diagnostico }}</p>
+                <div v-if="solicitudSeleccionada.diagnosticos?.length" class="detalle-dx-list">
+                  <div v-for="dx in solicitudSeleccionada.diagnosticos" :key="dx.id" class="detalle-dx-item">
+                    <strong class="detalle-dx-code">{{ dx.codigo_cie10 }}</strong>
+                    <span class="detalle-dx-desc">{{ dx.descripcion }}</span>
+                  </div>
+                </div>
+                <p v-else-if="solicitudSeleccionada.diagnostico" class="detalle-card-text">{{ solicitudSeleccionada.diagnostico }}</p>
+                <p v-else class="detalle-card-text">—</p>
               </div>
 
               <div v-if="solicitudSeleccionada.adjuntos?.length" class="detalle-card detalle-card-blue">
@@ -308,15 +334,19 @@
         </div>
       </template>
       <div class="space-y-3 px-4 py-4">
-        <div class="grid grid-cols-1 gap-3">
+        <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Hora de respuesta <span class="text-red-400">*</span></label>
-            <el-time-select v-model="formAceptar.hora_respuesta" placeholder="HH:MM" start="00:00" step="00:05" end="23:55" class="w-full" />
+            <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Fecha</label>
+            <el-input :model-value="formAceptar.fecha_respuesta" disabled />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Hora</label>
+            <el-input :model-value="formAceptar.hora_respuesta" disabled />
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Nombre de quien responde <span class="text-red-400">*</span></label>
-          <el-input v-model="formAceptar.nombre_quien_responde" placeholder="Nombre completo" />
+          <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Nombre de quien responde</label>
+          <el-input :model-value="formAceptar.nombre_quien_responde" disabled />
         </div>
         <div>
           <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Observaciones</label>
@@ -347,17 +377,23 @@
         </div>
       </template>
       <div class="space-y-3 px-4 py-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Fecha</label>
+            <el-input :model-value="formNegar.fecha_respuesta" disabled />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Hora</label>
+            <el-input :model-value="formNegar.hora_respuesta" disabled />
+          </div>
+        </div>
         <div>
-          <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Hora de respuesta <span class="text-red-400">*</span></label>
-          <el-time-select v-model="formNegar.hora_respuesta" placeholder="HH:MM" start="00:00" step="00:05" end="23:55" class="w-full" />
+          <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Nombre de quien responde</label>
+          <el-input :model-value="formNegar.nombre_quien_responde" disabled />
         </div>
         <div>
           <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Motivo de negación <span class="text-red-400">*</span></label>
           <el-input v-model="formNegar.motivo_negacion" type="textarea" :rows="3" placeholder="Indique el motivo..." />
-        </div>
-        <div>
-          <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Nombre de quien responde <span class="text-red-400">*</span></label>
-          <el-input v-model="formNegar.nombre_quien_responde" placeholder="Nombre completo" />
         </div>
         <div>
           <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Observaciones adicionales</label>
@@ -394,6 +430,9 @@ import {
   Download as DownloadIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
+import { useAuthStore } from '@/stores/auth';
+
+const authStore = useAuthStore();
 
 interface Clinica {
   id: number;
@@ -416,10 +455,14 @@ interface Solicitud {
   numero_documento: string;
   eps: string;
   diagnostico: string;
+  diagnosticos?: { id: number; codigo_cie10: string; descripcion: string }[];
   municipio_capita: string;
   especialidad_requerida: string;
   servicio_ubicacion_actual: string;
   servicio_remision?: string;
+  quien_remitente?: string;
+  telefono_contacto?: string;
+  correo_contacto?: string;
   resumen_historia_clinica: string;
   via_contacto?: string;
   gestante?: boolean;
@@ -448,8 +491,8 @@ const modalAceptar = ref(false);
 const modalNegar = ref(false);
 const solicitudSeleccionada = ref<Solicitud | null>(null);
 
-const formAceptar = ref({ hora_respuesta: '', nombre_quien_responde: '', observaciones_respuesta: '' });
-const formNegar = ref({ hora_respuesta: '', motivo_negacion: '', nombre_quien_responde: '', observaciones_respuesta: '' });
+const formAceptar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', observaciones_respuesta: '' });
+const formNegar = ref({ fecha_respuesta: '', hora_respuesta: '', motivo_negacion: '', nombre_quien_responde: '', observaciones_respuesta: '' });
 
 const resumen = computed(() => ({
   total: solicitudes.value.length,
@@ -585,6 +628,14 @@ function abrirHistoriaClinica() {
   modalHistoriaClinica.value = true;
 }
 
+function fechaActual(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function horaActual(): string {
   const now = new Date();
   const h = String(now.getHours()).padStart(2, '0');
@@ -594,13 +645,24 @@ function horaActual(): string {
 
 function abrirAceptar(s: Solicitud) {
   solicitudSeleccionada.value = s;
-  formAceptar.value = { hora_respuesta: horaActual(), nombre_quien_responde: '', observaciones_respuesta: '' };
+  formAceptar.value = {
+    fecha_respuesta: fechaActual(),
+    hora_respuesta: horaActual(),
+    nombre_quien_responde: authStore.user?.full_name ?? '',
+    observaciones_respuesta: '',
+  };
   modalAceptar.value = true;
 }
 
 function abrirNegar(s: Solicitud) {
   solicitudSeleccionada.value = s;
-  formNegar.value = { hora_respuesta: horaActual(), motivo_negacion: '', nombre_quien_responde: '', observaciones_respuesta: '' };
+  formNegar.value = {
+    fecha_respuesta: fechaActual(),
+    hora_respuesta: horaActual(),
+    motivo_negacion: '',
+    nombre_quien_responde: authStore.user?.full_name ?? '',
+    observaciones_respuesta: '',
+  };
   modalNegar.value = true;
 }
 
@@ -823,6 +885,7 @@ onMounted(cargar);
 .sol-th-actions { text-align: right; }
 
 .sol-table-paciente { display: flex; align-items: center; gap: 10px; }
+.sol-table-paciente-info { min-width: 0; }
 .sol-table-avatar {
   width: 32px; height: 32px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
@@ -831,9 +894,13 @@ onMounted(cargar);
 .sol-table-name {
   font-size: 13px; font-weight: 700; color: #1e2d55;
   margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  max-width: 180px;
+  max-width: 200px;
 }
+.sol-table-clinica { font-size: 10px; color: #3b82f6; margin: 1px 0 0; font-weight: 600; }
+.sol-table-clinica-name { font-size: 12px; font-weight: 700; color: #1e40af; margin: 0; }
+.sol-table-remitente { font-size: 10px; color: #94a3b8; margin: 2px 0 0; }
 .sol-table-doc { font-size: 10px; color: #94a3b8; margin: 1px 0 0; }
+.sol-table-doc-inline { font-size: 10px; color: #94a3b8; font-weight: 400; }
 .sol-table-status {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 10px; border-radius: 999px;
@@ -853,11 +920,10 @@ onMounted(cargar);
 .sol-table-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .sol-table-actions .el-button {
   margin-left: 0 !important;
-  min-width: 96px;
   transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s ease, filter .2s ease;
 }
 .sol-table-actions .el-button:hover {
-  transform: translateY(-2px) scale(1.05);
+  transform: translateY(-2px) scale(1.1);
   filter: brightness(1.08);
 }
 .sol-table-actions .el-button:active {
@@ -911,10 +977,11 @@ onMounted(cargar);
 
 /* ── Modal Detalle ── */
 :deep(.detalle-dialog) { border-radius: 22px; overflow: hidden; box-shadow: 0 32px 80px rgba(11,35,73,.4), 0 0 0 1px rgba(255,255,255,.08); }
-:deep(.detalle-dialog .el-dialog__header) { display: none; }
+:deep(.detalle-dialog .el-dialog__header) { position: absolute; top: 0; right: 0; z-index: 30; padding: 0; margin: 0; background: transparent; border: none; }
+:deep(.detalle-dialog .el-dialog__title) { display: none; }
 :deep(.detalle-dialog .el-dialog__body) { padding: 0; }
-:deep(.detalle-dialog .el-dialog__headerbtn) { z-index: 10; top: 14px; right: 14px; }
-:deep(.detalle-dialog .el-dialog__headerbtn .el-dialog__close) { color: #fff; font-size: 1.1rem; }
+:deep(.detalle-dialog .el-dialog__headerbtn) { position: relative; top: auto; right: auto; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+:deep(.detalle-dialog .el-dialog__headerbtn .el-dialog__close) { color: #fff; font-size: 1.4rem; font-weight: 700; }
 :deep(.detalle-dialog .el-dialog__headerbtn:hover .el-dialog__close) { color: #e1f7ff; }
 :deep(.el-overlay) { background-color: rgba(8,27,58,.56); backdrop-filter: blur(4px); }
 
@@ -946,6 +1013,18 @@ onMounted(cargar);
 .detalle-head-sub {
   margin: 2px 0 0; color: rgba(255,255,255,0.55); font-size: 11px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.detalle-head-id-badge {
+  flex-shrink: 0; z-index: 10;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px; font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.03em;
+  font-family: monospace;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 .detalle-head-badge {
   padding: 5px 14px; border-radius: 999px;
@@ -1004,6 +1083,17 @@ onMounted(cargar);
   font-size: 12px; color: #475569; line-height: 1.5; margin: 0;
   word-break: break-word; white-space: normal;
 }
+.detalle-dx-list { display: flex; flex-direction: column; gap: 6px; }
+.detalle-dx-item {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 6px 10px; border-radius: 8px;
+  background: #f5f3ff;
+}
+.detalle-dx-code {
+  font-size: 12px; font-weight: 800; color: #7c3aed;
+  font-family: monospace; flex-shrink: 0;
+}
+.detalle-dx-desc { font-size: 12px; color: #334155; }
 .detalle-historia-preview {
   display: -webkit-box;
   -webkit-box-orient: vertical;

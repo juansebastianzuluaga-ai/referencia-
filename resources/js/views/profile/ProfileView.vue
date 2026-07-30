@@ -1,5 +1,8 @@
 <template>
-  <ContentCard subtitle="Gestiona tu información personal y contraseña">
+  <ContentCard subtitle="Gestiona tu información personal y contraseña"
+    v-motion
+    :initial="{ opacity: 0, y: 20 }"
+    :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
     <template #title>
       <div class="flex items-center gap-2">
         <UserIcon class="w-5 h-5 text-blue-600" />

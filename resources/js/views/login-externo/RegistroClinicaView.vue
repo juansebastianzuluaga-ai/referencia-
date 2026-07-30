@@ -8,7 +8,10 @@
     <div class="fixed bottom-0 right-1/4 w-[400px] h-[400px] rounded-full opacity-[0.05] pointer-events-none"
       style="background: radial-gradient(circle, #60a5fa, transparent 70%)" />
 
-    <div class="w-full max-w-2xl relative z-10">
+    <div class="w-full max-w-2xl relative z-10"
+      v-motion
+      :initial="{ opacity: 0, y: 30, scale: 0.96 }"
+      :enter="{ opacity: 1, y: 0, scale: 1, transition: { duration: 600, ease: 'easeOut' } }">
 
       <!-- Card -->
       <div class="rounded-2xl overflow-hidden card-enter"

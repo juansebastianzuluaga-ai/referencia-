@@ -31,6 +31,9 @@ class SolicitudReferencia extends Model
         'especialidad_requerida',
         'servicio_ubicacion_actual',
         'servicio_remision',
+        'quien_remitente',
+        'telefono_contacto',
+        'correo_contacto',
         'resumen_historia_clinica',
         'via_contacto',
         'gestante',
@@ -64,6 +67,11 @@ class SolicitudReferencia extends Model
     public function eventos(): HasMany
     {
         return $this->hasMany(SolicitudReferenciaEvento::class)->latest();
+    }
+
+    public function diagnosticos(): HasMany
+    {
+        return $this->hasMany(DiagnosticoSolicitud::class)->orderBy('id');
     }
 
     protected static function booted(): void

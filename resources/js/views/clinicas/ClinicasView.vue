@@ -2,7 +2,10 @@
   <div class="h-full flex flex-col gap-2 p-3 sm:p-4 overflow-hidden clinic-page">
 
     <!-- ── Header ── -->
-    <div class="clinic-header shrink-0">
+    <div class="clinic-header shrink-0"
+      v-motion
+      :initial="{ opacity: 0, y: 20 }"
+      :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
       <div class="clinic-header-icon">
         <component :is="BuildingIcon" class="w-5 h-5" />
       </div>
@@ -151,7 +154,7 @@
     </div>
 
     <!-- Modal: Detalle -->
-    <el-dialog v-model="modalDetalle" width="620px" class="detalle-clinica-dialog" :show-close="true" align-center>
+    <BaseModal v-model="modalDetalle" width="620px" class="detalle-clinica-dialog" :show-close="true" align-center :title="'Detalle de clínica'" :subtitle="clinicaSeleccionada ? clinicaSeleccionada.nit + ' · ' + clinicaSeleccionada.nombre : ''">
       <template v-if="clinicaSeleccionada">
         <div class="detalle-clinica-content">
           <!-- Header azul -->
@@ -285,7 +288,7 @@
           </div>
         </div>
       </template>
-    </el-dialog>
+    </BaseModal>
 
     <!-- Modal: Motivo de rechazo -->
     <el-dialog v-model="modalRechazo" title="Rechazar clínica" width="420px" :close-on-click-modal="false" class="rounded-2xl">
@@ -496,8 +499,12 @@
   overflow: hidden;
   box-shadow: 0 32px 80px rgba(11, 35, 73, .4), 0 0 0 1px rgba(255,255,255,.08);
 }
-:deep(.detalle-clinica-dialog .el-dialog__header) { display: none; }
+:deep(.detalle-clinica-dialog .el-dialog__header) { position: absolute; top: 0; right: 0; z-index: 30; padding: 0; margin: 0; background: transparent; border: none; }
+:deep(.detalle-clinica-dialog .el-dialog__title) { display: none; }
 :deep(.detalle-clinica-dialog .el-dialog__body) { padding: 0; }
+:deep(.detalle-clinica-dialog .el-dialog__headerbtn) { position: absolute; top: 14px; right: 14px; z-index: 40; }
+:deep(.detalle-clinica-dialog .el-dialog__headerbtn .el-dialog__close) { color: #fff; font-size: 1.5rem; font-weight: 700; }
+:deep(.detalle-clinica-dialog .el-dialog__headerbtn:hover .el-dialog__close) { color: #e1f7ff; }
 .detalle-clinica-content { overflow: hidden; }
 
 /* Header */

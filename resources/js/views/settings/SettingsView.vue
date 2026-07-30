@@ -1,5 +1,8 @@
 <template>
-  <ContentCard title="Configuración" subtitle="Ajustes generales del sistema">
+  <ContentCard title="Configuración" subtitle="Ajustes generales del sistema"
+    v-motion
+    :initial="{ opacity: 0, y: 20 }"
+    :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
     <template #actions>
       <el-button
         v-if="activeTab !== 'api'"

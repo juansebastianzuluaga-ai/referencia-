@@ -1,5 +1,8 @@
 <template>
-  <div class="historial-page h-full overflow-y-auto p-4 sm:p-5">
+  <div class="historial-page h-full overflow-y-auto p-4 sm:p-5"
+    v-motion
+    :initial="{ opacity: 0, y: 20 }"
+    :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
 
     <!-- ── Header ── -->
     <div class="historial-header rounded-2xl p-4 sm:p-5 flex items-center justify-between mb-4 shrink-0 anim-fade-down">
@@ -219,8 +222,9 @@
             </div>
             <div class="detalle-head-info">
               <p class="detalle-head-title">Detalle de solicitud</p>
-              <p class="detalle-head-sub">#{{ solicitudSeleccionada.id }} · {{ formatFecha(solicitudSeleccionada.created_at) }}</p>
+              <p class="detalle-head-sub">{{ formatFecha(solicitudSeleccionada.created_at) }}</p>
             </div>
+            <div class="detalle-head-id-badge">ID #{{ solicitudSeleccionada.id }}</div>
             <div class="detalle-head-badge" :class="'badge-' + solicitudSeleccionada.estado">
               {{ estadoLabel(solicitudSeleccionada.estado) }}
             </div>
@@ -250,17 +254,27 @@
                 <div class="data-row"><span>Servicio actual</span><strong>{{ solicitudSeleccionada.servicio_ubicacion_actual }}</strong></div>
                 <div class="data-row"><span>Municipio</span><strong>{{ solicitudSeleccionada.municipio_capita }}</strong></div>
                 <div v-if="solicitudSeleccionada.servicio_remision" class="data-row"><span>Destino</span><strong>{{ solicitudSeleccionada.servicio_remision }}</strong></div>
+                <div v-if="solicitudSeleccionada.quien_remitente" class="data-row"><span>Remite</span><strong>{{ solicitudSeleccionada.quien_remitente }}</strong></div>
+                <div v-if="solicitudSeleccionada.telefono_contacto" class="data-row"><span>Teléfono</span><strong>{{ solicitudSeleccionada.telefono_contacto }}</strong></div>
+                <div v-if="solicitudSeleccionada.correo_contacto" class="data-row"><span>Correo</span><strong>{{ solicitudSeleccionada.correo_contacto }}</strong></div>
               </div>
             </div>
           </div>
 
-          <!-- Diagnóstico + Historia en 2 columnas -->
+          <!-- Diagnósticos + Historia en 2 columnas -->
           <div class="grid grid-cols-2 gap-2.5 mb-2.5">
             <div class="detalle-card">
               <div class="card-icon" style="background:#ede9fe; color:#7c3aed;"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
               <div class="card-body">
-                <p class="card-title">Diagnóstico</p>
-                <p class="card-text">{{ solicitudSeleccionada.diagnostico }}</p>
+                <p class="card-title">Diagnósticos</p>
+                <div v-if="solicitudSeleccionada.diagnosticos?.length" class="card-dx-list">
+                  <div v-for="dx in solicitudSeleccionada.diagnosticos" :key="dx.id" class="card-dx-item">
+                    <strong class="card-dx-code">{{ dx.codigo_cie10 }}</strong>
+                    <span class="card-dx-desc">{{ dx.descripcion }}</span>
+                  </div>
+                </div>
+                <p v-else-if="solicitudSeleccionada.diagnostico" class="card-text">{{ solicitudSeleccionada.diagnostico }}</p>
+                <p v-else class="card-text">—</p>
               </div>
             </div>
             <div class="detalle-card">
@@ -524,8 +538,10 @@ function exportarPdf() {
       </div>
 
       <div class="doc-full">
-        <h2>Diagnóstico</h2>
-        <p>${s.diagnostico}</p>
+        <h2>Diagnósticos</h2>
+        ${s.diagnosticos?.length
+          ? s.diagnosticos.map((dx: any) => `<p><strong>${dx.codigo_cie10}</strong> — ${dx.descripcion}</p>`).join('')
+          : `<p>${s.diagnostico || '—'}</p>`}
       </div>
 
       <div class="doc-full">
@@ -983,15 +999,16 @@ onUnmounted(() => {
   overflow: hidden;
   box-shadow: 0 32px 80px rgba(11, 35, 73, .4), 0 0 0 1px rgba(255,255,255,.08);
 }
-:deep(.detalle-dialog .el-dialog__header) { display: none; }
+:deep(.detalle-dialog .el-dialog__header) { position: absolute; top: 0; right: 0; z-index: 30; padding: 0; margin: 0; background: transparent; border: none; }
+:deep(.detalle-dialog .el-dialog__title) { display: none; }
 :deep(.detalle-dialog .el-dialog__body) {
   padding: 0;
   max-height: calc(100vh - 3rem);
   overflow: hidden;
   background: linear-gradient(180deg, #f0f5ff 0%, #f8faff 30%, #ffffff 100%);
 }
-:deep(.detalle-dialog .el-dialog__headerbtn) { z-index: 10; top: 14px; right: 14px; }
-:deep(.detalle-dialog .el-dialog__headerbtn .el-dialog__close) { color: #fff; font-size: 1.1rem; }
+:deep(.detalle-dialog .el-dialog__headerbtn) { position: relative; top: auto; right: auto; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+:deep(.detalle-dialog .el-dialog__headerbtn .el-dialog__close) { color: #fff; font-size: 1.4rem; font-weight: 700; }
 :deep(.detalle-dialog .el-dialog__headerbtn:hover .el-dialog__close) { color: #e1f7ff; }
 :deep(.el-overlay) { background-color: rgba(8, 27, 58, .56); backdrop-filter: blur(4px); }
 
@@ -1047,6 +1064,18 @@ onUnmounted(() => {
 .detalle-head-info { flex: 1; z-index: 1; }
 .detalle-head-title { margin: 0; color: #fff; font-size: 1rem; font-weight: 800; }
 .detalle-head-sub { margin: .15rem 0 0; color: rgba(255,255,255,.55); font-size: .68rem; }
+.detalle-head-id-badge {
+  flex-shrink: 0; z-index: 1;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  padding: .35rem .7rem;
+  font-size: .72rem; font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.03em;
+  font-family: monospace;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
 
 .detalle-head-badge {
   padding: .3rem .7rem;
@@ -1124,6 +1153,17 @@ onUnmounted(() => {
 }
 .card-text { font-size: .72rem; color: #334e70; line-height: 1.5; margin: 0; }
 .card-text-sm { font-size: .66rem; color: #64748b; line-height: 1.45; margin: 0; }
+.card-dx-list { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.card-dx-item {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 4px 8px; border-radius: 6px;
+  background: #f5f3ff;
+}
+.card-dx-code {
+  font-size: 11px; font-weight: 800; color: #7c3aed;
+  font-family: monospace; flex-shrink: 0;
+}
+.card-dx-desc { font-size: 11px; color: #334155; }
 
 .data-row {
   display: flex;

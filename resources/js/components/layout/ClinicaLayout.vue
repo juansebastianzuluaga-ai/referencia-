@@ -82,6 +82,21 @@
           </div>
         </router-link>
 
+        <!-- Nueva solicitud -->
+        <router-link to="/clinica/solicitud" class="no-underline" @click="mobileOpen = false">
+          <div
+            class="menu-item"
+            :class="{ 'menu-item-active': isSolicitud }"
+          >
+            <span v-if="isSolicitud" class="menu-accent-bar"></span>
+            <div class="menu-icon-wrap" :class="{ 'menu-icon-active': isSolicitud }">
+              <FilePlusIcon class="shrink-0" style="width:20px; height:20px;" />
+            </div>
+            <span class="menu-label" :class="{ 'menu-label-active': isSolicitud }">Nueva solicitud</span>
+            <span v-if="isSolicitud" class="menu-dot"></span>
+          </div>
+        </router-link>
+
         <!-- Historial -->
         <router-link to="/clinica/historial" class="no-underline" @click="mobileOpen = false">
           <div
@@ -145,6 +160,7 @@ import {
   LogOut as LogOutIcon,
   Menu as MenuIcon,
   History as HistoryIcon,
+  FilePlus as FilePlusIcon,
 } from '@lucide/vue';
 
 const logoW = '/images/logo-w.png';
@@ -153,6 +169,7 @@ const route = useRoute();
 const mobileOpen = ref(false);
 
 const isDashboard = computed(() => route.path === '/clinica/dashboard');
+const isSolicitud = computed(() => route.path === '/clinica/solicitud');
 const isHistorial = computed(() => route.path === '/clinica/historial');
 
 const iniciales = computed(() => {

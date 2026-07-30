@@ -2,7 +2,10 @@
   <div class="h-full flex flex-col gap-3 p-3 sm:p-5 overflow-hidden dashboard-bg">
 
     <!-- ── Hero banner ── -->
-    <div class="hero-card rounded-2xl p-5 sm:p-6 flex items-center gap-5 relative overflow-hidden shrink-0 anim-fade-down">
+    <div class="hero-card rounded-2xl p-5 sm:p-6 flex items-center gap-5 relative overflow-hidden shrink-0"
+      v-motion
+      :initial="{ opacity: 0, y: -20 }"
+      :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
       <div class="hero-glow"></div>
       <div class="hero-pattern"></div>
       <div class="hero-glow-2"></div>
@@ -51,7 +54,10 @@
     </div>
 
     <!-- ── Barra de filtros ── -->
-    <div class="filter-bar rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap shrink-0 anim-slide-up" style="animation-delay:0.05s">
+    <div class="filter-bar rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap shrink-0"
+      v-motion
+      :initial="{ opacity: 0, y: 20 }"
+      :enter="{ opacity: 1, y: 0, transition: { duration: 500, delay: 80, ease: 'easeOut' } }">
       <div class="filter-bar-icon shrink-0">
         <component :is="FilterIcon" class="w-4 h-4" />
       </div>
@@ -101,7 +107,10 @@
     </div>
 
     <!-- ── Stat cards ── -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0"
+      v-motion
+      :initial="{ opacity: 0, y: 24 }"
+      :enter="{ opacity: 1, y: 0, transition: { duration: 500, delay: 150, ease: 'easeOut' } }">
       <div
         v-for="(card, i) in statCards" :key="i"
         class="stat-card rounded-2xl p-4 flex flex-col gap-2 anim-slide-up"
@@ -128,66 +137,46 @@
     </div>
 
     <!-- ── Distribución + Donut ── -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 shrink-0">
-      <!-- Barra de distribución -->
-      <div class="distrib-card rounded-2xl p-4 flex items-center gap-4 anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
-        <div class="distrib-card-glow"></div>
-        <div class="flex-1 relative z-10">
-          <div class="flex items-center justify-between mb-2">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 shrink-0"
+      v-motion
+      :initial="{ opacity: 0, y: 24 }"
+      :enter="{ opacity: 1, y: 0, transition: { duration: 500, delay: 220, ease: 'easeOut' } }">
+      <!-- Barra de distribución con ApexCharts -->
+      <div class="distrib-card rounded-2xl p-4 flex flex-col anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
+        <div class="flex items-center justify-between mb-3">
+          <div>
             <p class="text-xs font-bold" style="color:#1e2d55;">Distribución de solicitudes</p>
-            <p class="text-[10px]" style="color:#8a9ab5;">{{ stats.solicitudes.total }} en total</p>
+            <p class="text-[10px] mt-0.5" style="color:#8a9ab5;">{{ stats.solicitudes.total }} en total · por estado</p>
           </div>
-          <div class="flex h-3 rounded-full overflow-hidden" style="background:#edf2f7;">
-            <div v-if="stats.solicitudes.pendientes" class="distrib-segment transition-all duration-700" :style="{ width: (stats.solicitudes.pendientes / Math.max(1, stats.solicitudes.total)) * 100 + '%', background: 'linear-gradient(90deg, #fbbf24, #f59e0b)' }"
-              :data-tooltip="`${stats.solicitudes.pendientes} pendientes (${Math.round(stats.solicitudes.pendientes / Math.max(1, stats.solicitudes.total) * 100)}%)`"></div>
-            <div v-if="stats.solicitudes.aceptadas" class="distrib-segment transition-all duration-700" :style="{ width: (stats.solicitudes.aceptadas / Math.max(1, stats.solicitudes.total)) * 100 + '%', background: 'linear-gradient(90deg, #4ade80, #22c55e)' }"
-              :data-tooltip="`${stats.solicitudes.aceptadas} aceptadas (${Math.round(stats.solicitudes.aceptadas / Math.max(1, stats.solicitudes.total) * 100)}%)`"></div>
-            <div v-if="stats.solicitudes.negadas" class="distrib-segment transition-all duration-700" :style="{ width: (stats.solicitudes.negadas / Math.max(1, stats.solicitudes.total)) * 100 + '%', background: 'linear-gradient(90deg, #f87171, #ef4444)' }"
-              :data-tooltip="`${stats.solicitudes.negadas} negadas (${Math.round(stats.solicitudes.negadas / Math.max(1, stats.solicitudes.total) * 100)}%)`"></div>
-          </div>
-          <div class="flex items-center gap-4 mt-2.5">
-            <div class="flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full" style="background:#fbbf24;"></span>
-              <span class="text-[10px] font-medium" style="color:#8a9ab5;">Pendientes <strong style="color:#d97706;">{{ stats.solicitudes.pendientes }}</strong></span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full" style="background:#22c55e;"></span>
-              <span class="text-[10px] font-medium" style="color:#8a9ab5;">Aceptadas <strong style="color:#16a34a;">{{ stats.solicitudes.aceptadas }}</strong></span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full" style="background:#f87171;"></span>
-              <span class="text-[10px] font-medium" style="color:#8a9ab5;">Negadas <strong style="color:#dc2626;">{{ stats.solicitudes.negadas }}</strong></span>
-            </div>
-          </div>
+        </div>
+        <div class="flex-1">
+          <apexchart
+            type="bar"
+            height="180"
+            :options="distribChartOptions"
+            :series="distribChartSeries"
+          />
         </div>
       </div>
 
-      <!-- Donut chart CSS -->
-      <div class="distrib-card rounded-2xl p-4 flex items-center justify-center gap-4 anim-slide-up" style="animation-delay:0.2s">
-        <div class="donut-chart relative z-10" :style="donutStyle">
-          <div class="donut-center">
-            <span class="donut-num">{{ stats.solicitudes.total }}</span>
-            <span class="donut-label">Total</span>
-          </div>
-        </div>
-        <div class="flex flex-col gap-1.5 relative z-10">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" style="background:#fbbf24;"></span>
-            <span class="text-[10px] font-semibold" style="color:#d97706;">{{ Math.round(donutPercents[0]) }}%</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" style="background:#22c55e;"></span>
-            <span class="text-[10px] font-semibold" style="color:#16a34a;">{{ Math.round(donutPercents[1]) }}%</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" style="background:#f87171;"></span>
-            <span class="text-[10px] font-semibold" style="color:#dc2626;">{{ Math.round(donutPercents[2]) }}%</span>
-          </div>
+      <!-- Donut chart con ApexCharts -->
+      <div class="distrib-card rounded-2xl p-4 flex flex-col items-center justify-center anim-slide-up" style="animation-delay:0.2s">
+        <p class="text-xs font-bold mb-2 self-start" style="color:#1e2d55;">Proporción de estados</p>
+        <div class="flex-1 w-full flex items-center justify-center">
+          <apexchart
+            type="donut"
+            height="220"
+            :options="donutChartOptions"
+            :series="donutChartSeries"
+          />
         </div>
       </div>
     </div>
 
-    <div class="operations-grid anim-slide-up">
+    <div class="operations-grid"
+      v-motion
+      :initial="{ opacity: 0, y: 24 }"
+      :enter="{ opacity: 1, y: 0, transition: { duration: 500, delay: 300, ease: 'easeOut' } }">
       <section class="operations-card">
         <div class="operations-glow"></div>
         <div class="operations-heading">
@@ -319,6 +308,7 @@ const todayShort = new Intl.DateTimeFormat('es-CO', {
 }).format(new Date());
 
 const cargando = ref(true);
+
 const stats = ref({
   solicitudes: { total: 0, pendientes: 0, aceptadas: 0, negadas: 0, en_espera: 0, completadas: 0 },
   clinicas: { total: 0, activas: 0, pendientes: 0 },
@@ -421,26 +411,110 @@ const statCards = computed(() => [
   },
 ]);
 
-const donutPercents = computed(() => {
-  const total = Math.max(1, stats.value.solicitudes.total);
-  return [
-    (stats.value.solicitudes.pendientes / total) * 100,
-    (stats.value.solicitudes.aceptadas / total) * 100,
-    (stats.value.solicitudes.negadas / total) * 100,
-  ];
+const donutChartSeries = computed(() => {
+  const s = stats.value.solicitudes;
+  return [s.pendientes, s.en_espera, s.aceptadas, s.negadas].filter(v => v > 0);
 });
 
-const donutStyle = computed(() => {
-  const [p, a, n] = donutPercents.value;
-  return {
-    background: `conic-gradient(
-      #fbbf24 0% ${p}%,
-      #22c55e ${p}% ${p + a}%,
-      #f87171 ${p + a}% ${p + a + n}%,
-      #edf2f7 ${p + a + n}% 100%
-    )`,
-  };
-});
+const donutChartOptions = computed(() => ({
+  chart: {
+    type: 'donut' as const,
+    fontFamily: 'inherit',
+    toolbar: { show: false },
+  },
+  labels: ['Pendientes', 'En espera', 'Aceptadas', 'Negadas'].filter((_, i) => {
+    const s = stats.value.solicitudes;
+    return [s.pendientes, s.en_espera, s.aceptadas, s.negadas][i] > 0;
+  }),
+  colors: ['#f59e0b', '#2563eb', '#22c55e', '#ef4444'].filter((_, i) => {
+    const s = stats.value.solicitudes;
+    return [s.pendientes, s.en_espera, s.aceptadas, s.negadas][i] > 0;
+  }),
+  legend: {
+    position: 'bottom' as const,
+    fontSize: '11px',
+    fontWeight: 600,
+    labels: { colors: '#475569' },
+    markers: { size: 5 },
+    itemMargin: { horizontal: 6, vertical: 4 },
+  },
+  dataLabels: {
+    enabled: true,
+    formatter: (val: number) => `${Math.round(val)}%`,
+    style: { fontSize: '11px', fontWeight: 700 },
+  },
+  tooltip: {
+    y: { formatter: (val: number) => `${val} solicitudes` },
+  },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: '68%',
+        labels: {
+          show: true,
+          name: { fontSize: '11px', color: '#8a9ab5' },
+          value: { fontSize: '22px', fontWeight: 800, color: '#1e2d55' },
+          total: {
+            show: true,
+            label: 'Total',
+            fontSize: '10px',
+            color: '#8a9ab5',
+            formatter: () => String(stats.value.solicitudes.total),
+          },
+        },
+      },
+    },
+  },
+  stroke: { width: 0 },
+}));
+
+const distribChartSeries = computed(() => [{
+  name: 'Solicitudes',
+  data: [
+    stats.value.solicitudes.pendientes,
+    stats.value.solicitudes.en_espera,
+    stats.value.solicitudes.aceptadas,
+    stats.value.solicitudes.negadas,
+  ],
+}]);
+
+const distribChartOptions = computed(() => ({
+  chart: {
+    type: 'bar' as const,
+    fontFamily: 'inherit',
+    toolbar: { show: false },
+    sparkline: { enabled: false },
+  },
+  plotOptions: {
+    bar: {
+      distributed: true,
+      borderRadius: 6,
+      columnWidth: '60%',
+    },
+  },
+  colors: ['#f59e0b', '#2563eb', '#22c55e', '#ef4444'],
+  xaxis: {
+    categories: ['Pendientes', 'En espera', 'Aceptadas', 'Negadas'],
+    labels: {
+      style: { fontSize: '11px', fontWeight: 600, colors: '#475569' },
+    },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  },
+  yaxis: {
+    labels: { style: { fontSize: '10px', colors: '#94a3b8' } },
+  },
+  grid: {
+    borderColor: '#f1f5f9',
+    strokeDashArray: 4,
+    xaxis: { lines: { show: false } },
+  },
+  dataLabels: { enabled: false },
+  tooltip: {
+    y: { formatter: (val: number) => `${val} solicitudes` },
+  },
+  legend: { show: false },
+}));
 
 const services = computed(() => {
   const total = Math.max(1, stats.value.solicitudes.total);
@@ -986,42 +1060,27 @@ onMounted(cargarStats);
   background: rgba(255,255,255,0.92);
   border: 1px solid rgba(212, 222, 234, 0.6);
   box-shadow: 0 4px 20px rgba(22, 70, 142, .07);
-  position: relative; overflow: hidden;
+  position: relative; overflow: visible;
   transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1);
   backdrop-filter: blur(10px);
 }
-.distrib-card-glow {
-  position: absolute; top: -40px; right: -40px; width: 140px; height: 140px;
-  border-radius: 50%; pointer-events: none;
-  background: radial-gradient(circle, rgba(126,179,255,0.10), transparent 70%);
-}
 .distrib-card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(22,70,142,.12); }
-.distrib-segment { position: relative; cursor: pointer; transition: opacity .2s ease; }
-.distrib-segment:hover { opacity: .85; }
-.distrib-segment::after {
-  content: attr(data-tooltip); position: absolute; bottom: calc(100% + 6px); left: 50%;
-  transform: translateX(-50%); background: #1e2d55; color: #fff;
-  font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 6px;
-  white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 20;
-}
-.distrib-segment:hover::after { opacity: 1; }
 
-/* ── Donut chart ── */
-.donut-chart {
-  width: 72px; height: 72px; border-radius: 50%;
-  position: relative;
-  transition: transform .3s ease;
-  box-shadow: 0 4px 14px rgba(22,70,142,.12);
+/* ── Legend tooltips ── */
+.legend-tip-wrap { position: relative; }
+.legend-tip {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  background: #1e2d55; color: #fff; font-size: 11px; font-weight: 600;
+  padding: 6px 12px; border-radius: 8px; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 100;
+  box-shadow: 0 4px 16px rgba(13,45,107,.3);
+  max-width: 280px; white-space: normal; text-align: center; line-height: 1.4;
 }
-.donut-chart:hover { transform: scale(1.08) rotate(5deg); }
-.donut-center {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 52px; height: 52px; border-radius: 50%; background: #fff;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  box-shadow: inset 0 2px 6px rgba(22,70,142,.08);
+.legend-tip::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: #1e2d55;
 }
-.donut-num { font-size: 16px; font-weight: 800; color: #1e2d55; line-height: 1; }
-.donut-label { font-size: 8px; color: #8a9ab5; margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
+.legend-tip-wrap:hover .legend-tip { opacity: 1; }
 
 /* ── Service count badge ── */
 .service-count-badge {

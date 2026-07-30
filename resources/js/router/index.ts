@@ -67,6 +67,11 @@ const router = createRouter({
           name: 'clinica-historial',
           component: () => import('@/views/login-externo/HistorialSolicitudesView.vue'),
         },
+        {
+          path: 'solicitud',
+          name: 'clinica-solicitud',
+          component: () => import('@/views/login-externo/SolicitudView.vue'),
+        },
       ],
     },
     // ────────────────────────────────────────────────────────────────────────

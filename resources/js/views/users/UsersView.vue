@@ -2,7 +2,10 @@
   <div class="users-page h-full flex flex-col gap-2 p-3 sm:p-4 overflow-hidden">
 
     <!-- ── Header ── -->
-    <div class="flex items-center justify-between shrink-0">
+    <div class="flex items-center justify-between shrink-0"
+      v-motion
+      :initial="{ opacity: 0, y: 20 }"
+      :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
       <div>
         <h1 class="text-lg font-bold text-gray-900">Gestión de Usuarios</h1>
         <p class="text-xs text-gray-500">Administración de cuentas de acceso al sistema</p>

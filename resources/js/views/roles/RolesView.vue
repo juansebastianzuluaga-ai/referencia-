@@ -1,5 +1,8 @@
 <template>
-  <ContentCard title="Roles y Permisos" subtitle="Gestión de roles de sistema y asignación de permisos">
+  <ContentCard title="Roles y Permisos" subtitle="Gestión de roles de sistema y asignación de permisos"
+    v-motion
+    :initial="{ opacity: 0, y: 20 }"
+    :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
     <template #actions>
       <el-button v-permission="'roles.create'" type="primary" :icon="PlusIcon" @click="openCreateDialog">
         Nuevo Rol

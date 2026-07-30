@@ -2,7 +2,10 @@
   <div class="ph-dashboard h-full flex overflow-hidden">
 
     <!-- ══ Columna principal ═══════════════════════════════════════════════ -->
-    <div class="flex-1 flex flex-col gap-2 p-3 sm:p-4 min-w-0 overflow-hidden">
+    <div class="flex-1 flex flex-col gap-2 p-3 sm:p-4 min-w-0 overflow-hidden"
+      v-motion
+      :initial="{ opacity: 0, y: 20 }"
+      :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
 
       <!-- ── Hero banner ── -->
       <div class="hero-card rounded-2xl p-3 sm:p-4 flex items-center gap-4 relative overflow-hidden shrink-0 anim-fade-down">
@@ -25,7 +28,7 @@
           <p class="text-[11px] sm:text-xs mt-1" style="color:rgba(255,255,255,0.65);">{{ fechaHoy }} · Gestione sus remisiones al centro de referencia.</p>
         </div>
         <div class="hero-right z-10 shrink-0 hidden sm:flex flex-col items-end gap-2">
-          <button @click="abrirFormulario" class="hero-link">
+          <button @click="router.push('/clinica/solicitud')" class="hero-link">
             <component :is="PlusIcon" class="w-4 h-4" />
             <span>Nueva solicitud</span>
           </button>
@@ -330,260 +333,6 @@
 
     <!-- ── Modales ──────────────────────────────────────────────────────── -->
 
-    <!-- ── Drawer: Nueva Solicitud ──────────────────────────────────────── -->
-    <el-dialog
-      v-model="drawerVisible"
-      title="Nueva Solicitud de Referencia"
-      width="900px"
-      class="request-dialog"
-      :close-on-click-modal="false"
-      :lock-scroll="true"
-      :destroy-on-close="true"
-      :before-close="confirmarCierre"
-      align-center
-    >
-      <div class="request-form px-1">
-        <div class="form-hero mb-1.5">
-          <div class="form-hero-icon"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
-          <div><p>Nueva remisión</p><span>Complete la información para que el equipo de referencia pueda gestionar el caso.</span></div>
-        </div>
-        <div class="stepper mb-1.5">
-          <div v-for="step in formSteps" :key="step.number" class="stepper-item" :class="{ active: pasoFormulario >= step.number }">
-            <span class="stepper-number">{{ pasoFormulario > step.number ? '✓' : step.number }}</span>
-            <p>{{ step.label }}</p>
-          </div>
-        </div>
-        <el-form :model="form" :rules="rules" ref="formRef" label-position="top" size="default">
-
-          <div v-show="pasoFormulario === 1" class="mb-0">
-            <div class="flex items-center gap-2 mb-1">
-              <div class="w-5 h-5 rounded-full bg-[#0D2D6B] text-white text-[10px] flex items-center justify-center font-bold shrink-0">1</div>
-              <p class="font-semibold text-gray-700 text-xs">Datos del paciente</p>
-            </div>
-            <div class="grid grid-cols-4 gap-x-3 gap-y-2 items-start form-patient-grid">
-              <el-form-item label="Tipo de documento" prop="tipo_documento" required>
-                <el-select v-model="form.tipo_documento" class="w-full" placeholder="Tipo">
-                  <el-option v-for="t in TIPOS_DOCUMENTO" :key="t" :label="t" :value="t" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="Número de documento" prop="numero_documento" required>
-                <el-input v-model="form.numero_documento" autocomplete="off" />
-              </el-form-item>
-              <el-form-item label="Primer nombre" prop="primer_nombre" required>
-                <el-input v-model="form.primer_nombre" autocomplete="off" @input="capitalizar('primer_nombre')" />
-              </el-form-item>
-              <el-form-item label="Segundo nombre">
-                <el-input v-model="form.segundo_nombre" autocomplete="off" @input="capitalizar('segundo_nombre')" />
-              </el-form-item>
-              <el-form-item label="Primer apellido" prop="primer_apellido" required>
-                <el-input v-model="form.primer_apellido" autocomplete="off" @input="capitalizar('primer_apellido')" />
-              </el-form-item>
-              <el-form-item label="Segundo apellido">
-                <el-input v-model="form.segundo_apellido" autocomplete="off" @input="capitalizar('segundo_apellido')" />
-              </el-form-item>
-              <el-form-item label="Edad" prop="edad" required>
-                <el-input-number v-model="form.edad" :min="0" :max="120" class="w-full" controls-position="right" />
-              </el-form-item>
-              <el-form-item label="Género" prop="genero" required>
-                <el-select v-model="form.genero" class="w-full" placeholder="Seleccione">
-                  <el-option label="Masculino" value="M" />
-                  <el-option label="Femenino" value="F" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="Municipio" prop="municipio_capita" required>
-                <el-input v-model="form.municipio_capita" autocomplete="off" @input="capitalizar('municipio_capita')" />
-              </el-form-item>
-              <el-form-item label="EPS / Aseguradora" prop="eps" required class="col-span-2">
-                <el-select v-model="form.eps" filterable class="w-full" placeholder="Seleccione o escriba">
-                  <el-option v-for="e in EPS_LIST" :key="e" :label="e" :value="e" />
-                </el-select>
-              </el-form-item>
-            </div>
-          </div>
-
-          <el-divider class="form-section-divider" />
-
-          <div v-show="pasoFormulario === 2" class="mb-0">
-            <div class="flex items-center gap-2 mb-1">
-              <div class="w-5 h-5 rounded-full bg-[#0D2D6B] text-white text-[10px] flex items-center justify-center font-bold shrink-0">2</div>
-              <p class="font-semibold text-gray-700 text-xs">Datos de la remisión</p>
-            </div>
-            <div class="grid grid-cols-3 gap-x-3 gap-y-2 items-start">
-              <el-form-item label="Diagnóstico (CIE-10)" prop="diagnostico" required class="col-span-2">
-                <el-select
-                  v-model="form.diagnostico"
-                  filterable
-                  class="w-full"
-                  placeholder="Seleccione o busque diagnóstico"
-                  :filter-method="filtrarCIE10"
-                  @change="onDiagnosticoSelect"
-                >
-                  <el-option key="__otro_dx" label="➕ Otro diagnóstico..." value="__otro_dx" />
-                  <el-option
-                    v-for="item in cie10Filtrados"
-                    :key="item.codigo"
-                    :label="`${item.codigo} — ${item.descripcion}`"
-                    :value="`${item.codigo} ${item.descripcion}`"
-                  />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="Especialidad requerida" prop="especialidad_requerida" required>
-                <el-select v-model="form.especialidad_requerida" filterable class="w-full" placeholder="Seleccione" @change="onEspecialidadSelect">
-                  <el-option key="__otra_esp" label="➕ Otra especialidad..." value="__otra_esp" />
-                  <el-option v-for="e in ESPECIALIDADES" :key="e" :label="e" :value="e" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="Historia clínica" prop="resumen_historia_clinica" required class="col-span-2">
-                <el-input v-model="form.resumen_historia_clinica" type="textarea" :rows="2"
-                  placeholder="Motivo de remisión, antecedentes, estado actual..." @input="capitalizar('resumen_historia_clinica')" />
-              </el-form-item>
-              <div class="attachments-card rounded-xl p-2 flex flex-col"
-                :class="{ 'dropzone-active': dragOver }"
-                @dragover.prevent="dragOver = true"
-                @dragleave.prevent="dragOver = false"
-                @drop.prevent="onDrop"
-              >
-                <div class="flex items-center gap-1.5 mb-1">
-                  <div class="attach-header-icon" style="width:20px;height:20px;border-radius:6px;"><component :is="PaperclipIcon" class="w-3 h-3" /></div>
-                  <p class="text-[11px] font-semibold text-slate-700">Adjuntar soportes</p>
-                  <span v-if="adjuntos.length" class="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:#dbeafe; color:#1d4ed8;">{{ adjuntos.length }}/10</span>
-                </div>
-                <div class="dropzone rounded-lg flex-1 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-0.5 min-h-[52px]"
-                  @click="fileInput?.click()"
-                >
-                  <component :is="UploadCloudIcon" class="w-4 h-4 text-[#3174c4]" />
-                  <p class="text-[10px] font-semibold text-slate-600">Clic o arrastre aquí</p>
-                  <p class="text-[8px] text-slate-400">PDF/img/Word · 10MB c/u</p>
-                  <input ref="fileInput" class="hidden" type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.svg,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" multiple @change="seleccionarAdjuntos" />
-                </div>
-                <transition-group v-if="adjuntos.length" name="file-list" tag="div" class="mt-1 space-y-0.5">
-                  <div v-for="(archivo, i) in adjuntos" :key="archivo.name + i"
-                    class="file-chip rounded-lg px-1.5 py-0.5 flex items-center gap-1.5">
-                    <span class="file-type-badge" :class="getFileTypeClass(archivo)">{{ getFileTypeLabel(archivo) }}</span>
-                    <div class="flex-1 min-w-0">
-                      <p class="text-[9px] font-semibold text-slate-700 truncate">{{ archivo.name }}</p>
-                    </div>
-                    <button type="button" class="file-remove-btn" @click.stop="removerAdjunto(i)">
-                      <component :is="XCircleIcon" class="w-3 h-3" />
-                    </button>
-                  </div>
-                </transition-group>
-              </div>
-              <el-form-item label="Servicio / Ubicación actual" prop="servicio_ubicacion_actual" required>
-                <el-select v-model="form.servicio_ubicacion_actual" class="w-full" placeholder="Seleccione">
-                  <el-option v-for="s in SERVICIOS" :key="s" :label="s" :value="s" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="Servicio al que se remite">
-                <el-select v-model="form.servicio_remision" class="w-full" placeholder="Seleccione" clearable>
-                  <el-option v-for="s in SERVICIOS" :key="s" :label="s" :value="s" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="Vía de contacto">
-                <el-select v-model="form.via_contacto" class="w-full" placeholder="Seleccione" clearable>
-                  <el-option label="Email" value="EMAIL" />
-                  <el-option label="Telefónica" value="TELEFONICA" />
-                  <el-option label="N/A" value="N/A" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="¿Paciente gestante?">
-                <el-select v-model="form.gestante" class="w-full" placeholder="Seleccione" clearable>
-                  <el-option label="Sí" :value="true" />
-                  <el-option label="No" :value="false" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="Condición especial" class="col-span-2">
-                <el-input v-model="form.condicion_especial" placeholder="Ej: discapacidad, obesidad mórbida..." autocomplete="off" />
-              </el-form-item>
-            </div>
-          </div>
-
-          <el-divider class="form-section-divider" />
-
-          <div v-show="pasoFormulario === 3" class="mb-0">
-            <div class="flex items-center gap-2 mb-1">
-              <div class="w-5 h-5 rounded-full bg-[#0D2D6B] text-white text-[10px] flex items-center justify-center font-bold shrink-0">3</div>
-              <p class="font-semibold text-gray-700 text-xs">Resumen de la solicitud</p>
-            </div>
-            <div class="grid grid-cols-3 gap-2 mb-2">
-              <div class="summary-card">
-                <span class="summary-label">Tipo de documento</span>
-                <strong class="summary-value">{{ form.tipo_documento || '—' }}</strong>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">Número de documento</span>
-                <strong class="summary-value">{{ form.numero_documento || '—' }}</strong>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">Edad</span>
-                <strong class="summary-value">{{ form.edad ?? '—' }}</strong>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">Género</span>
-                <strong class="summary-value">{{ form.genero === 'M' ? 'Masculino' : form.genero === 'F' ? 'Femenino' : '—' }}</strong>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">Municipio</span>
-                <strong class="summary-value">{{ form.municipio_capita || '—' }}</strong>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">EPS / Aseguradora</span>
-                <strong class="summary-value">{{ form.eps || '—' }}</strong>
-              </div>
-              <div class="summary-card col-span-3">
-                <span class="summary-label">Nombre del paciente</span>
-                <strong class="summary-value">{{ nombreCompleto }}</strong>
-              </div>
-              <div class="summary-card col-span-3">
-                <span class="summary-label">Diagnóstico</span>
-                <strong class="summary-value">{{ form.diagnostico || '—' }}</strong>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">Especialidad requerida</span>
-                <strong class="summary-value">{{ form.especialidad_requerida || '—' }}</strong>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">Servicio / Ubicación actual</span>
-                <strong class="summary-value">{{ form.servicio_ubicacion_actual || '—' }}</strong>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">Servicio al que se remite</span>
-                <strong class="summary-value">{{ form.servicio_remision || '—' }}</strong>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">Vía de contacto</span>
-                <strong class="summary-value">{{ form.via_contacto || '—' }}</strong>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">¿Paciente gestante?</span>
-                <strong class="summary-value">{{ form.gestante === true ? 'Sí' : form.gestante === false ? 'No' : '—' }}</strong>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">Condición especial</span>
-                <strong class="summary-value">{{ form.condicion_especial || '—' }}</strong>
-              </div>
-              <div class="summary-card col-span-3">
-                <span class="summary-label">Historia clínica</span>
-                <strong class="summary-value">{{ form.resumen_historia_clinica || '—' }}</strong>
-              </div>
-            </div>
-            <div class="grid grid-cols-1 gap-3">
-              <el-form-item label="Observaciones adicionales" class="mb-0">
-                <el-input v-model="form.observaciones" type="textarea" :rows="2" placeholder="Información adicional relevante..." />
-              </el-form-item>
-            </div>
-          </div>
-
-        </el-form>
-
-        <div class="flex gap-3 pt-1.5 border-t border-gray-100 mt-1">
-          <el-button class="flex-1" @click="pasoFormulario === 1 ? drawerVisible = false : pasoFormulario--">{{ pasoFormulario === 1 ? 'Cancelar' : 'Anterior' }}</el-button>
-          <el-button v-if="pasoFormulario < 3" type="primary" class="flex-1 !bg-[#0D2D6B]" @click="avanzarPaso">Continuar</el-button>
-          <el-button v-else type="primary" class="flex-1 !bg-[#0D2D6B]" :loading="guardando" @click="guardar">Enviar solicitud</el-button>
-        </div>
-      </div>
-    </el-dialog>
-
     <!-- ── Modal: Detalle ──────────────────────────────────────────────── -->
     <el-dialog v-model="modalDetalle" width="640px" class="detalle-dialog" :show-close="true" align-center>
       <template v-if="solicitudSeleccionada">
@@ -599,8 +348,9 @@
             </div>
             <div class="detalle-head-info">
               <p class="detalle-head-title">Detalle de solicitud</p>
-              <p class="detalle-head-sub">#{{ solicitudSeleccionada.id }} · {{ formatFecha(solicitudSeleccionada.created_at) }}</p>
+              <p class="detalle-head-sub">{{ formatFecha(solicitudSeleccionada.created_at) }}</p>
             </div>
+            <div class="detalle-head-id-badge">ID #{{ solicitudSeleccionada.id }}</div>
             <div class="detalle-head-badge" :class="'badge-' + solicitudSeleccionada.estado">
               {{ estadoLabel(solicitudSeleccionada.estado) }}
             </div>
@@ -626,17 +376,27 @@
                 <div class="data-row"><span>Servicio actual</span><strong>{{ solicitudSeleccionada.servicio_ubicacion_actual }}</strong></div>
                 <div class="data-row"><span>Municipio</span><strong>{{ solicitudSeleccionada.municipio_capita }}</strong></div>
                 <div v-if="solicitudSeleccionada.servicio_remision" class="data-row"><span>Destino</span><strong>{{ solicitudSeleccionada.servicio_remision }}</strong></div>
+                <div v-if="solicitudSeleccionada.quien_remitente" class="data-row"><span>Remite</span><strong>{{ solicitudSeleccionada.quien_remitente }}</strong></div>
+                <div v-if="solicitudSeleccionada.telefono_contacto" class="data-row"><span>Teléfono</span><strong>{{ solicitudSeleccionada.telefono_contacto }}</strong></div>
+                <div v-if="solicitudSeleccionada.correo_contacto" class="data-row"><span>Correo</span><strong>{{ solicitudSeleccionada.correo_contacto }}</strong></div>
               </div>
             </div>
           </div>
 
-          <!-- Diagnóstico + Historia en 2 columnas -->
+          <!-- Diagnósticos + Historia en 2 columnas -->
           <div class="grid grid-cols-2 gap-2.5 mb-2.5">
             <div class="detalle-card">
               <div class="card-icon" style="background:#ede9fe; color:#7c3aed;"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
               <div class="card-body">
-                <p class="card-title">Diagnóstico</p>
-                <p class="card-text">{{ solicitudSeleccionada.diagnostico }}</p>
+                <p class="card-title">Diagnósticos</p>
+                <div v-if="solicitudSeleccionada.diagnosticos?.length" class="card-dx-list">
+                  <div v-for="dx in solicitudSeleccionada.diagnosticos" :key="dx.id" class="card-dx-item">
+                    <strong class="card-dx-code">{{ dx.codigo_cie10 }}</strong>
+                    <span class="card-dx-desc">{{ dx.descripcion }}</span>
+                  </div>
+                </div>
+                <p v-else-if="solicitudSeleccionada.diagnostico" class="card-text">{{ solicitudSeleccionada.diagnostico }}</p>
+                <p v-else class="card-text">—</p>
               </div>
             </div>
             <div class="detalle-card">
@@ -717,7 +477,7 @@
           <div class="exito-detail-row"><span>Paciente</span><strong>{{ ultimoEnviado.paciente }}</strong></div>
           <div class="exito-detail-row"><span>Documento</span><strong>{{ ultimoEnviado.documento }}</strong></div>
           <div class="exito-detail-row"><span>Especialidad</span><strong>{{ ultimoEnviado.especialidad }}</strong></div>
-          <div class="exito-detail-row"><span>Diagnóstico</span><strong>{{ ultimoEnviado.diagnostico }}</strong></div>
+          <div class="exito-detail-row"><span>Diagnósticos</span><strong style="white-space: pre-line;">{{ ultimoEnviado.diagnosticos }}</strong></div>
           <div class="exito-detail-row"><span>Servicio actual</span><strong>{{ ultimoEnviado.servicio }}</strong></div>
           <div class="exito-detail-row" v-if="ultimoEnviado.adjuntos"><span>Adjuntos</span><strong>{{ ultimoEnviado.adjuntos }}</strong></div>
         </div>
@@ -734,6 +494,7 @@ import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   Plus as PlusIcon,
+  X as XIcon,
   ClipboardList as ClipboardListIcon,
   Clock as ClockIcon,
   CheckCircle as CheckCircleIcon,
@@ -745,6 +506,9 @@ import {
   UploadCloud as UploadCloudIcon,
   Stethoscope as StethoscopeIcon,
   CheckCircle2 as CheckCircle2Icon,
+  User as UserIcon,
+  UserCheck as UserCheckIcon,
+  FileCheck as FileCheckIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 import { useClinicaAuthStore } from '@/stores/clinicaAuth';
@@ -757,6 +521,7 @@ const solicitudes = ref<any[]>([]);
 const cargando = ref(false);
 const drawerVisible = ref(false);
 const guardando = ref(false);
+const showConfirmResumen = ref(false);
 const formRef = ref();
 const modalDetalle = ref(false);
 const solicitudSeleccionada = ref<any>(null);
@@ -765,6 +530,47 @@ const dragOver = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
 const pasoFormulario = ref(1);
 const cie10Filtrados = ref(CIE10.slice(0, 20));
+
+interface DiagnosticoItem {
+  codigo_cie10: string;
+  descripcion: string;
+}
+
+const diagnosticos = ref<DiagnosticoItem[]>([{ codigo_cie10: '', descripcion: '' }]);
+
+function agregarDiagnostico() {
+  diagnosticos.value.push({ codigo_cie10: '', descripcion: '' });
+}
+
+function quitarDiagnostico(i: number) {
+  diagnosticos.value.splice(i, 1);
+}
+
+async function onDxSelect(i: number, val: string) {
+  if (val === '__otro_dx') {
+    diagnosticos.value[i].codigo_cie10 = '';
+    try {
+      const { value } = await ElMessageBox.prompt('Escriba el código CIE-10', 'Nuevo diagnóstico', {
+        confirmButtonText: 'Continuar',
+        cancelButtonText: 'Cancelar',
+        inputPlaceholder: 'Ej: J18.9',
+        inputValidator: (v) => v?.trim() ? true : 'El código es requerido',
+      });
+      diagnosticos.value[i].codigo_cie10 = value.trim();
+    } catch {
+      diagnosticos.value[i].codigo_cie10 = '';
+    }
+    return;
+  }
+  if (!val) return;
+  const match = CIE10.find(c => c.codigo === val);
+  if (match) {
+    diagnosticos.value[i].codigo_cie10 = match.codigo;
+    if (!diagnosticos.value[i].descripcion) {
+      diagnosticos.value[i].descripcion = match.descripcion;
+    }
+  }
+}
 
 function filtrarCIE10(query: string) {
   if (!query) {
@@ -775,36 +581,6 @@ function filtrarCIE10(query: string) {
   cie10Filtrados.value = CIE10.filter(
     c => c.codigo.toLowerCase().includes(q) || c.descripcion.toLowerCase().includes(q),
   ).slice(0, 30);
-}
-
-async function onDiagnosticoSelect(val: string) {
-  if (val === '__otro_dx') {
-    form.value.diagnostico = '';
-    try {
-      const { value } = await ElMessageBox.prompt('Escriba el código CIE-10', 'Nuevo diagnóstico', {
-        confirmButtonText: 'Continuar',
-        cancelButtonText: 'Cancelar',
-        inputPlaceholder: 'Ej: J18.9',
-        inputValidator: (v) => v?.trim() ? true : 'El código es requerido',
-      });
-      const codigo = value.trim();
-      const { value: descVal } = await ElMessageBox.prompt('Escriba el nombre del diagnóstico', 'Descripción', {
-        confirmButtonText: 'Agregar',
-        cancelButtonText: 'Cancelar',
-        inputPlaceholder: 'Ej: Neumonía no especificada',
-        inputValidator: (v) => v?.trim() ? true : 'La descripción es requerida',
-      });
-      form.value.diagnostico = `${codigo} ${descVal.trim()}`;
-    } catch {
-      form.value.diagnostico = '';
-    }
-    return;
-  }
-  if (!val) return;
-  const match = CIE10.find(c => `${c.codigo} ${c.descripcion}` === val);
-  if (match) {
-    form.value.diagnostico = `${match.codigo} ${match.descripcion}`;
-  }
 }
 
 async function onEspecialidadSelect(val: string) {
@@ -827,7 +603,6 @@ async function onEspecialidadSelect(val: string) {
 const formSteps = [
   { number: 1, label: 'Paciente' },
   { number: 2, label: 'Remisión' },
-  { number: 3, label: 'Resumen' },
 ];
 
 // ── Stat cards config ───────────────────────────────────────────────────────
@@ -939,8 +714,8 @@ function emptyForm() {
   return {
     primer_nombre: '', segundo_nombre: '', primer_apellido: '', segundo_apellido: '',
     genero: '', edad: null as number | null, tipo_documento: '', numero_documento: '',
-    eps: '', diagnostico: '', municipio_capita: '', especialidad_requerida: '',
-    servicio_ubicacion_actual: '', servicio_remision: '', via_contacto: '',
+    eps: '', municipio_capita: '', especialidad_requerida: '',
+    servicio_ubicacion_actual: '', servicio_remision: '', quien_remitente: '', telefono_contacto: '', correo_contacto: '', via_contacto: '',
     gestante: null as boolean | null, condicion_especial: '',
     resumen_historia_clinica: '', observaciones: '',
   };
@@ -948,7 +723,7 @@ function emptyForm() {
 
 const form = ref(emptyForm());
 
-function capitalizar(campo: 'primer_nombre' | 'segundo_nombre' | 'primer_apellido' | 'segundo_apellido' | 'municipio_capita' | 'resumen_historia_clinica') {
+function capitalizar(campo: 'primer_nombre' | 'segundo_nombre' | 'primer_apellido' | 'segundo_apellido' | 'municipio_capita' | 'resumen_historia_clinica' | 'condicion_especial' | 'quien_remitente' | 'observaciones') {
   const val = form.value[campo];
   if (val && val.length === 1) {
     form.value[campo] = val.charAt(0).toUpperCase();
@@ -971,11 +746,11 @@ const rules = {
   tipo_documento: [{ required: true, message: 'Requerido', trigger: 'change' }],
   numero_documento: [{ required: true, message: 'Requerido', trigger: 'blur' }],
   eps: [{ required: true, message: 'Requerido', trigger: 'change' }],
-  diagnostico: [{ required: true, message: 'Requerido', trigger: 'blur' }],
   municipio_capita: [{ required: true, message: 'Requerido', trigger: 'blur' }],
   especialidad_requerida: [{ required: true, message: 'Requerido', trigger: 'change' }],
   servicio_ubicacion_actual: [{ required: true, message: 'Requerido', trigger: 'change' }],
   resumen_historia_clinica: [{ required: true, message: 'Requerido', trigger: 'blur' }],
+  correo_contacto: [{ type: 'email', message: 'Correo no válido', trigger: 'blur' }],
 };
 
 async function cargar() {
@@ -987,13 +762,14 @@ async function cargar() {
   finally { cargando.value = false; }
 }
 
-function abrirFormulario() { form.value = emptyForm(); adjuntos.value = []; pasoFormulario.value = 1; cie10Filtrados.value = CIE10.slice(0, 20); drawerVisible.value = true; }
+function abrirFormulario() { router.push('/clinica/solicitud'); }
 
 function irHistorial() { router.push('/clinica/historial'); }
 
 function formularioTieneDatos(): boolean {
   const f = form.value;
-  return !!(f.primer_nombre || f.primer_apellido || f.numero_documento || f.diagnostico ||
+  return !!(f.primer_nombre || f.primer_apellido || f.numero_documento ||
+    diagnosticos.value.some(d => d.codigo_cie10 || d.descripcion) ||
     f.especialidad_requerida || f.resumen_historia_clinica || adjuntos.value.length > 0);
 }
 
@@ -1013,7 +789,7 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'n' || e.key === 'N') {
     const tag = (e.target as HTMLElement)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement)?.isContentEditable) return;
-    if (drawerVisible.value || modalDetalle.value) return;
+    if (modalDetalle.value) return;
     e.preventDefault();
     abrirFormulario();
   }
@@ -1102,14 +878,36 @@ function getAdjuntoBadgeClass(mime: string, nombre: string): string {
 async function avanzarPaso(): Promise<void> {
   const camposPorPaso = [
     ['primer_nombre', 'primer_apellido', 'genero', 'edad', 'tipo_documento', 'numero_documento', 'municipio_capita', 'eps'],
-    ['diagnostico', 'resumen_historia_clinica', 'especialidad_requerida', 'servicio_ubicacion_actual'],
+    ['resumen_historia_clinica', 'especialidad_requerida', 'servicio_ubicacion_actual'],
   ];
+
+  if (pasoFormulario.value === 2) {
+    const validDx = diagnosticos.value.filter(d => d.codigo_cie10.trim() && d.descripcion.trim());
+    if (validDx.length === 0) {
+      ElMessage.warning('Agregue al menos un diagnóstico con código y descripción');
+      return;
+    }
+  }
 
   try {
     await formRef.value?.validateField(camposPorPaso[pasoFormulario.value - 1]);
     pasoFormulario.value++;
   } catch {
     ElMessage.warning('Complete los campos requeridos para continuar');
+  }
+}
+
+async function abrirConfirmacion(): Promise<void> {
+  const validDx = diagnosticos.value.filter(d => d.codigo_cie10.trim() && d.descripcion.trim());
+  if (validDx.length === 0) {
+    ElMessage.warning('Agregue al menos un diagnóstico con código y descripción');
+    return;
+  }
+  try {
+    await formRef.value?.validate();
+    showConfirmResumen.value = true;
+  } catch {
+    ElMessage.error('Por favor complete todos los campos requeridos');
   }
 }
 
@@ -1136,11 +934,11 @@ function tiempoRelativo(fecha: string): string {
 
 const modalExito = ref(false);
 const ultimoEnviado = ref({
-  paciente: '', documento: '', especialidad: '', diagnostico: '', servicio: '', adjuntos: '',
+  paciente: '', documento: '', especialidad: '', diagnosticos: '', servicio: '', adjuntos: '',
 });
 
 function onCerrarExito() {
-  ultimoEnviado.value = { paciente: '', documento: '', especialidad: '', diagnostico: '', servicio: '', adjuntos: '' };
+  ultimoEnviado.value = { paciente: '', documento: '', especialidad: '', diagnosticos: '', servicio: '', adjuntos: '' };
 }
 
 async function guardar() {
@@ -1157,13 +955,18 @@ async function guardar() {
         payload.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
       }
     });
+    const validDx = diagnosticos.value.filter(d => d.codigo_cie10.trim() && d.descripcion.trim());
+    validDx.forEach((dx, i) => {
+      payload.append(`diagnosticos[${i}][codigo_cie10]`, dx.codigo_cie10.trim());
+      payload.append(`diagnosticos[${i}][descripcion]`, dx.descripcion.trim());
+    });
     adjuntos.value.forEach((archivo) => payload.append('adjuntos[]', archivo));
     await http.post('/api/externo/solicitudes', payload);
     ultimoEnviado.value = {
       paciente: nombreCompleto.value,
       documento: `${form.value.tipo_documento} ${form.value.numero_documento}`,
       especialidad: form.value.especialidad_requerida || '—',
-      diagnostico: form.value.diagnostico || '—',
+      diagnosticos: validDx.map(d => `${d.codigo_cie10} — ${d.descripcion}`).join('\n') || '—',
       servicio: form.value.servicio_ubicacion_actual || '—',
       adjuntos: adjuntos.value.length ? `${adjuntos.value.length} archivo(s)` : '',
     };
@@ -1181,8 +984,17 @@ watch(stats, (s) => {
 });
 
 watch(drawerVisible, (isOpen) => {
-  document.documentElement.style.overflow = isOpen ? 'hidden' : '';
-  document.body.style.overflow = isOpen ? 'hidden' : '';
+  if (isOpen) {
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    document.body.style.height = '100vh';
+    document.querySelectorAll('main').forEach(el => { (el as HTMLElement).style.overflow = 'hidden'; });
+  } else {
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    document.body.style.height = '';
+    document.querySelectorAll('main').forEach(el => { (el as HTMLElement).style.overflow = ''; });
+  }
 });
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -1202,70 +1014,608 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* ════════════════════════════════════════════════════════════════
+   NUEVO FORMULARIO PROFESIONAL — Sistema de Referencia
+   Paleta: #0D2D6B (azul institucional), #1E293B (slate), #F8FAFC (fondo)
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Dialog base ── */
 :deep(.request-dialog) {
   max-width: calc(100vw - 2rem);
   overflow: hidden;
-  border-radius: 22px;
-  box-shadow: 0 28px 70px rgba(11, 35, 73, .28);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(13, 45, 107, .3);
 }
-
 :deep(.request-dialog .el-dialog__header) {
-  position: relative;
-  margin: .9rem .9rem 0;
-  padding: 1.05rem 1.35rem 1.05rem 4.2rem;
-  color: #fff;
-  background:
-    radial-gradient(circle at 90% 10%, rgba(77, 132, 202, .3), transparent 28%),
-    linear-gradient(115deg, #081f45, #0d2d6b 58%, #16468e);
-  border: 1px solid rgba(255,255,255,.3);
-  border-radius: 18px 18px 7px 18px;
-  box-shadow: 0 10px 20px rgba(12, 62, 116, .22);
-  font-size: 1rem;
-  font-weight: 800;
+  margin: 0;
+  padding: .6rem 1.25rem;
+  border-bottom: 2px solid #0D2D6B;
+  background: linear-gradient(135deg, #0D2D6B 0%, #16468E 100%);
+  border-radius: 16px 16px 0 0;
 }
-
-:deep(.request-dialog .el-dialog__header::before) {
-  position: absolute;
-  top: 50%;
-  left: 1.25rem;
-  width: 2.15rem;
-  height: 2.15rem;
-  border-radius: 11px;
-  background: linear-gradient(135deg, #3c72b4, #16468e);
-  box-shadow: 0 6px 14px rgba(4, 31, 69, .35);
-  content: '✚';
+:deep(.request-dialog .el-dialog__title) {
   color: #fff;
-  font-size: 1rem;
-  line-height: 2.15rem;
-  text-align: center;
-  transform: translateY(-50%);
+  font-size: .95rem;
+  font-weight: 700;
 }
-
-:deep(.request-dialog .el-dialog__title) { color: #fff; font-weight: 800; letter-spacing: .01em; }
-:deep(.request-dialog .el-dialog__headerbtn .el-dialog__close) { color: #e1f7ff; }
+:deep(.request-dialog .el-dialog__headerbtn) {
+  position: fixed;
+  top: calc(50vh - 50vh + 12px);
+  right: calc(50vw - 550px + 12px);
+  z-index: 9999;
+  width: 30px;
+  height: 30px;
+  border: 1.5px solid #DC2626;
+  border-radius: 8px;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  transition: all .2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
+}
+:deep(.request-dialog .el-dialog__headerbtn .el-dialog__close) {
+  color: #DC2626;
+  font-size: .9rem;
+  font-weight: 700;
+}
+:deep(.request-dialog .el-dialog__headerbtn:hover) {
+  background: #DC2626;
+  border-color: #DC2626;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, .35);
+}
 :deep(.request-dialog .el-dialog__headerbtn:hover .el-dialog__close) { color: #fff; }
-:global(.request-dialog .el-dialog__body) { max-height: calc(100vh - 4rem); padding: .5rem .9rem .6rem; overflow-y: auto; background: linear-gradient(180deg, #f7faff, #fff); display: flex; flex-direction: column; }
-:global(.request-dialog .el-dialog) {
-  max-height: calc(100vh - 1rem);
+:global(.request-dialog .el-dialog__body) {
+  max-height: calc(100vh - 3.5rem);
+  padding: .5rem 1rem .75rem;
   overflow: hidden;
-  margin-top: .5rem !important;
-  margin-bottom: .5rem !important;
+  background: #F8FAFC;
+  display: flex;
+  flex-direction: column;
+}
+:global(.request-dialog .el-dialog) {
+  max-height: calc(100vh - .5rem);
+  overflow: hidden;
+  margin-top: .25rem !important;
+  margin-bottom: .25rem !important;
 }
 :global(html:has(.request-dialog)),
 :global(body:has(.request-dialog)) {
   height: 100%;
   overflow: hidden !important;
 }
-:deep(.request-form .el-form-item) { margin-bottom: 0; display: flex; flex-direction: column; }
-:deep(.request-form .el-form-item__label) { min-height: 16px; padding-bottom: 1px; line-height: 1.1; display: flex; align-items: center; }
-:deep(.request-form .el-form-item__error) { padding-top: 0; font-size: .6rem; line-height: 1.1; }
-:deep(.request-form .el-divider) { display: none; }
-:deep(.request-form .el-textarea__inner) { min-height: 34px !important; }
-:deep(.request-form .el-input__wrapper),
-:deep(.request-form .el-select__wrapper) { min-height: 30px; }
-:deep(.request-form .el-input-number) { width: 100%; }
-:deep(.request-form .el-input-number .el-input__wrapper) { min-height: 30px; }
-:deep(.el-overlay) { background-color: rgba(8, 27, 58, .56); backdrop-filter: blur(4px); }
+:global(.el-overlay) {
+  background-color: rgba(15, 23, 42, .5);
+  backdrop-filter: blur(3px);
+  overflow: hidden !important;
+}
+
+/* ── Form overrides ── */
+:deep(.rf-form-col .el-form) { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+:deep(.rf-form-col .el-form-item) { margin-bottom: 0; display: flex; flex-direction: column; }
+:deep(.rf-form-col .el-form-item__label) {
+  color: #475569; font-size: .68rem; font-weight: 600;
+  padding-bottom: .1rem; line-height: 1.1;
+}
+:deep(.rf-form-col .el-form-item__error) { padding-top: 2px; font-size: .62rem; }
+:deep(.rf-form-col .el-input__wrapper),
+:deep(.rf-form-col .el-select__wrapper),
+:deep(.rf-form-col .el-textarea__inner) {
+  box-shadow: 0 0 0 1px #CBD5E1 inset;
+  border-radius: 8px;
+  background: #fff;
+  transition: box-shadow .2s ease;
+}
+:deep(.rf-form-col .el-input__wrapper.is-focus),
+:deep(.rf-form-col .el-select__wrapper.is-focus) { box-shadow: 0 0 0 2px #0D2D6B inset; }
+:deep(.rf-form-col .el-input__wrapper:hover),
+:deep(.rf-form-col .el-select__wrapper:hover) { box-shadow: 0 0 0 1px #3B82F6 inset; }
+:deep(.rf-form-col .el-input__wrapper),
+:deep(.rf-form-col .el-select__wrapper) { min-height: 30px; }
+:deep(.rf-form-col .el-input-number) { width: 100%; }
+:deep(.rf-form-col .el-input-number .el-input__wrapper) { min-height: 30px; }
+:deep(.rf-form-col .el-textarea__inner) { min-height: 28px !important; border-radius: 8px; }
+
+/* ── Stepper ── */
+.rf-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: .5rem;
+  padding: 0;
+}
+.rf-step {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex: 1;
+  position: relative;
+}
+.rf-step:not(:last-child)::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  margin: 0 .75rem;
+  background: #E2E8F0;
+  transition: background .3s ease;
+}
+.rf-step.active:not(:last-child)::after { background: linear-gradient(90deg, #0D2D6B, #3B82F6); }
+.rf-step-num {
+  display: grid;
+  width: 1.4rem;
+  height: 1.4rem;
+  place-items: center;
+  border-radius: 50%;
+  font-size: .68rem;
+  font-weight: 700;
+  background: #E2E8F0;
+  color: #94A3B8;
+  flex-shrink: 0;
+  transition: all .3s ease;
+}
+.rf-step.active .rf-step-num {
+  background: linear-gradient(135deg, #0D2D6B, #16468E);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(13, 45, 107, .3);
+}
+.rf-step.current .rf-step-num {
+  box-shadow: 0 0 0 4px rgba(13, 45, 107, .15);
+}
+.rf-step-label {
+  font-size: .72rem;
+  font-weight: 600;
+  color: #94A3B8;
+  white-space: nowrap;
+  transition: color .3s ease;
+}
+.rf-step.active .rf-step-label { color: #0D2D6B; }
+
+/* ── Sections ── */
+.rf-section {
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-top: 3px solid #0D2D6B;
+  border-radius: 10px;
+  padding: .6rem .75rem;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 12px rgba(13, 45, 107, .06);
+}
+.rf-section-header {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin-bottom: .4rem;
+  padding-bottom: .3rem;
+  border-bottom: 1px solid #F1F5F9;
+}
+.rf-section-header svg { color: #0D2D6B; }
+.rf-section-header h3 {
+  margin: 0;
+  font-size: .78rem;
+  font-weight: 700;
+  color: #0D2D6B;
+}
+
+/* ── Grid ── */
+.rf-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .35rem .75rem;
+}
+.rf-col-1 { grid-column: span 1; }
+.rf-col-2 { grid-column: span 2; }
+.rf-col-3 { grid-column: span 3; }
+.rf-mt { margin-top: .4rem; }
+
+/* ── Subsection ── */
+.rf-subsection {
+  margin-top: .4rem;
+  padding-top: .4rem;
+  border-top: 1px solid #F1F5F9;
+}
+.rf-subsection-header {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin-bottom: .3rem;
+}
+.rf-subsection-header svg { color: #0D2D6B; }
+.rf-subsection-header h4 {
+  margin: 0;
+  font-size: .78rem;
+  font-weight: 600;
+  color: #0D2D6B;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+/* ── Diagnósticos ── */
+.rf-dx-block {
+  background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+  border: 1px solid #93C5FD;
+  border-radius: 8px;
+  padding: .4rem .6rem;
+}
+.rf-dx-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .25rem;
+}
+.rf-dx-title {
+  font-size: .78rem;
+  font-weight: 600;
+  color: #1E40AF;
+}
+.rf-req { color: #DC2626; }
+.rf-dx-add {
+  font-size: .72rem;
+  font-weight: 600;
+  color: #0D2D6B;
+  border-color: #0D2D6B;
+  background: #DBEAFE;
+}
+.rf-dx-row {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin-bottom: .25rem;
+}
+.rf-dx-row:last-child { margin-bottom: 0; }
+.rf-dx-code { width: 140px; flex-shrink: 0; }
+.rf-dx-desc { flex: 1; }
+.rf-dx-remove {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  background: #FEF2F2;
+  color: #DC2626;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all .2s ease;
+}
+.rf-dx-remove:hover { background: #DC2626; color: #fff; border-color: #DC2626; }
+.rf-dx-empty { font-size: .72rem; color: #94A3B8; margin: .25rem 0 0; }
+
+/* ── Attachments ── */
+.rf-attach {
+  border: 1px solid #BFDBFE;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #EFF6FF, #F0F9FF);
+  padding: .4rem;
+  display: flex;
+  flex-direction: column;
+}
+.rf-attach-active { border-color: #0D2D6B; box-shadow: 0 0 0 3px rgba(13, 45, 107, .08); }
+.rf-attach-header {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  margin-bottom: .25rem;
+  font-size: .68rem;
+  font-weight: 600;
+  color: #475569;
+}
+.rf-attach-header svg { color: #2563EB; }
+.rf-attach-count {
+  margin-left: auto;
+  font-size: .62rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #E0E7FF;
+  color: #3730A3;
+}
+.rf-dropzone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .1rem;
+  min-height: 48px;
+  border: 2px dashed #60A5FA;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .2s ease;
+  text-align: center;
+  background: rgba(219, 234, 254, .3);
+}
+.rf-dropzone:hover { border-color: #0D2D6B; background: #DBEAFE; }
+.rf-dropzone svg { color: #2563EB; }
+.rf-dropzone p { margin: 0; font-size: .72rem; font-weight: 600; color: #1E40AF; }
+.rf-dropzone small { font-size: .62rem; color: #94A3B8; }
+.rf-file-list { margin-top: .25rem; display: flex; flex-direction: column; gap: .15rem; }
+.rf-file-chip {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .3rem .5rem;
+  border-radius: 6px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+}
+.rf-file-badge {
+  font-size: .58rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #DBEAFE;
+  color: #1D4ED8;
+  flex-shrink: 0;
+}
+.rf-file-name {
+  flex: 1;
+  font-size: .68rem;
+  font-weight: 600;
+  color: #475569;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rf-file-remove {
+  display: grid;
+  place-items: center;
+  color: #94A3B8;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 2px;
+  transition: color .2s ease;
+}
+.rf-file-remove:hover { color: #DC2626; }
+
+/* ── Layout 2 columnas: formulario + panel lateral ── */
+.rf-body {
+  display: flex;
+  gap: .75rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.rf-form-col {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Panel lateral: resumen en tiempo real ── */
+.rf-summary-panel {
+  width: 260px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #EFF6FF, #F8FAFC);
+  border: 1px solid #BFDBFE;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.rf-summary-panel-header {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem .65rem;
+  background: linear-gradient(135deg, #0D2D6B, #16468E);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 700;
+  border-radius: 10px 10px 0 0;
+}
+.rf-summary-panel-header svg { color: #fff; }
+.rf-summary-panel-body {
+  padding: .5rem .65rem;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+.rf-sp-block {
+  display: flex;
+  flex-direction: column;
+  gap: .05rem;
+  padding-bottom: .35rem;
+  border-bottom: 1px solid #DBEAFE;
+}
+.rf-sp-block:last-child { border-bottom: none; padding-bottom: 0; }
+.rf-sp-label {
+  font-size: .58rem;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.rf-sp-value {
+  font-size: .72rem;
+  font-weight: 700;
+  color: #0D2D6B;
+  word-break: break-word;
+}
+.rf-sp-sub {
+  font-size: .62rem;
+  color: #3B82F6;
+  font-weight: 500;
+}
+.rf-sp-dx-list { display: flex; flex-direction: column; gap: .15rem; margin-top: .1rem; }
+.rf-sp-dx-item {
+  display: flex;
+  align-items: baseline;
+  gap: .3rem;
+  padding: .15rem .3rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .7);
+}
+.rf-sp-dx-code {
+  font-size: .62rem;
+  font-weight: 800;
+  color: #15803D;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+.rf-sp-dx-desc { font-size: .62rem; color: #166534; }
+.rf-sp-empty { font-size: .62rem; color: #94A3B8; font-style: italic; }
+
+/* ── Dialog de confirmación ── */
+:deep(.confirm-dialog) {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(13, 45, 107, .25);
+}
+:deep(.confirm-dialog .el-dialog__header) {
+  display: none;
+}
+:deep(.confirm-dialog .el-dialog__body) {
+  padding: 0;
+}
+.confirm-body {
+  padding: 1.5rem 1.5rem 1rem;
+  text-align: center;
+}
+.confirm-icon-wrap {
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+  color: #0D2D6B;
+  margin-bottom: .75rem;
+}
+.confirm-title {
+  margin: 0 0 .25rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0D2D6B;
+}
+.confirm-subtitle {
+  margin: 0 0 1rem;
+  font-size: .78rem;
+  color: #64748B;
+}
+.confirm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .5rem .75rem;
+  text-align: left;
+}
+.confirm-item {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  padding: .4rem .6rem;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+}
+.confirm-item-full {
+  grid-column: span 2;
+}
+.confirm-item span {
+  font-size: .62rem;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.confirm-item strong {
+  font-size: .75rem;
+  font-weight: 700;
+  color: #0D2D6B;
+  word-break: break-word;
+}
+.confirm-dx-list {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+}
+.confirm-dx-item {
+  display: flex;
+  align-items: baseline;
+  gap: .4rem;
+  padding: .2rem .4rem;
+  border-radius: 6px;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+}
+.confirm-dx-code {
+  font-size: .68rem;
+  font-weight: 800;
+  color: #15803D;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+.confirm-dx-desc { font-size: .68rem; color: #166534; }
+.confirm-footer {
+  display: flex;
+  gap: .75rem;
+  padding: 0 1.5rem 1.25rem;
+}
+
+/* ── Footer buttons ── */
+.rf-footer {
+  display: flex;
+  gap: .5rem;
+  margin-top: .4rem;
+  padding-top: .4rem;
+  border-top: 1px solid #E2E8F0;
+  flex-shrink: 0;
+}
+.rf-btn-back {
+  flex: 1;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #475569;
+  border-color: #CBD5E1;
+  background: #fff;
+}
+.rf-btn-back:hover { color: #0D2D6B; border-color: #0D2D6B; background: #EFF6FF; }
+.rf-btn-next {
+  flex: 1;
+  border-radius: 8px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #0D2D6B, #16468E) !important;
+  border-color: #0D2D6B !important;
+  box-shadow: 0 4px 12px rgba(13, 45, 107, .25);
+}
+.rf-btn-next:hover { background: linear-gradient(135deg, #16468E, #1A4A9E) !important; border-color: #16468E !important; box-shadow: 0 6px 16px rgba(13, 45, 107, .35); }
+.rf-btn-submit {
+  flex: 1;
+  border-radius: 8px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #0D2D6B, #16468E) !important;
+  border-color: #0D2D6B !important;
+  box-shadow: 0 4px 12px rgba(13, 45, 107, .25);
+}
+.rf-btn-submit:hover { background: linear-gradient(135deg, #16468E, #1A4A9E) !important; border-color: #16468E !important; box-shadow: 0 6px 16px rgba(13, 45, 107, .35); }
+
+/* ── Card dx (detalle modal) ── */
+.card-dx-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.card-dx-item {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 4px 8px; border-radius: 6px;
+  background: #f5f3ff;
+}
+.card-dx-code {
+  font-size: 11px; font-weight: 800; color: #7c3aed;
+  font-family: monospace; flex-shrink: 0;
+}
+.card-dx-desc { font-size: 11px; color: #334155; }
+
+@media (max-height: 750px) {
+  :global(.request-dialog .el-dialog__body) { padding: .35rem .75rem .5rem; }
+  .rf-section { padding: .4rem .5rem; }
+  .rf-grid { gap: .25rem .5rem; }
+  .rf-stepper { margin-bottom: .35rem; }
+  .rf-step-num { width: 1.25rem; height: 1.25rem; font-size: .62rem; }
+  .rf-step-label { font-size: .68rem; }
+  :deep(.rf-form-col .el-input__wrapper),
+  :deep(.rf-form-col .el-select__wrapper) { min-height: 28px; }
+}
 
 /* ── Modal Éxito ── */
 :deep(.exito-dialog) { border-radius: 20px; overflow: hidden; box-shadow: 0 28px 70px rgba(11, 35, 73, .35); }
@@ -1312,7 +1662,8 @@ onUnmounted(() => {
 .exito-detail-row:last-child { border-bottom: none; }
 .exito-detail-row span { color: #61748d; font-weight: 600; }
 .exito-detail-row strong { color: #0d2d5e; font-weight: 700; text-align: right; max-width: 60%; word-break: break-word; }
-.exito-btn { border-radius: 10px; font-weight: 700; height: 40px; }
+.exito-btn { border-radius: 8px; font-weight: 600; height: 42px; background: #0D2D6B !important; border-color: #0D2D6B !important; }
+.exito-btn:hover { background: #16468E !important; border-color: #16468E !important; }
 
 /* ── Modal Detalle ── */
 :deep(.detalle-dialog) {
@@ -1383,6 +1734,18 @@ onUnmounted(() => {
 .detalle-head-info { flex: 1; z-index: 1; }
 .detalle-head-title { margin: 0; color: #fff; font-size: 1rem; font-weight: 800; }
 .detalle-head-sub { margin: .15rem 0 0; color: rgba(255,255,255,.55); font-size: .68rem; }
+.detalle-head-id-badge {
+  flex-shrink: 0; z-index: 1;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  padding: .35rem .7rem;
+  font-size: .72rem; font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.03em;
+  font-family: monospace;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
 
 .detalle-head-badge {
   padding: .3rem .7rem;
@@ -1636,151 +1999,6 @@ onUnmounted(() => {
   font-style: italic;
   margin: 0;
   padding: .3rem 0;
-}
-:deep(.request-form .el-form-item__label) { color: #334e70; font-size: .7rem; font-weight: 700; padding-bottom: .1rem; }
-:deep(.request-form .el-input__wrapper),
-:deep(.request-form .el-select__wrapper),
-:deep(.request-form .el-textarea__inner) {
-  box-shadow: 0 0 0 1px #dce7f2 inset;
-  border-radius: 10px;
-  background: #fff;
-}
-:deep(.request-form .el-input__wrapper:hover),
-:deep(.request-form .el-select__wrapper:hover) { box-shadow: 0 0 0 1px #86b4e8 inset; }
-
-.form-hero {
-  display: flex;
-  gap: .5rem;
-  align-items: center;
-  padding: .5rem .7rem;
-  border: 1px solid #cfe0f5;
-  border-radius: 12px;
-  background: linear-gradient(120deg, #eaf4ff, #f8fbff);
-}
-.form-hero-icon {
-  display: grid;
-  width: 1.6rem;
-  height: 1.6rem;
-  place-items: center;
-  color: #fff;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #0d2d5e, #3174c4);
-  box-shadow: 0 4px 10px rgba(13, 45, 94, .2);
-}
-.form-hero p { margin: 0 0 .05rem; color: #0d2d5e; font-size: .75rem; font-weight: 800; }
-.form-hero span { color: #61748d; font-size: .6rem; line-height: 1.2; }
-
-.attachments-card { border: 1.5px solid #4a8fdb; background: linear-gradient(135deg, #eef5ff, #f8fbff); box-shadow: 0 2px 6px rgba(74,143,219,.12); }
-
-.summary-card {
-  background: linear-gradient(135deg, #e8f1ff, #d6e8fa);
-  border: 1.5px solid #4a8fdb;
-  border-radius: 10px;
-  padding: .4rem .6rem;
-  display: flex;
-  flex-direction: column;
-  gap: .1rem;
-  min-height: 44px;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(74, 143, 219, .15);
-  transition: transform .2s ease, box-shadow .2s ease;
-}
-.summary-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(74, 143, 219, .25);
-}
-.summary-card.col-span-3 {
-  background: linear-gradient(135deg, #dbeafe, #c7dffc);
-  border-color: #2563eb;
-}
-.summary-label {
-  font-size: .52rem;
-  font-weight: 800;
-  color: #1e40af;
-  text-transform: uppercase;
-  letter-spacing: .03em;
-  line-height: 1.1;
-}
-.summary-value {
-  font-size: .64rem;
-  color: #0d2d5e;
-  font-weight: 700;
-  line-height: 1.25;
-  word-break: break-word;
-}
-
-@media (max-height: 650px) {
-  :global(.request-dialog .el-dialog__header) { margin: .45rem .65rem 0; padding-block: .7rem; }
-  :global(.request-dialog .el-dialog__body) { padding: .55rem .9rem .65rem; }
-  .form-hero { padding: .45rem .6rem; }
-  .form-hero-icon { width: 1.8rem; height: 1.8rem; border-radius: 9px; }
-  .form-hero p { font-size: .76rem; }
-  .form-hero span { font-size: .62rem; }
-  .stepper { gap: .25rem; padding: .25rem; }
-  .stepper-item { min-height: 2rem; font-size: .64rem; }
-  .stepper-number { width: 1.2rem; height: 1.2rem; font-size: .6rem; }
-  :deep(.request-form .el-form-item) { margin-bottom: .3rem; }
-  :deep(.request-form .el-form-item__label) { height: 15px; line-height: 15px; font-size: .66rem; }
-  :deep(.request-form .el-input__wrapper),
-  :deep(.request-form .el-select__wrapper) { min-height: 28px; }
-  :deep(.request-form .el-button) { min-height: 30px; padding-block: .35rem; }
-}
-.attachments-icon { display: inline-grid; width: 1.35rem; height: 1.35rem; place-items: center; color: #fff; background: #2f70bb; border-radius: 6px; font-weight: 800; }
-
-.review-card { background: #f8fbff; border: 1px solid #e0ecf8; border-radius: 10px; padding: .4rem .6rem; }
-.review-title { margin: 0 0 .3rem; font-size: .62rem; font-weight: 800; color: #0d2d5e; text-transform: uppercase; letter-spacing: .04em; }
-.review-card div { display: flex; flex-direction: column; }
-.review-card span { color: #64748b; font-size: .55rem; }
-.review-card strong { margin-top: .02rem; color: #1e3a5f; font-weight: 700; font-size: .62rem; }
-
-.stepper {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: .25rem;
-  padding: .25rem;
-  border: 1px solid #dbe8f5;
-  border-radius: 14px;
-  background: #edf5fc;
-}
-
-.stepper-item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .35rem;
-  min-height: 2rem;
-  padding: 0 .5rem;
-  border-radius: 8px;
-  font-size: .68rem;
-  font-weight: 600;
-  color: #61748d;
-  background: #fff;
-  border: 1px solid #dce7f2;
-  transition: .2s ease;
-}
-
-.stepper-item p { margin: 0; }
-.stepper-number {
-  display: grid;
-  width: 1.1rem;
-  height: 1.1rem;
-  place-items: center;
-  border: 1px solid #cfe0f5;
-  border-radius: 50%;
-  font-weight: 800;
-  font-size: .62rem;
-}
-
-.stepper-item.active {
-  color: #fff;
-  background: linear-gradient(135deg, #0d2d5e, #2469b2);
-  box-shadow: 0 5px 12px rgba(20, 74, 135, .2);
-}
-
-.stepper-item.active .stepper-number {
-  border-color: rgba(255,255,255,.32);
-  background: rgba(255,255,255,.18);
-  color: #fff;
 }
 
 .ph-dashboard {

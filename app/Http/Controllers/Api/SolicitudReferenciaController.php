@@ -15,7 +15,7 @@ class SolicitudReferenciaController extends Controller
 {
     public function index(): JsonResponse
     {
-        $solicitudes = SolicitudReferencia::with(['clinica', 'adjuntos'])
+        $solicitudes = SolicitudReferencia::with(['clinica', 'adjuntos', 'diagnosticos'])
             ->orderByRaw("FIELD(estado, 'pendiente', 'aceptado', 'en_espera', 'completado', 'negado')")
             ->orderBy('created_at', 'desc')
             ->get();
@@ -25,7 +25,7 @@ class SolicitudReferenciaController extends Controller
 
     public function show(SolicitudReferencia $solicitud): JsonResponse
     {
-        return response()->json(['data' => $solicitud->load('clinica')]);
+        return response()->json(['data' => $solicitud->load(['clinica', 'diagnosticos'])]);
     }
 
     public function aceptar(Request $request, SolicitudReferencia $solicitud): JsonResponse
