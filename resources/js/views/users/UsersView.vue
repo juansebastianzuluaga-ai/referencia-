@@ -2,10 +2,8 @@
   <div class="users-page h-full flex flex-col gap-2 p-3 sm:p-4 overflow-hidden">
 
     <!-- ── Header ── -->
-    <div class="flex items-center justify-between shrink-0"
-      v-motion
-      :initial="{ opacity: 0, y: 20 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
+    <div class="flex items-center justify-between shrink-0 animate-fade-in-up"
+      style="animation-duration: 0.4s; animation-fill-mode: both;">
       <div>
         <h1 class="text-lg font-bold text-gray-900">Gestión de Usuarios</h1>
         <p class="text-xs text-gray-500">Administración de cuentas de acceso al sistema</p>
@@ -209,7 +207,8 @@ import {
   KeyRound as KeyRoundIcon,
   Users as UsersIcon,
 } from '@lucide/vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessageBox } from 'element-plus';
+import notify from '@/plugins/toast';
 import UserFormDialog from '@/views/users/UserFormDialog.vue';
 import UserPasswordDialog from '@/views/users/UserPasswordDialog.vue';
 import { useUsersStore } from '@/stores/users';
@@ -278,11 +277,11 @@ async function toggleUserStatus(user: any) {
   usersStore.loading = true;
   try {
     await usersStore.updateUser(user.id, { is_active: newStatus });
-    ElMessage.success(`Usuario ${newStatus ? 'activado' : 'inactivado'} correctamente`);
+    notify.success(`Usuario ${newStatus ? 'activado' : 'inactivado'} correctamente`);
     await loadUsersData();
   } catch (e: any) {
     console.error(e);
-    ElMessage.error('Error al cambiar el estado del usuario');
+    notify.error('Error al cambiar el estado del usuario');
   } finally {
     usersStore.loading = false;
   }
@@ -290,7 +289,7 @@ async function toggleUserStatus(user: any) {
 
 async function deleteUser(user: any) {
   if (user.user_name === 'superadmin') {
-    ElMessage.warning('No se puede eliminar al usuario superadmin.');
+    notify.warning('No se puede eliminar al usuario superadmin.');
     return;
   }
 
@@ -311,11 +310,11 @@ async function deleteUser(user: any) {
   usersStore.loading = true;
   try {
     await usersStore.deleteUser(user.id);
-    ElMessage.success('Usuario eliminado correctamente');
+    notify.success('Usuario eliminado correctamente');
     await loadUsersData();
   } catch (e: any) {
     console.error(e);
-    ElMessage.error('Error al eliminar el usuario');
+    notify.error('Error al eliminar el usuario');
   } finally {
     usersStore.loading = false;
   }

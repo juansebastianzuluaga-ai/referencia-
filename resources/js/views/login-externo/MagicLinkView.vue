@@ -10,10 +10,8 @@
     <div class="fixed top-1/2 left-1/2 w-64 h-64 rounded-full opacity-3 pointer-events-none"
       style="background: radial-gradient(circle, #60a5fa, transparent)" />
 
-    <div class="w-full max-w-md relative z-10"
-      v-motion
-      :initial="{ opacity: 0, y: 30, scale: 0.96 }"
-      :enter="{ opacity: 1, y: 0, scale: 1, transition: { duration: 600, ease: 'easeOut' } }">
+    <div class="w-full max-w-md relative z-10 animate-fade-in-up"
+      style="animation-duration: 0.5s; animation-fill-mode: both;">
 
       <!-- Card -->
       <div class="magic-card rounded-3xl overflow-hidden"

@@ -1,8 +1,7 @@
 <template>
   <ContentCard title="Configuración" subtitle="Ajustes generales del sistema"
-    v-motion
-    :initial="{ opacity: 0, y: 20 }"
-    :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
+    class="animate-fade-in-up"
+    style="animation-duration: 0.4s; animation-fill-mode: both;">
     <template #actions>
       <el-button
         v-if="activeTab !== 'api'"

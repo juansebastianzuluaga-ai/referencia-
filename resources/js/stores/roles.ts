@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { ElMessage } from 'element-plus';
+import notify from '@/plugins/toast';
 import http from '@/plugins/axios';
 
 export const useRolesStore = defineStore('roles', () => {
@@ -28,7 +28,7 @@ export const useRolesStore = defineStore('roles', () => {
       permissionsLoaded.value = true;
     } catch (e: any) {
       permissions.value = [];
-      ElMessage.error('Error cargando permisos.');
+      notify.error('Error cargando permisos.');
     }
   }
 
@@ -54,9 +54,9 @@ export const useRolesStore = defineStore('roles', () => {
     } catch (e: any) {
       roles.value = [];
       if (e?.response?.status === 403) {
-        ElMessage.error('No tiene permiso para ver roles.');
+        notify.error('No tiene permiso para ver roles.');
       } else {
-        ElMessage.error('Error cargando roles.');
+        notify.error('Error cargando roles.');
       }
     } finally {
       loading.value = false;

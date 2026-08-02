@@ -4,6 +4,7 @@
       <component :is="Component" />
     </transition>
   </router-view>
+  <ToastifyContainer />
 </template>
 
 <script setup lang="ts">

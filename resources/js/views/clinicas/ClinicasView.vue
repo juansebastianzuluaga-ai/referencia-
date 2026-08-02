@@ -2,10 +2,8 @@
   <div class="h-full flex flex-col gap-2 p-3 sm:p-4 overflow-hidden clinic-page">
 
     <!-- ── Header ── -->
-    <div class="clinic-header shrink-0"
-      v-motion
-      :initial="{ opacity: 0, y: 20 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
+    <div class="clinic-header shrink-0 animate-fade-in-up"
+      style="animation-duration: 0.4s; animation-fill-mode: both;">
       <div class="clinic-header-icon">
         <component :is="BuildingIcon" class="w-5 h-5" />
       </div>
@@ -682,7 +680,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { useStorage } from '@vueuse/core';
+import { ElMessageBox } from 'element-plus';
+import notify from '@/plugins/toast';
 import {
   RefreshCw as RefreshIcon,
   Check as CheckIcon,
@@ -722,9 +722,9 @@ const procesando = ref<string | null>(null);
 const modalRechazo = ref(false);
 const modalDetalle = ref(false);
 const clinicaSeleccionada = ref<Clinica | null>(null);
-const tabActiva = ref<'todas' | 'pendiente' | 'activa' | 'rechazada'>('todas');
+const tabActiva = useStorage<'todas' | 'pendiente' | 'activa' | 'rechazada'>('clinica-tab', 'todas');
 const motivoRechazo = ref('');
-const filtroBuscar = ref('');
+const filtroBuscar = useStorage('clinica-buscar', '');
 
 function limpiarFiltros() {
   filtroBuscar.value = '';
@@ -813,7 +813,7 @@ async function cargar() {
     const { data } = await http.get('/api/clinicas');
     clinicas.value = data.data;
   } catch {
-    ElMessage.error('Error al cargar las clínicas');
+    notify.error('Error al cargar las clínicas');
   } finally {
     cargando.value = false;
   }
@@ -832,10 +832,10 @@ async function aprobar(clinica: Clinica) {
     procesando.value = clinica.id + '_aprobar';
     const endpoint = esReactivar ? 'reactivar' : 'aprobar';
     await http.post(`/api/clinicas/${clinica.id}/${endpoint}`);
-    ElMessage.success(esReactivar ? 'Clínica reactivada correctamente' : 'Clínica aprobada correctamente');
+    notify.success(esReactivar ? 'Clínica reactivada correctamente' : 'Clínica aprobada correctamente');
     await cargar();
   } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error('Error al procesar la clínica');
+    if (e !== 'cancel') notify.error('Error al procesar la clínica');
   } finally {
     procesando.value = null;
   }
@@ -855,7 +855,7 @@ function abrirRechazo(clinica: Clinica) {
 
 async function rechazar() {
   if (!motivoRechazo.value.trim()) {
-    ElMessage.warning('Ingrese el motivo de rechazo');
+    notify.warning('Ingrese el motivo de rechazo');
     return;
   }
   try {
@@ -863,11 +863,11 @@ async function rechazar() {
     await http.post(`/api/clinicas/${clinicaSeleccionada.value!.id}/rechazar`, {
       motivo: motivoRechazo.value,
     });
-    ElMessage.success('Clínica rechazada');
+    notify.success('Clínica rechazada');
     modalRechazo.value = false;
     await cargar();
   } catch {
-    ElMessage.error('Error al rechazar la clínica');
+    notify.error('Error al rechazar la clínica');
   } finally {
     procesando.value = null;
   }

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { ElMessage } from 'element-plus';
+import notify from '@/plugins/toast';
 import http from '@/plugins/axios';
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -21,9 +21,9 @@ export const useSettingsStore = defineStore('settings', () => {
     } catch (e: any) {
       settings.value = {};
       if (e?.response?.status === 403) {
-        ElMessage.error('No tiene permiso para ver la configuración.');
+        notify.error('No tiene permiso para ver la configuración.');
       } else {
-        ElMessage.error('Error cargando configuración.');
+        notify.error('Error cargando configuración.');
       }
     } finally {
       loading.value = false;
@@ -36,14 +36,14 @@ export const useSettingsStore = defineStore('settings', () => {
       const { data } = await http.put('/api/settings', { settings: payload });
       settings.value = data.data || {};
       loaded.value = true;
-      ElMessage.success('Configuración guardada correctamente');
+      notify.success('Configuración guardada correctamente');
     } catch (e: any) {
       console.error(e);
       const status = e?.response?.status;
       if (status === 403) {
-        ElMessage.error('No tiene permiso para actualizar la configuración (403)');
+        notify.error('No tiene permiso para actualizar la configuración (403)');
       } else {
-        ElMessage.error('Error al guardar la configuración.');
+        notify.error('Error al guardar la configuración.');
       }
       throw e;
     } finally {

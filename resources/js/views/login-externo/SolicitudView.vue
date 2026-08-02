@@ -2,10 +2,8 @@
   <div class="solicitud-page h-full flex flex-col overflow-hidden">
 
     <!-- Header -->
-    <div class="sp-header"
-      v-motion
-      :initial="{ opacity: 0, y: 20 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
+    <div class="sp-header animate-fade-in-up"
+      style="animation-duration: 0.4s; animation-fill-mode: both;">
       <div class="sp-header-left">
         <button class="sp-back-btn" @click="router.push('/clinica/dashboard')">
           <component :is="ArrowLeftIcon" class="w-4 h-4" />
@@ -358,7 +356,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessageBox } from 'element-plus';
+import notify from '@/plugins/toast';
 import {
   Plus as PlusIcon,
   X as XIcon,
@@ -519,12 +518,12 @@ function onDrop(event: DragEvent) {
 function agregarAdjuntos(files: File[]) {
   const restantes = 10 - adjuntos.value.length;
   if (restantes <= 0) {
-    ElMessage.warning('Máximo 10 archivos permitidos');
+    notify.warning('Máximo 10 archivos permitidos');
     return;
   }
   const nuevos = files.slice(0, restantes);
   if (files.length > restantes) {
-    ElMessage.warning(`Solo se agregaron ${restantes} de ${files.length} archivos (límite 10)`);
+    notify.warning(`Solo se agregaron ${restantes} de ${files.length} archivos (límite 10)`);
   }
   adjuntos.value = [...adjuntos.value, ...nuevos];
 }
@@ -565,7 +564,7 @@ async function avanzarPaso(): Promise<void> {
   if (pasoFormulario.value === 2) {
     const validDx = diagnosticos.value.filter(d => d.codigo_cie10.trim() && d.descripcion.trim());
     if (validDx.length === 0) {
-      ElMessage.warning('Agregue al menos un diagnóstico con código y descripción');
+      notify.warning('Agregue al menos un diagnóstico con código y descripción');
       return;
     }
   }
@@ -574,21 +573,21 @@ async function avanzarPaso(): Promise<void> {
     await formRef.value?.validateField(camposPorPaso[pasoFormulario.value - 1]);
     pasoFormulario.value++;
   } catch {
-    ElMessage.warning('Complete los campos requeridos para continuar');
+    notify.warning('Complete los campos requeridos para continuar');
   }
 }
 
 async function abrirConfirmacion(): Promise<void> {
   const validDx = diagnosticos.value.filter(d => d.codigo_cie10.trim() && d.descripcion.trim());
   if (validDx.length === 0) {
-    ElMessage.warning('Agregue al menos un diagnóstico con código y descripción');
+    notify.warning('Agregue al menos un diagnóstico con código y descripción');
     return;
   }
   try {
     await formRef.value?.validate();
     showConfirmResumen.value = true;
   } catch {
-    ElMessage.error('Por favor complete todos los campos requeridos');
+    notify.error('Por favor complete todos los campos requeridos');
   }
 }
 
@@ -603,7 +602,7 @@ function onCerrarExito() {
 
 async function guardar() {
   try { await formRef.value?.validate(); }
-  catch { ElMessage.error('Por favor complete todos los campos requeridos'); return; }
+  catch { notify.error('Por favor complete todos los campos requeridos'); return; }
   guardando.value = true;
   try {
     const now = new Date();
@@ -638,7 +637,7 @@ async function guardar() {
     diagnosticos.value = [{ codigo_cie10: '', descripcion: '' }];
   } catch (e: any) {
     const errors = e.response?.data?.data?.errors || e.response?.data?.errors;
-    ElMessage.error(errors ? Object.values(errors).flat().join('\n') : 'Error al enviar la solicitud');
+    notify.error(errors ? Object.values(errors).flat().join('\n') : 'Error al enviar la solicitud');
   } finally { guardando.value = false; }
 }
 

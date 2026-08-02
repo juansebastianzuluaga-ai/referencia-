@@ -1,8 +1,7 @@
 <template>
   <ContentCard subtitle="Gestiona tu información personal y contraseña"
-    v-motion
-    :initial="{ opacity: 0, y: 20 }"
-    :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
+    class="animate-fade-in-up"
+    style="animation-duration: 0.4s; animation-fill-mode: both;">
     <template #title>
       <div class="flex items-center gap-2">
         <UserIcon class="w-5 h-5 text-blue-600" />
@@ -153,7 +152,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { ElMessage, type FormInstance } from 'element-plus';
+import { type FormInstance } from 'element-plus';
+import notify from '@/plugins/toast';
 import {
   Save as SaveIcon,
   Key as KeyIcon,
@@ -297,18 +297,18 @@ async function saveProfile() {
   try {
     const { data } = await http.put('/api/user/profile', { ...profileForm });
     auth.user = data.data;
-    ElMessage.success('Perfil actualizado correctamente');
+    notify.success('Perfil actualizado correctamente');
   } catch (e: any) {
     if (e.response?.status === 422) {
       const errors = e.response.data?.data?.errors || e.response.data?.errors;
       if (errors) {
         const errorMessages = Object.values(errors).flat().join('\n');
-        ElMessage.error(errorMessages || 'Error de validación');
+        notify.error(errorMessages || 'Error de validación');
       } else {
-        ElMessage.error(e.response.data?.message || 'Error de validación');
+        notify.error(e.response.data?.message || 'Error de validación');
       }
     } else {
-      ElMessage.error('Error al actualizar el perfil');
+      notify.error('Error al actualizar el perfil');
     }
   } finally {
     savingProfile.value = false;
@@ -326,19 +326,19 @@ async function savePassword() {
   try {
     const { data } = await http.put('/api/user/password', { ...passwordForm });
     auth.user = data.data;
-    ElMessage.success('Contraseña actualizada correctamente');
+    notify.success('Contraseña actualizada correctamente');
     resetPasswordForm();
   } catch (e: any) {
     if (e.response?.status === 422) {
       const errors = e.response.data?.data?.errors || e.response.data?.errors;
       if (errors) {
         const errorMessages = Object.values(errors).flat().join('\n');
-        ElMessage.error(errorMessages || 'Error de validación');
+        notify.error(errorMessages || 'Error de validación');
       } else {
-        ElMessage.error(e.response.data?.message || 'Error de validación');
+        notify.error(e.response.data?.message || 'Error de validación');
       }
     } else {
-      ElMessage.error('Error al actualizar la contraseña');
+      notify.error('Error al actualizar la contraseña');
     }
   } finally {
     savingPassword.value = false;

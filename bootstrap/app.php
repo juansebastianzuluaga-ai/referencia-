@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/logout',
             'api/forgot-password',
             'api/reset-password',
+            'api/externo/*',
         ]);
 
         $middleware->alias([

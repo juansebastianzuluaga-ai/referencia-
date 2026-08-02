@@ -56,7 +56,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue';
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
+import { type FormInstance, type FormRules } from 'element-plus';
+import notify from '@/plugins/toast';
 import { ShieldCheck as ShieldCheckIcon, KeyRound as KeyRoundIcon, CheckCircle as CheckCircleIcon } from '@lucide/vue';
 import BaseModal from '@/components/ui/BaseModal.vue';
 import http from '@/plugins/axios';
@@ -166,7 +167,7 @@ async function handleSubmit() {
         password: form.password,
         password_confirmation: form.password_confirmation,
       });
-      ElMessage.success('Contraseña actualizada correctamente');
+      notify.success('Contraseña actualizada correctamente');
       resetForm();
       emit('update:modelValue', false);
       emit('saved');
@@ -174,11 +175,11 @@ async function handleSubmit() {
       if (error.response?.status === 422) {
         const errors = error.response.data?.data?.errors || error.response.data?.errors || {};
         const firstError = Object.values(errors)[0];
-        ElMessage.error(Array.isArray(firstError) ? firstError[0] : 'Error de validación');
+        notify.error(Array.isArray(firstError) ? firstError[0] : 'Error de validación');
       } else if (error.response?.status === 403) {
-        ElMessage.error(error.response.data?.message || 'No tiene permisos para esta acción');
+        notify.error(error.response.data?.message || 'No tiene permisos para esta acción');
       } else {
-        ElMessage.error('Error al actualizar la contraseña');
+        notify.error('Error al actualizar la contraseña');
       }
     } finally {
       loading.value = false;

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { ElMessage } from 'element-plus';
+import notify from '@/plugins/toast';
 import http from '@/plugins/axios';
 
 export interface Notification {
@@ -67,7 +67,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
         unreadCount.value = Math.max(0, unreadCount.value - 1);
       }
     } catch {
-      ElMessage.error('Error al marcar la notificación como leída');
+      notify.error('Error al marcar la notificación como leída');
     }
   }
 
@@ -79,9 +79,9 @@ export const useNotificationsStore = defineStore('notifications', () => {
         n.read_at = new Date().toISOString();
       });
       unreadCount.value = 0;
-      ElMessage.success('Notificaciones marcadas como leídas');
+      notify.success('Notificaciones marcadas como leídas');
     } catch {
-      ElMessage.error('Error al marcar las notificaciones');
+      notify.error('Error al marcar las notificaciones');
     }
   }
 
@@ -94,7 +94,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
       }
       notifications.value = notifications.value.filter(n => n.id !== notificationId);
     } catch {
-      ElMessage.error('Error al eliminar la notificación');
+      notify.error('Error al eliminar la notificación');
     }
   }
 
@@ -103,9 +103,9 @@ export const useNotificationsStore = defineStore('notifications', () => {
       await http.delete('/api/notifications');
       notifications.value = [];
       unreadCount.value = 0;
-      ElMessage.success('Notificaciones eliminadas');
+      notify.success('Notificaciones eliminadas');
     } catch {
-      ElMessage.error('Error al eliminar las notificaciones');
+      notify.error('Error al eliminar las notificaciones');
     }
   }
 

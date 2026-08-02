@@ -48,6 +48,7 @@ declare module 'vue' {
     ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
+    FloatingTooltip: typeof import('./components/ui/FloatingTooltip.vue')['default']
     NotificationCenter: typeof import('./components/layout/NotificationCenter.vue')['default']
     PermissionGuard: typeof import('./components/ui/PermissionGuard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

@@ -1,35 +1,27 @@
 <template>
-  <div class="h-full flex flex-col gap-3 p-3 sm:p-5 overflow-hidden dashboard-bg">
+  <div class="h-full flex flex-col gap-2 p-2 sm:p-3 overflow-hidden dashboard-bg">
 
-    <!-- ── Hero banner ── -->
-    <div class="hero-card rounded-2xl p-5 sm:p-6 flex items-center gap-5 relative overflow-hidden shrink-0"
-      v-motion
-      :initial="{ opacity: 0, y: -20 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
+    <!-- ── Hero + Filtros compacto ── -->
+    <div class="hero-card rounded-2xl p-3 sm:p-4 flex items-center gap-4 relative overflow-hidden shrink-0 animate-fade-in-down"
+      style="animation-duration: 0.4s; animation-fill-mode: both;">
       <div class="hero-glow"></div>
       <div class="hero-pattern"></div>
-      <div class="hero-glow-2"></div>
-      <div class="flex items-center gap-4 z-10 shrink-0">
+      <div class="flex items-center gap-3 z-10 shrink-0">
         <div class="hero-logo">
           <img :src="'/images/logo-w.png'" alt="Logo" class="w-full h-full object-contain" />
         </div>
       </div>
       <div class="flex-1 min-w-0 z-10">
-        <div class="flex items-center gap-2 mb-1.5">
+        <div class="flex items-center gap-2 mb-0.5">
           <span class="hero-live-dot"></span>
-          <p class="text-[10px] font-semibold uppercase tracking-[0.12em]" style="color:rgba(255,255,255,0.55);">Sistema de referencia · En línea</p>
+          <p class="text-[9px] font-semibold uppercase tracking-[0.12em]" style="color:rgba(255,255,255,0.55);">En línea</p>
         </div>
-        <h1 class="text-lg sm:text-2xl font-bold leading-tight text-white tracking-tight">
+        <h1 class="text-sm sm:text-lg font-bold leading-tight text-white tracking-tight">
           Centro de control
         </h1>
-        <p class="text-sm font-extrabold mt-0.5" style="color:#7eb3ff;">Clínica Santa Bárbara</p>
-        <p class="text-[11px] sm:text-xs mt-2" style="color:rgba(255,255,255,0.5);">{{ today }} · Resumen operativo en tiempo real</p>
+        <p class="text-[10px] sm:text-xs font-semibold mt-0.5" style="color:#7eb3ff;">Clínica Santa Bárbara · {{ today }}</p>
       </div>
-      <div class="hero-right z-10 shrink-0 hidden sm:flex flex-col items-end gap-2">
-        <div class="hero-date-pill">
-          <component :is="CalendarDaysIcon" class="w-3.5 h-3.5" />
-          <span>{{ todayShort }}</span>
-        </div>
+      <div class="hero-right z-10 shrink-0 hidden sm:flex items-center gap-3">
         <div class="hero-mini-stats">
           <div class="hero-mini-stat">
             <span class="hero-mini-stat-num">{{ stats.solicitudes.total }}</span>
@@ -47,80 +39,21 @@
           </div>
         </div>
       </div>
-      <span class="hero-pill" style="top:18%; right:28%; background:rgba(255,255,255,0.12); width:8px; height:8px;"></span>
-      <span class="hero-pill" style="top:62%; right:12%; background:rgba(126,179,255,0.3); width:16px; height:16px;"></span>
-      <span class="hero-pill" style="bottom:20%; right:35%; background:rgba(255,255,255,0.08); width:10px; height:10px;"></span>
-      <span class="hero-pill" style="top:35%; right:8%; background:rgba(126,179,255,0.15); width:12px; height:12px;"></span>
-    </div>
-
-    <!-- ── Barra de filtros ── -->
-    <div class="filter-bar rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap shrink-0"
-      v-motion
-      :initial="{ opacity: 0, y: 20 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 500, delay: 80, ease: 'easeOut' } }">
-      <div class="filter-bar-icon shrink-0">
-        <component :is="FilterIcon" class="w-4 h-4" />
-      </div>
-      <span class="filter-bar-title shrink-0">Filtros de consulta</span>
-      <div class="filter-divider shrink-0"></div>
-      <el-date-picker
-        v-model="filtros.desde"
-        type="date"
-        placeholder="Desde"
-        format="DD/MM/YYYY"
-        value-format="YYYY-MM-DD"
-        size="small"
-        clearable
-        class="filter-picker"
-        @change="aplicarFiltros"
-      />
-      <span class="filter-arrow shrink-0">→</span>
-      <el-date-picker
-        v-model="filtros.hasta"
-        type="date"
-        placeholder="Hasta"
-        format="DD/MM/YYYY"
-        value-format="YYYY-MM-DD"
-        size="small"
-        clearable
-        class="filter-picker"
-        @change="aplicarFiltros"
-      />
-      <el-select v-model="filtros.estado" placeholder="Estado" size="small" clearable class="filter-select" @change="aplicarFiltros">
-        <el-option label="Todas" value="todas" />
-        <el-option label="Pendientes" value="pendiente" />
-        <el-option label="Aceptadas" value="aceptado" />
-        <el-option label="En espera" value="en_espera" />
-        <el-option label="Completadas" value="completado" />
-        <el-option label="Negadas" value="negado" />
-      </el-select>
-      <el-select v-model="filtros.especialidad" placeholder="Especialidad" size="small" clearable filterable class="filter-select" @change="aplicarFiltros">
-        <el-option v-for="e in especialidadesOpciones" :key="e" :label="e" :value="e" />
-      </el-select>
-      <el-select v-model="filtros.eps" placeholder="EPS" size="small" clearable filterable class="filter-select" @change="aplicarFiltros">
-        <el-option v-for="e in epsOpciones" :key="e" :label="e" :value="e" />
-      </el-select>
-      <el-button v-if="hayFiltrosActivos" size="small" type="danger" round @click="limpiarFiltros">
-        <component :is="XIcon" class="w-3 h-3 mr-1" />
-        Limpiar filtros
-      </el-button>
     </div>
 
     <!-- ── Stat cards ── -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0"
-      v-motion
-      :initial="{ opacity: 0, y: 24 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 500, delay: 150, ease: 'easeOut' } }">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 shrink-0 animate-fade-in-up"
+      style="animation-duration: 0.4s; animation-delay: 0.1s; animation-fill-mode: both;">
       <div
         v-for="(card, i) in statCards" :key="i"
-        class="stat-card rounded-2xl p-4 flex flex-col gap-2 anim-slide-up"
-        :style="{ animationDelay: (i * 0.08) + 's', '--accent': card.color, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
+        class="stat-card rounded-xl p-2.5 flex flex-col gap-1.5 anim-slide-up"
+        :style="{ animationDelay: (i * 0.06) + 's', '--accent': card.color, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
       >
         <div class="stat-card-top-bar"></div>
         <div class="stat-card-glow" :style="{ background: 'radial-gradient(circle at 80% 20%, ' + card.color + '15, transparent 60%)' }"></div>
         <div class="flex items-center justify-between relative z-10">
           <div class="stat-icon-wrap">
-            <component :is="card.icon" class="w-5 h-5" />
+            <component :is="card.icon" class="w-4 h-4" />
           </div>
           <span class="stat-delta-badge">
             {{ card.delta }}
@@ -137,13 +70,10 @@
     </div>
 
     <!-- ── Distribución + Donut ── -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 shrink-0"
-      v-motion
-      :initial="{ opacity: 0, y: 24 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 500, delay: 220, ease: 'easeOut' } }">
-      <!-- Barra de distribución con ApexCharts -->
-      <div class="distrib-card rounded-2xl p-4 flex flex-col anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
-        <div class="flex items-center justify-between mb-3">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 shrink-0 animate-fade-in-up"
+      style="animation-duration: 0.4s; animation-delay: 0.18s; animation-fill-mode: both;">
+      <div class="distrib-card rounded-xl p-3 flex flex-col lg:col-span-2">
+        <div class="flex items-center justify-between mb-1">
           <div>
             <p class="text-xs font-bold" style="color:#1e2d55;">Distribución de solicitudes</p>
             <p class="text-[10px] mt-0.5" style="color:#8a9ab5;">{{ stats.solicitudes.total }} en total · por estado</p>
@@ -152,20 +82,19 @@
         <div class="flex-1">
           <apexchart
             type="bar"
-            height="180"
+            height="140"
             :options="distribChartOptions"
             :series="distribChartSeries"
           />
         </div>
       </div>
 
-      <!-- Donut chart con ApexCharts -->
-      <div class="distrib-card rounded-2xl p-4 flex flex-col items-center justify-center anim-slide-up" style="animation-delay:0.2s">
-        <p class="text-xs font-bold mb-2 self-start" style="color:#1e2d55;">Proporción de estados</p>
+      <div class="distrib-card rounded-xl p-3 flex flex-col items-center justify-center">
+        <p class="text-xs font-bold mb-1 self-start" style="color:#1e2d55;">Proporción de estados</p>
         <div class="flex-1 w-full flex items-center justify-center">
           <apexchart
             type="donut"
-            height="220"
+            height="160"
             :options="donutChartOptions"
             :series="donutChartSeries"
           />
@@ -173,10 +102,8 @@
       </div>
     </div>
 
-    <div class="operations-grid"
-      v-motion
-      :initial="{ opacity: 0, y: 24 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 500, delay: 300, ease: 'easeOut' } }">
+    <div class="operations-grid animate-fade-in-up min-h-0"
+      style="animation-duration: 0.4s; animation-delay: 0.25s; animation-fill-mode: both;">
       <section class="operations-card">
         <div class="operations-glow"></div>
         <div class="operations-heading">
@@ -421,51 +348,81 @@ const donutChartOptions = computed(() => ({
     type: 'donut' as const,
     fontFamily: 'inherit',
     toolbar: { show: false },
+    animations: {
+      enabled: true,
+      easing: 'easeinout' as const,
+      speed: 800,
+      animateGradually: { enabled: true, delay: 150 },
+      dynamicAnimation: { enabled: true, speed: 400 },
+    },
+    dropShadow: {
+      enabled: true,
+      top: 2,
+      left: 0,
+      blur: 8,
+      opacity: 0.15,
+    },
   },
   labels: ['Pendientes', 'En espera', 'Aceptadas', 'Negadas'].filter((_, i) => {
     const s = stats.value.solicitudes;
     return [s.pendientes, s.en_espera, s.aceptadas, s.negadas][i] > 0;
   }),
-  colors: ['#f59e0b', '#2563eb', '#22c55e', '#ef4444'].filter((_, i) => {
+  colors: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'].filter((_, i) => {
     const s = stats.value.solicitudes;
     return [s.pendientes, s.en_espera, s.aceptadas, s.negadas][i] > 0;
   }),
+  fill: {
+    type: 'gradient',
+    gradient: {
+      shade: 'light',
+      type: 'vertical',
+      shadeIntensity: 0.3,
+      gradientToColors: ['#fbbf24', '#60a5fa', '#34d399', '#f87171'],
+      inverseColors: false,
+      opacityFrom: 1,
+      opacityTo: 0.85,
+    },
+  },
   legend: {
     position: 'bottom' as const,
     fontSize: '11px',
     fontWeight: 600,
     labels: { colors: '#475569' },
-    markers: { size: 5 },
-    itemMargin: { horizontal: 6, vertical: 4 },
+    markers: { size: 5, strokeWidth: 0 },
+    itemMargin: { horizontal: 8, vertical: 6 },
   },
   dataLabels: {
     enabled: true,
     formatter: (val: number) => `${Math.round(val)}%`,
-    style: { fontSize: '11px', fontWeight: 700 },
+    style: { fontSize: '11px', fontWeight: 700, colors: ['#fff'] },
+    dropShadow: { enabled: false },
   },
   tooltip: {
     y: { formatter: (val: number) => `${val} solicitudes` },
+    style: { fontSize: '12px', fontFamily: 'inherit' },
+    fillSeriesColor: false,
   },
   plotOptions: {
     pie: {
       donut: {
-        size: '68%',
+        size: '72%',
         labels: {
           show: true,
-          name: { fontSize: '11px', color: '#8a9ab5' },
-          value: { fontSize: '22px', fontWeight: 800, color: '#1e2d55' },
+          name: { fontSize: '11px', color: '#8a9ab5', fontWeight: 600 },
+          value: { fontSize: '24px', fontWeight: 800, color: '#1e2d55', formatter: (val: string) => val },
           total: {
             show: true,
-            label: 'Total',
+            label: 'Total solicitudes',
             fontSize: '10px',
             color: '#8a9ab5',
+            fontWeight: 600,
             formatter: () => String(stats.value.solicitudes.total),
           },
         },
       },
     },
   },
-  stroke: { width: 0 },
+  stroke: { width: 2, colors: ['#fff'] },
 }));
 
 const distribChartSeries = computed(() => [{
@@ -484,15 +441,36 @@ const distribChartOptions = computed(() => ({
     fontFamily: 'inherit',
     toolbar: { show: false },
     sparkline: { enabled: false },
+    animations: {
+      enabled: true,
+      easing: 'easeinout' as const,
+      speed: 700,
+      animateGradually: { enabled: true, delay: 100 },
+      dynamicAnimation: { enabled: true, speed: 350 },
+    },
   },
   plotOptions: {
     bar: {
       distributed: true,
-      borderRadius: 6,
-      columnWidth: '60%',
+      borderRadius: 8,
+      borderRadiusApplication: 'end' as const,
+      columnWidth: '55%',
+      dataLabels: { position: 'top' as const },
     },
   },
-  colors: ['#f59e0b', '#2563eb', '#22c55e', '#ef4444'],
+  colors: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'],
+  fill: {
+    type: 'gradient',
+    gradient: {
+      shade: 'light',
+      type: 'vertical',
+      shadeIntensity: 0.25,
+      gradientToColors: ['#fbbf24', '#60a5fa', '#34d399', '#f87171'],
+      inverseColors: false,
+      opacityFrom: 1,
+      opacityTo: 0.7,
+    },
+  },
   xaxis: {
     categories: ['Pendientes', 'En espera', 'Aceptadas', 'Negadas'],
     labels: {
@@ -508,10 +486,21 @@ const distribChartOptions = computed(() => ({
     borderColor: '#f1f5f9',
     strokeDashArray: 4,
     xaxis: { lines: { show: false } },
+    padding: { top: -10, right: 0, bottom: 0, left: 0 },
   },
-  dataLabels: { enabled: false },
+  dataLabels: {
+    enabled: true,
+    enabledOnSeries: undefined,
+    formatter: (val: number) => String(val),
+    position: 'top' as const,
+    style: { fontSize: '11px', fontWeight: 700, colors: ['#475569'] },
+    background: { enabled: false },
+    dropShadow: { enabled: false },
+  },
   tooltip: {
     y: { formatter: (val: number) => `${val} solicitudes` },
+    style: { fontSize: '12px', fontFamily: 'inherit' },
+    fillSeriesColor: false,
   },
   legend: { show: false },
 }));
@@ -698,14 +687,14 @@ onMounted(cargarStats);
   pointer-events: none;
 }
 .hero-logo {
-  width: 52px; height: 52px;
-  border-radius: 14px;
+  width: 40px; height: 40px;
+  border-radius: 12px;
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: 6px;
   backdrop-filter: blur(8px);
 }
 .hero-date-pill {
@@ -778,7 +767,7 @@ onMounted(cargarStats);
 .stat-card {
   background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, color-mix(in srgb, var(--accent) 12%, white) 100%);
   border: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 18%, transparent), 0 0 0 1px rgba(255,255,255,0.5) inset;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 14%, transparent), 0 0 0 1px rgba(255,255,255,0.5) inset;
   transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1), border-color .3s ease;
   position: relative;
   overflow: hidden;
@@ -800,27 +789,27 @@ onMounted(cargarStats);
   filter: blur(24px);
 }
 .stat-card:hover {
-  transform: translateY(-10px) scale(1.04);
-  box-shadow: 0 28px 56px color-mix(in srgb, var(--accent) 26%, transparent);
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 18px 36px color-mix(in srgb, var(--accent) 22%, transparent);
   border-color: var(--accent);
 }
 .stat-icon-wrap {
-  width: 48px; height: 48px;
-  border-radius: 14px;
+  width: 34px; height: 34px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   background: var(--icon-bg);
   color: var(--icon-color);
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--icon-color) 25%, transparent);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--icon-color) 20%, transparent);
   transition: transform .25s ease, box-shadow .25s ease;
   position: relative;
   z-index: 10;
 }
 .stat-card:hover .stat-icon-wrap {
-  transform: scale(1.18) rotate(-6deg);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--icon-color) 40%, transparent);
+  transform: scale(1.12) rotate(-6deg);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--icon-color) 35%, transparent);
 }
 .stat-delta-badge {
   font-size: 10px;
@@ -835,7 +824,7 @@ onMounted(cargarStats);
   z-index: 10;
 }
 .stat-value {
-  font-size: 34px;
+  font-size: 24px;
   font-weight: 900;
   line-height: 1;
   letter-spacing: -.03em;
@@ -855,7 +844,7 @@ onMounted(cargarStats);
   z-index: 10;
 }
 .stat-progress-track {
-  height: 6px;
+  height: 4px;
   border-radius: 999px;
   background: rgba(255,255,255,0.6);
   overflow: hidden;
@@ -1057,12 +1046,21 @@ onMounted(cargarStats);
 
 /* ── Distribución + Donut ── */
 .distrib-card {
-  background: rgba(255,255,255,0.92);
+  background: rgba(255,255,255,0.95);
   border: 1px solid rgba(212, 222, 234, 0.6);
   box-shadow: 0 4px 20px rgba(22, 70, 142, .07);
-  position: relative; overflow: visible;
   transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1);
   backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+.distrib-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0D2D6B 0%, #16468E 50%, #3b82f6 100%);
+  opacity: 0.8;
 }
 .distrib-card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(22,70,142,.12); }
 
@@ -1122,10 +1120,10 @@ onMounted(cargarStats);
 /* ── Operations ── */
 .operations-grid {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
-  gap: .75rem;
+  grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+  gap: .5rem;
   flex: 1;
-  min-height: 150px;
+  min-height: 0;
 }
 .operations-card,
 .flow-card {
@@ -1134,10 +1132,10 @@ onMounted(cargarStats);
   border-radius: 1rem;
 }
 .operations-card {
-  padding: 1rem;
+  padding: .65rem;
   background: rgba(255, 255, 255, .92);
   border: 1px solid rgba(212, 222, 234, .65);
-  box-shadow: 0 6px 24px rgba(22, 70, 142, .08);
+  box-shadow: 0 4px 16px rgba(22, 70, 142, .06);
   backdrop-filter: blur(10px);
 }
 .operations-card::before {
@@ -1165,7 +1163,7 @@ onMounted(cargarStats);
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: .8rem;
+  margin-bottom: .5rem;
 }
 .operations-hint {
   color: #94a3b8;
@@ -1177,7 +1175,7 @@ onMounted(cargarStats);
   z-index: 1;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .65rem;
+  gap: .5rem;
 }
 .quick-action {
   --quick-color: #2563c4;
@@ -1186,10 +1184,10 @@ onMounted(cargarStats);
   display: flex;
   align-items: center;
   min-width: 0;
-  gap: .65rem;
-  padding: .8rem;
+  gap: .5rem;
+  padding: .55rem;
   border: 1px solid rgba(226, 232, 240, .85);
-  border-radius: .85rem;
+  border-radius: .75rem;
   background: linear-gradient(145deg, #fff, #f8fafc);
   color: inherit;
   text-decoration: none;
@@ -1218,12 +1216,12 @@ onMounted(cargarStats);
 .quick-action-green { --quick-color: #15966a; --quick-bg: #dcfce7; }
 .quick-action-purple { --quick-color: #7048e8; --quick-bg: #ede9fe; }
 .quick-action-icon {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border-radius: 11px;
+  border-radius: 9px;
   color: var(--quick-color);
   background: var(--quick-bg);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
@@ -1261,11 +1259,11 @@ onMounted(cargarStats);
   transform: translateX(3px);
 }
 .flow-card {
-  min-height: 150px;
-  padding: 1rem;
+  min-height: 0;
+  padding: .65rem;
   background: rgba(255,255,255,0.92);
   border: 1px solid rgba(212, 222, 234, 0.6);
-  box-shadow: 0 6px 24px rgba(22, 70, 142, .08);
+  box-shadow: 0 4px 16px rgba(22, 70, 142, .06);
   backdrop-filter: blur(10px);
 }
 .flow-card::before {
@@ -1343,12 +1341,12 @@ onMounted(cargarStats);
   gap: .5rem;
 }
 .flow-step-icon {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border-radius: 11px;
+  border-radius: 9px;
   background: #e7efff;
   color: #2563c4;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.75);

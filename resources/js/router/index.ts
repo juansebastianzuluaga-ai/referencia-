@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import notify from '@/plugins/toast';
 import { useAuthStore } from '@/stores/auth';
 import { useClinicaAuthStore } from '@/stores/clinicaAuth';
 
@@ -187,7 +187,7 @@ router.beforeEach(async (to, from, next) => {
     const required = permissions as string[];
     const hasAccess = required.some((p: string) => auth.hasPermission(p));
     if (!hasAccess) {
-      ElMessage.error('No tiene permisos para acceder a este módulo.');
+      notify.error('No tiene permisos para acceder a este módulo.');
       return next({ name: 'dashboard' });
     }
   }

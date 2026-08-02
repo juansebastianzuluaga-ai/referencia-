@@ -2,32 +2,29 @@
   <div class="ph-dashboard h-full flex overflow-hidden">
 
     <!-- ══ Columna principal ═══════════════════════════════════════════════ -->
-    <div class="flex-1 flex flex-col gap-2 p-3 sm:p-4 min-w-0 overflow-hidden"
-      v-motion
-      :initial="{ opacity: 0, y: 20 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
+    <div class="flex-1 flex flex-col gap-3 p-4 sm:p-6 min-w-0 overflow-hidden animate-fade-in-up"
+      style="animation-duration: 0.4s; animation-fill-mode: both;">
 
-      <!-- ── Hero banner ── -->
-      <div class="hero-card rounded-2xl p-3 sm:p-4 flex items-center gap-4 relative overflow-hidden shrink-0 anim-fade-down">
+      <!-- ── Hero compacto ── -->
+      <div class="hero-card rounded-3xl p-5 sm:p-6 flex items-center gap-5 relative overflow-hidden shrink-0">
         <div class="hero-glow"></div>
         <div class="hero-pattern"></div>
-        <div class="hero-glow-2"></div>
-        <div class="flex items-center gap-3 z-10 shrink-0">
+        <div class="flex items-center gap-4 z-10 shrink-0">
           <div class="hero-logo">
-            <component :is="ClipboardListIcon" class="w-6 h-6" />
+            <component :is="ClipboardListIcon" class="w-7 h-7" />
           </div>
         </div>
         <div class="flex-1 min-w-0 z-10">
-          <div class="flex items-center gap-2 mb-1">
+          <div class="flex items-center gap-2 mb-1.5">
             <span class="hero-live-dot"></span>
-            <p class="text-[10px] font-semibold uppercase tracking-wider" style="color:rgba(255,255,255,0.6);">Sistema de referencia · En línea</p>
+            <p class="text-[11px] font-semibold uppercase tracking-[0.12em]" style="color:rgba(255,255,255,0.6);">Sistema de referencia · En línea</p>
           </div>
-          <h1 class="text-sm sm:text-lg font-bold leading-tight text-white">
+          <h1 class="text-lg sm:text-xl font-bold leading-tight text-white">
             {{ saludoTexto }}, <span class="clinic-name font-extrabold">{{ clinicaAuth.clinica?.nombre }}</span>
           </h1>
-          <p class="text-[11px] sm:text-xs mt-1" style="color:rgba(255,255,255,0.65);">{{ fechaHoy }} · Gestione sus remisiones al centro de referencia.</p>
+          <p class="text-xs sm:text-sm mt-1.5" style="color:rgba(255,255,255,0.65);">{{ fechaHoy }} · Gestione sus remisiones al centro de referencia.</p>
         </div>
-        <div class="hero-right z-10 shrink-0 hidden sm:flex flex-col items-end gap-2">
+        <div class="hero-right z-10 shrink-0 hidden sm:flex flex-col items-end gap-3">
           <button @click="router.push('/clinica/solicitud')" class="hero-link">
             <component :is="PlusIcon" class="w-4 h-4" />
             <span>Nueva solicitud</span>
@@ -49,33 +46,30 @@
             </div>
           </div>
         </div>
-        <span class="hero-pill" style="top:18%; right:28%; background:rgba(255,255,255,0.12); width:8px; height:8px;"></span>
-        <span class="hero-pill" style="top:62%; right:12%; background:rgba(126,179,255,0.3); width:16px; height:16px;"></span>
-        <span class="hero-pill" style="bottom:20%; right:35%; background:rgba(255,255,255,0.08); width:10px; height:10px;"></span>
       </div>
 
       <!-- ── Stat cards ── -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 shrink-0">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
         <template v-if="cargando">
-          <div v-for="i in 4" :key="i" class="stat-card rounded-2xl p-3 flex flex-col gap-1.5">
+          <div v-for="i in 4" :key="i" class="stat-card rounded-2xl p-4 flex flex-col gap-2">
             <div class="flex items-center gap-2 mb-1">
-              <div class="shimmer-box" style="width:36px; height:36px; border-radius:12px;"></div>
+              <div class="shimmer-box" style="width:40px; height:40px; border-radius:12px;"></div>
               <div class="shimmer-bar" style="width:50px; height:12px;"></div>
             </div>
-            <div class="shimmer-bar" style="width:70%; height:22px;"></div>
+            <div class="shimmer-bar" style="width:70%; height:28px;"></div>
             <div class="shimmer-bar" style="width:40%; height:6px; border-radius:999px;"></div>
           </div>
         </template>
         <template v-else>
           <div
             v-for="(card, i) in statCards" :key="i"
-            class="stat-card rounded-2xl p-3 flex flex-col gap-1 anim-slide-up"
+            class="stat-card rounded-2xl p-4 flex flex-col gap-2 anim-slide-up"
             :style="{ animationDelay: (i * 0.08) + 's', '--accent': card.color, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
           >
-            <div class="stat-card-glow" :style="{ background: 'radial-gradient(circle at 80% 20%, ' + card.color + '15, transparent 60%)' }"></div>
+            <div class="stat-card-glow" :style="{ background: 'radial-gradient(circle at 80% 20%, ' + card.color + '18, transparent 60%)' }"></div>
             <div class="flex items-center justify-between relative z-10">
               <div class="stat-icon-wrap">
-                <component :is="card.icon" class="w-4 h-4" />
+                <component :is="card.icon" class="w-5 h-5" />
               </div>
               <span class="stat-delta-badge">{{ card.delta }}</span>
             </div>
@@ -91,8 +85,8 @@
       </div>
 
       <!-- ── Distribución + Donut ── -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 shrink-0">
-        <div v-if="cargando" class="distrib-card rounded-2xl p-3 flex items-center gap-4 lg:col-span-2">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 shrink-0">
+        <div v-if="cargando" class="distrib-card rounded-2xl p-4 flex items-center gap-4 lg:col-span-2">
           <div class="flex-1">
             <div class="flex items-center justify-between mb-2">
               <div class="shimmer-bar" style="width:140px; height:12px;"></div>
@@ -101,14 +95,14 @@
             <div class="shimmer-bar w-full" style="height:10px; border-radius:999px;"></div>
           </div>
         </div>
-        <div v-else class="distrib-card rounded-2xl p-3 flex items-center gap-4 anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
+        <div v-else class="distrib-card rounded-2xl p-4 flex items-center gap-4 anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
           <div class="distrib-card-glow"></div>
           <div class="flex-1 relative z-10">
-            <div class="flex items-center justify-between mb-2">
-              <p class="text-xs font-bold" style="color:#1e2d55;">Distribución de solicitudes</p>
-              <p class="text-[10px]" style="color:#8a9ab5;">{{ stats.total }} en total</p>
+            <div class="flex items-center justify-between mb-2.5">
+              <p class="text-sm font-bold" style="color:#1e2d55;">Distribución de solicitudes</p>
+              <p class="text-xs" style="color:#8a9ab5;">{{ stats.total }} en total</p>
             </div>
-            <div class="flex h-2.5 rounded-full overflow-hidden" style="background:#edf2f7;">
+            <div class="flex h-3 rounded-full overflow-hidden" style="background:#edf2f7;">
               <div v-if="stats.pendientes" class="distrib-segment transition-all duration-700" :style="{ width: (stats.pendientes / Math.max(1, stats.total)) * 100 + '%', background: 'linear-gradient(90deg, #fbbf24, #f59e0b)' }"
                 :data-tooltip="`${stats.pendientes} pendientes (${Math.round(stats.pendientes / Math.max(1, stats.total) * 100)}%)`"></div>
               <div v-if="stats.aceptadas" class="distrib-segment transition-all duration-700" :style="{ width: (stats.aceptadas / Math.max(1, stats.total)) * 100 + '%', background: 'linear-gradient(90deg, #4ade80, #22c55e)' }"
@@ -116,43 +110,43 @@
               <div v-if="stats.negadas" class="distrib-segment transition-all duration-700" :style="{ width: (stats.negadas / Math.max(1, stats.total)) * 100 + '%', background: 'linear-gradient(90deg, #f87171, #ef4444)' }"
                 :data-tooltip="`${stats.negadas} negadas (${Math.round(stats.negadas / Math.max(1, stats.total) * 100)}%)`"></div>
             </div>
-            <div class="flex items-center gap-4 mt-2.5">
+            <div class="flex items-center gap-4 mt-3">
               <div class="flex items-center gap-1.5">
                 <span class="w-2.5 h-2.5 rounded-full" style="background:#fbbf24;"></span>
-                <span class="text-[10px] font-medium" style="color:#8a9ab5;">Pendientes <strong style="color:#d97706;">{{ stats.pendientes }}</strong></span>
+                <span class="text-xs font-medium" style="color:#8a9ab5;">Pendientes <strong style="color:#d97706;">{{ stats.pendientes }}</strong></span>
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="w-2.5 h-2.5 rounded-full" style="background:#22c55e;"></span>
-                <span class="text-[10px] font-medium" style="color:#8a9ab5;">Aceptadas <strong style="color:#16a34a;">{{ stats.aceptadas }}</strong></span>
+                <span class="text-xs font-medium" style="color:#8a9ab5;">Aceptadas <strong style="color:#16a34a;">{{ stats.aceptadas }}</strong></span>
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="w-2.5 h-2.5 rounded-full" style="background:#f87171;"></span>
-                <span class="text-[10px] font-medium" style="color:#8a9ab5;">Negadas <strong style="color:#dc2626;">{{ stats.negadas }}</strong></span>
+                <span class="text-xs font-medium" style="color:#8a9ab5;">Negadas <strong style="color:#dc2626;">{{ stats.negadas }}</strong></span>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Donut chart CSS -->
-        <div v-if="!cargando" class="distrib-card rounded-2xl p-3 flex items-center justify-center gap-4 anim-slide-up" style="animation-delay:0.2s">
+        <div v-if="!cargando" class="distrib-card rounded-2xl p-4 flex items-center justify-center gap-4 anim-slide-up" style="animation-delay:0.2s">
           <div class="donut-chart relative z-10" :style="donutStyle">
             <div class="donut-center">
               <span class="donut-num">{{ stats.total }}</span>
               <span class="donut-label">Total</span>
             </div>
           </div>
-          <div class="flex flex-col gap-1.5 relative z-10">
+          <div class="flex flex-col gap-2 relative z-10">
             <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full" style="background:#fbbf24;"></span>
-              <span class="text-[10px] font-semibold" style="color:#d97706;">{{ Math.round(donutPercents[0]) }}%</span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#fbbf24;"></span>
+              <span class="text-xs font-semibold" style="color:#d97706;">{{ Math.round(donutPercents[0]) }}%</span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full" style="background:#22c55e;"></span>
-              <span class="text-[10px] font-semibold" style="color:#16a34a;">{{ Math.round(donutPercents[1]) }}%</span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#22c55e;"></span>
+              <span class="text-xs font-semibold" style="color:#16a34a;">{{ Math.round(donutPercents[1]) }}%</span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full" style="background:#f87171;"></span>
-              <span class="text-[10px] font-semibold" style="color:#dc2626;">{{ Math.round(donutPercents[2]) }}%</span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#f87171;"></span>
+              <span class="text-xs font-semibold" style="color:#dc2626;">{{ Math.round(donutPercents[2]) }}%</span>
             </div>
           </div>
         </div>
@@ -255,12 +249,12 @@
 
       <!-- ── Solicitudes recientes ── -->
       <div class="flex-1 min-h-0 flex flex-col">
-        <div class="flex items-center justify-between mb-1.5 shrink-0">
-          <div class="flex items-center gap-2">
+        <div class="flex items-center justify-between mb-2 shrink-0">
+          <div class="flex items-center gap-2.5">
             <div class="recent-header-icon">
-              <component :is="ClipboardListIcon" class="w-3.5 h-3.5" />
+              <component :is="ClipboardListIcon" class="w-4 h-4" />
             </div>
-            <h2 class="font-bold text-sm" style="color:#1e2d55;">Solicitudes recientes</h2>
+            <h2 class="font-bold text-base" style="color:#1e2d55;">Solicitudes recientes</h2>
             <span v-if="!cargando && solicitudes.length > 0" class="recent-count-badge">{{ solicitudes.length }}</span>
           </div>
           <button @click="cargar" class="recent-refresh-btn">
@@ -269,46 +263,46 @@
           </button>
         </div>
 
-        <div v-if="cargando" class="space-y-1.5">
-          <div v-for="i in 4" :key="i" class="skeleton-row rounded-xl px-3 py-2 flex items-center gap-3">
-            <div class="shimmer-box" style="width:32px; height:32px; border-radius:8px;"></div>
+        <div v-if="cargando" class="space-y-2">
+          <div v-for="i in 4" :key="i" class="skeleton-row rounded-xl px-4 py-3 flex items-center gap-3">
+            <div class="shimmer-box" style="width:36px; height:36px; border-radius:10px;"></div>
             <div class="flex-1 space-y-1.5">
-              <div class="shimmer-bar" style="width:45%; height:10px;"></div>
-              <div class="shimmer-bar" style="width:70%; height:8px;"></div>
+              <div class="shimmer-bar" style="width:45%; height:12px;"></div>
+              <div class="shimmer-bar" style="width:70%; height:9px;"></div>
             </div>
-            <div class="shimmer-box" style="width:48px; height:18px; border-radius:999px;"></div>
+            <div class="shimmer-box" style="width:56px; height:20px; border-radius:999px;"></div>
           </div>
         </div>
 
-        <div v-else-if="solicitudes.length === 0" class="flex-1 flex flex-col items-center justify-center py-6 text-center">
-          <div class="empty-state-icon w-12 h-12 rounded-2xl flex items-center justify-center mb-3">
-            <component :is="ClipboardListIcon" class="w-6 h-6" />
+        <div v-else-if="solicitudes.length === 0" class="flex-1 flex flex-col items-center justify-center py-8 text-center">
+          <div class="empty-state-icon w-14 h-14 rounded-2xl flex items-center justify-center mb-4">
+            <component :is="ClipboardListIcon" class="w-7 h-7" />
           </div>
-          <p class="font-semibold text-sm mb-1" style="color:#0d2d5e;">Aún no hay solicitudes</p>
-          <p class="text-xs max-w-[240px]" style="color:#64748b;">Cree la primera remisión para iniciar el seguimiento.</p>
-          <button class="empty-state-action mt-3" @click="abrirFormulario"><component :is="PlusIcon" class="w-3.5 h-3.5" /> Crear primera solicitud</button>
+          <p class="font-semibold text-base mb-1" style="color:#0d2d5e;">Aún no hay solicitudes</p>
+          <p class="text-sm max-w-[280px]" style="color:#64748b;">Cree la primera remisión para iniciar el seguimiento.</p>
+          <button class="empty-state-action mt-4" @click="abrirFormulario"><component :is="PlusIcon" class="w-4 h-4" /> Crear primera solicitud</button>
         </div>
 
-        <div v-else class="flex-1 overflow-y-auto space-y-1.5 pr-1">
+        <div v-else class="flex-1 overflow-y-auto space-y-2 pr-1">
           <div
-            v-for="(sol, idx) in solicitudes.slice(0, 3)"
+            v-for="(sol, idx) in solicitudes.slice(0, 5)"
             :key="sol.id"
-            class="med-row rounded-xl px-3 py-2 flex items-center gap-3 cursor-pointer transition-all anim-row-in"
+            class="med-row rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer transition-all anim-row-in"
             :style="[
           { borderLeftColor: sol.estado === 'pendiente' ? '#fbbf24' : sol.estado === 'aceptado' ? '#22c55e' : sol.estado === 'en_espera' ? '#3b82f6' : sol.estado === 'completado' ? '#6366f1' : '#f87171' },
           { animationDelay: (idx * 0.06) + 's' }
         ]"
             @click="verDetalle(sol)"
           >
-            <div class="med-icon w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+            <div class="med-icon w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
               :style="{ background: sol.estado === 'pendiente' ? '#fef3c7' : sol.estado === 'aceptado' ? '#dcfce7' : sol.estado === 'en_espera' ? '#dbeafe' : sol.estado === 'completado' ? '#e0e7ff' : '#fee2e2', color: sol.estado === 'pendiente' ? '#d97706' : sol.estado === 'aceptado' ? '#16a34a' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#dc2626' }">
               {{ initialesPaciente(sol) }}
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-xs font-bold truncate" style="color:#1e2d55;">
+              <p class="text-sm font-bold truncate" style="color:#1e2d55;">
                 {{ sol.primer_nombre }} {{ sol.primer_apellido }}
               </p>
-              <p class="text-[10px] truncate mt-0.5" style="color:#8a9ab5;">
+              <p class="text-xs truncate mt-0.5" style="color:#8a9ab5;">
                 {{ sol.especialidad_requerida }} · {{ sol.eps }} · {{ tiempoRelativo(sol.created_at) }}
               </p>
             </div>
@@ -316,7 +310,7 @@
               <path :d="sparklinePath(idx)" stroke-width="2" stroke-linecap="round" fill="none"
                 :stroke="sol.estado === 'pendiente' ? '#eab308' : sol.estado === 'aceptado' ? '#22c55e' : sol.estado === 'en_espera' ? '#3b82f6' : sol.estado === 'completado' ? '#6366f1' : '#f87171'" />
             </svg>
-            <span class="text-[10px] font-bold px-2 py-1 rounded-full shrink-0"
+            <span class="text-xs font-bold px-2.5 py-1 rounded-full shrink-0"
               :style="{
                 background: sol.estado === 'pendiente' ? '#fff3cd' : sol.estado === 'aceptado' ? '#d3f9d8' : sol.estado === 'en_espera' ? '#d0e3ff' : sol.estado === 'completado' ? '#e0e0ff' : '#ffe0e0',
                 color: sol.estado === 'pendiente' ? '#b96800' : sol.estado === 'aceptado' ? '#2f9e44' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#c92a2a',
@@ -491,7 +485,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessageBox } from 'element-plus';
+import notify from '@/plugins/toast';
 import {
   Plus as PlusIcon,
   X as XIcon,
@@ -758,7 +753,7 @@ async function cargar() {
   try {
     const { data } = await http.get('/api/externo/solicitudes');
     solicitudes.value = data.data;
-  } catch { ElMessage.error('Error al cargar solicitudes'); }
+  } catch { notify.error('Error al cargar solicitudes'); }
   finally { cargando.value = false; }
 }
 
@@ -809,12 +804,12 @@ function onDrop(event: DragEvent) {
 function agregarAdjuntos(files: File[]) {
   const restantes = 10 - adjuntos.value.length;
   if (restantes <= 0) {
-    ElMessage.warning('Máximo 10 archivos permitidos');
+    notify.warning('Máximo 10 archivos permitidos');
     return;
   }
   const nuevos = files.slice(0, restantes);
   if (files.length > restantes) {
-    ElMessage.warning(`Solo se agregaron ${restantes} de ${files.length} archivos (límite 10)`);
+    notify.warning(`Solo se agregaron ${restantes} de ${files.length} archivos (límite 10)`);
   }
   adjuntos.value = [...adjuntos.value, ...nuevos];
 }
@@ -884,7 +879,7 @@ async function avanzarPaso(): Promise<void> {
   if (pasoFormulario.value === 2) {
     const validDx = diagnosticos.value.filter(d => d.codigo_cie10.trim() && d.descripcion.trim());
     if (validDx.length === 0) {
-      ElMessage.warning('Agregue al menos un diagnóstico con código y descripción');
+      notify.warning('Agregue al menos un diagnóstico con código y descripción');
       return;
     }
   }
@@ -893,21 +888,21 @@ async function avanzarPaso(): Promise<void> {
     await formRef.value?.validateField(camposPorPaso[pasoFormulario.value - 1]);
     pasoFormulario.value++;
   } catch {
-    ElMessage.warning('Complete los campos requeridos para continuar');
+    notify.warning('Complete los campos requeridos para continuar');
   }
 }
 
 async function abrirConfirmacion(): Promise<void> {
   const validDx = diagnosticos.value.filter(d => d.codigo_cie10.trim() && d.descripcion.trim());
   if (validDx.length === 0) {
-    ElMessage.warning('Agregue al menos un diagnóstico con código y descripción');
+    notify.warning('Agregue al menos un diagnóstico con código y descripción');
     return;
   }
   try {
     await formRef.value?.validate();
     showConfirmResumen.value = true;
   } catch {
-    ElMessage.error('Por favor complete todos los campos requeridos');
+    notify.error('Por favor complete todos los campos requeridos');
   }
 }
 
@@ -943,7 +938,7 @@ function onCerrarExito() {
 
 async function guardar() {
   try { await formRef.value?.validate(); }
-  catch { ElMessage.error('Por favor complete todos los campos requeridos'); return; }
+  catch { notify.error('Por favor complete todos los campos requeridos'); return; }
   guardando.value = true;
   try {
     const now = new Date();
@@ -975,7 +970,7 @@ async function guardar() {
     await cargar();
   } catch (e: any) {
     const errors = e.response?.data?.data?.errors || e.response?.data?.errors;
-    ElMessage.error(errors ? Object.values(errors).flat().join('\n') : 'Error al enviar la solicitud');
+    notify.error(errors ? Object.values(errors).flat().join('\n') : 'Error al enviar la solicitud');
   } finally { guardando.value = false; }
 }
 
@@ -2003,16 +1998,16 @@ onUnmounted(() => {
 
 .ph-dashboard {
   background:
-    radial-gradient(ellipse at 90% 0%, rgba(188, 218, 255, 0.5), transparent 30rem),
-    radial-gradient(ellipse at 10% 100%, rgba(208, 230, 255, 0.4), transparent 28rem),
-    linear-gradient(160deg, #e8f0fc 0%, #dbe7f6 40%, #eef4fc 100%);
+    radial-gradient(ellipse at 90% 0%, rgba(188, 218, 255, 0.35), transparent 35rem),
+    radial-gradient(ellipse at 10% 100%, rgba(208, 230, 255, 0.3), transparent 32rem),
+    linear-gradient(165deg, #e8f0fc 0%, #dbe7f6 40%, #eef4fc 100%);
 }
 
 /* ── Hero banner ── */
 .hero-card {
-  background: linear-gradient(115deg, #0d2d6b 0%, #16468e 55%, #1e3a7a 100%);
-  border: 1px solid #1e3a7a;
-  box-shadow: 0 8px 24px rgba(13, 45, 107, .25);
+  background: linear-gradient(120deg, #0d2d6b 0%, #16468e 55%, #1e3a7a 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 12px 32px rgba(13, 45, 107, .22), 0 0 0 1px rgba(255,255,255,0.04) inset;
   position: relative;
   overflow: hidden;
 }
@@ -2033,16 +2028,16 @@ onUnmounted(() => {
   position: absolute;
   inset: 0;
   background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0);
-  background-size: 22px 22px;
+  background-size: 24px 24px;
   pointer-events: none;
 }
 
 .hero-live-dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #4ade80;
-  box-shadow: 0 0 8px rgba(74, 222, 128, .6);
+  box-shadow: 0 0 10px rgba(74, 222, 128, .6);
   animation: livePulse 2s ease-in-out infinite;
 }
 
@@ -2053,79 +2048,32 @@ onUnmounted(() => {
 
 .hero-glow {
   position: absolute;
-  top: -40%;
+  top: -50%;
   right: -10%;
-  width: 200px;
-  height: 200px;
+  width: 280px;
+  height: 280px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(126, 179, 255, .15), transparent 70%);
+  background: radial-gradient(circle, rgba(126, 179, 255, .12), transparent 70%);
   pointer-events: none;
 }
 
-.hero-illustration {
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, .15), inset 0 1px 2px rgba(255, 255, 255, .15);
-}
-
-.hero-link {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-  color: #0d2d6b;
-  background: #fff;
-  border: 0;
-  padding: .7rem 1.3rem;
-  font-size: .85rem;
-  font-weight: 800;
-  border-radius: 10px;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
-  transition: transform .25s ease, box-shadow .25s ease;
-  position: relative;
-  overflow: hidden;
-}
-.hero-link::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(13, 45, 107, 0.12), transparent);
-  transform: translateX(-100%);
-  transition: transform .6s ease;
-}
-.hero-link:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, .25), 0 0 22px rgba(126, 179, 255, .4);
-}
-.hero-link:hover::before {
-  transform: translateX(100%);
-}
-.hero-link:active { transform: translateY(0); }
-
-.hero-pill {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  opacity: .85;
-}
-
 .hero-logo {
-  width: 44px; height: 44px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.15);
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
   color: #fff;
   display: flex; align-items: center; justify-content: center;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
 }
 .hero-mini-stats {
   display: flex;
   align-items: center;
-  gap: .6rem;
-  padding: .4rem .75rem;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
+  gap: .75rem;
+  padding: .5rem .9rem;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.07);
 }
 .hero-mini-stat {
   display: flex;
@@ -2133,26 +2081,26 @@ onUnmounted(() => {
   align-items: center;
 }
 .hero-mini-stat-num {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
   color: #fff;
   line-height: 1;
 }
 .hero-mini-stat-label {
-  font-size: 8px;
+  font-size: 9px;
   color: rgba(255,255,255,0.5);
-  margin-top: 2px;
+  margin-top: 3px;
   text-transform: uppercase;
   letter-spacing: .05em;
   white-space: nowrap;
 }
 .hero-mini-divider {
-  width: 1px; height: 20px;
-  background: rgba(255,255,255,0.12);
+  width: 1px; height: 24px;
+  background: rgba(255,255,255,0.1);
 }
 
 .clinic-name::first-letter {
-  font-size: 1.6em;
+  font-size: 1.4em;
   font-weight: 900;
 }
 
@@ -2182,13 +2130,13 @@ onUnmounted(() => {
   pointer-events: none;
 }
 .stat-card:hover {
-  transform: translateY(-8px) scale(1.03);
-  box-shadow: 0 24px 48px color-mix(in srgb, var(--accent) 26%, transparent);
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 20px 44px color-mix(in srgb, var(--accent) 24%, transparent);
   border-color: var(--accent);
 }
 .stat-icon-wrap {
-  width: 36px; height: 36px;
-  border-radius: 11px;
+  width: 42px; height: 42px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2199,7 +2147,7 @@ onUnmounted(() => {
   transition: transform .25s ease, box-shadow .25s ease;
 }
 .stat-card:hover .stat-icon-wrap {
-  transform: scale(1.15) rotate(-6deg);
+  transform: scale(1.12) rotate(-5deg);
   box-shadow: 0 8px 24px color-mix(in srgb, var(--icon-color) 40%, transparent);
 }
 .stat-delta-badge {
@@ -2213,7 +2161,7 @@ onUnmounted(() => {
   box-shadow: 0 2px 6px rgba(0,0,0,.06);
 }
 .stat-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 900;
   line-height: 1;
   letter-spacing: -.02em;
@@ -2221,15 +2169,15 @@ onUnmounted(() => {
   text-shadow: 0 1px 0 rgba(255,255,255,0.8);
 }
 .stat-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   color: #475569;
-  margin-top: 2px;
+  margin-top: 4px;
   text-transform: uppercase;
   letter-spacing: .04em;
 }
 .stat-progress-track {
-  height: 5px;
+  height: 6px;
   border-radius: 999px;
   background: rgba(255,255,255,0.6);
   overflow: hidden;
@@ -2270,7 +2218,7 @@ onUnmounted(() => {
 .distrib-segment:hover::after { opacity: 1; }
 
 .donut-chart {
-  width: 64px; height: 64px; border-radius: 50%;
+  width: 72px; height: 72px; border-radius: 50%;
   position: relative;
   transition: transform .3s ease;
   box-shadow: 0 4px 14px rgba(22,70,142,.14);
@@ -2278,18 +2226,18 @@ onUnmounted(() => {
 .donut-chart:hover { transform: scale(1.08) rotate(5deg); }
 .donut-center {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 46px; height: 46px; border-radius: 50%; background: #fff;
+  width: 52px; height: 52px; border-radius: 50%; background: #fff;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   box-shadow: inset 0 2px 6px rgba(22,70,142,.08);
 }
-.donut-num { font-size: 14px; font-weight: 800; color: #1e2d55; line-height: 1; }
-.donut-label { font-size: 7px; color: #8a9ab5; margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
+.donut-num { font-size: 16px; font-weight: 800; color: #1e2d55; line-height: 1; }
+.donut-label { font-size: 8px; color: #8a9ab5; margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
 
 /* ── Operations / Accesos rápidos ── */
 .operations-grid {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
-  gap: .5rem;
+  grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr);
+  gap: .75rem;
   flex-shrink: 0;
 }
 .operations-card,
@@ -2299,7 +2247,7 @@ onUnmounted(() => {
   border-radius: 1rem;
 }
 .operations-card {
-  padding: .85rem;
+  padding: 1rem;
   background: rgba(255, 255, 255, .92);
   border: 1px solid rgba(212, 222, 234, .65);
   box-shadow: 0 4px 16px rgba(22, 70, 142, .08);
@@ -2329,7 +2277,21 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: .75rem;
-  margin-bottom: .6rem;
+  margin-bottom: .75rem;
+}
+.panel-eyebrow {
+  margin: 0;
+  color: #8a9ab5;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.panel-title {
+  margin: 2px 0 0;
+  color: #1e2d55;
+  font-size: 15px;
+  font-weight: 800;
 }
 .operations-hint {
   color: #94a3b8;
@@ -2342,7 +2304,7 @@ onUnmounted(() => {
   z-index: 1;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .5rem;
+  gap: .75rem;
 }
 .quick-action {
   --quick-color: #2563c4;
@@ -2351,10 +2313,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   min-width: 0;
-  gap: .5rem;
-  padding: .6rem;
+  gap: .6rem;
+  padding: .75rem;
   border: 1px solid rgba(226, 232, 240, .85);
-  border-radius: .75rem;
+  border-radius: .85rem;
   background: linear-gradient(145deg, #fff, #f8fafc);
   color: inherit;
   cursor: pointer;
@@ -2384,17 +2346,17 @@ onUnmounted(() => {
 .quick-action-green { --quick-color: #15966a; --quick-bg: #dcfce7; }
 .quick-action-purple { --quick-color: #7048e8; --quick-bg: #ede9fe; }
 .quick-action-icon {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border-radius: 9px;
+  border-radius: 10px;
   color: var(--quick-color);
   background: var(--quick-bg);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
 }
-.quick-action-icon svg { width: 14px; height: 14px; }
+.quick-action-icon svg { width: 16px; height: 16px; }
 .quick-action-copy {
   display: flex;
   flex: 1;
@@ -2404,14 +2366,14 @@ onUnmounted(() => {
 }
 .quick-action-copy strong {
   color: #1e2d55;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
 }
 .quick-action-copy span {
   overflow: hidden;
-  margin-top: 1px;
+  margin-top: 2px;
   color: #8a9ab5;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2428,7 +2390,7 @@ onUnmounted(() => {
   transform: translateX(3px);
 }
 .flow-card {
-  padding: .85rem;
+  padding: 1rem;
   background: rgba(255,255,255,0.92);
   border: 1px solid rgba(212, 222, 234, 0.6);
   box-shadow: 0 4px 16px rgba(22, 70, 142, .08);
@@ -2463,7 +2425,7 @@ onUnmounted(() => {
 .flow-eyebrow {
   margin: 0;
   color: #8a9ab5;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -2471,7 +2433,7 @@ onUnmounted(() => {
 .flow-heading h3 {
   margin: 2px 0 0;
   color: #1e2d55;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
 }
 .flow-live {
@@ -2508,12 +2470,12 @@ onUnmounted(() => {
   gap: .4rem;
 }
 .flow-step-icon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border-radius: 9px;
+  border-radius: 10px;
   background: #e7efff;
   color: #2563c4;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
@@ -2523,7 +2485,7 @@ onUnmounted(() => {
   transform: scale(1.1);
   box-shadow: 0 6px 16px rgba(37,99,196,.15);
 }
-.flow-step-icon svg { width: 13px; height: 13px; }
+.flow-step-icon svg { width: 15px; height: 15px; }
 .flow-step-success {
   background: #dcfce7;
   color: #15966a;
@@ -2535,14 +2497,14 @@ onUnmounted(() => {
 }
 .flow-step strong {
   color: #1e2d55;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
 }
 .flow-step span {
   overflow: hidden;
   margin-top: 1px;
   color: #8a9ab5;
-  font-size: 7px;
+  font-size: 8px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2579,11 +2541,11 @@ onUnmounted(() => {
 .med-row {
   background: linear-gradient(135deg, #ffffff 0%, #f0f6ff 100%);
   border: 1px solid #c5d5e8;
-  border-left: 3px solid transparent;
+  border-left: 4px solid transparent;
   box-shadow: 0 3px 10px rgba(22, 70, 142, .06);
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
-.med-row:hover { transform: translateX(3px); box-shadow: 0 10px 22px rgba(22, 70, 142, .13); border-color: #94a3c4; }
+.med-row:hover { transform: translateX(4px); box-shadow: 0 10px 22px rgba(22, 70, 142, .13); border-color: #94a3c4; }
 
 .med-row--active {
   background: linear-gradient(135deg, #16468e, #0d2d6b);
@@ -2595,7 +2557,7 @@ onUnmounted(() => {
 .med-icon {
   background: #eaf2fd;
   color: #16468e;
-  font-size: .68rem;
+  font-size: .75rem;
   font-weight: 800;
   transition: transform .2s ease;
 }
@@ -2615,26 +2577,26 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: .4rem;
-  padding: .5rem .8rem;
+  padding: .6rem 1rem;
   color: #fff;
   background: linear-gradient(135deg, #0d2d6b, #2563eb);
   border: 0;
-  border-radius: 10px;
-  font-size: .75rem;
+  border-radius: 12px;
+  font-size: .8rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(13, 45, 107, .2);
   transition: transform .2s ease, box-shadow .2s ease;
 }
-.empty-state-action:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(13, 45, 107, .32); }
+.empty-state-action:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(13, 45, 107, .32); }
 
 /* ── Entradas ── */
 .anim-fade-down  { animation: fadeDown  0.5s cubic-bezier(.22,1,.36,1) both; }
 
 /* ── Header solicitudes recientes ── */
 .recent-header-icon {
-  width: 26px; height: 26px;
-  border-radius: 7px;
+  width: 30px; height: 30px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #0D2D6B, #16468E);
   color: #fff;
   display: flex; align-items: center; justify-content: center;
@@ -2646,20 +2608,20 @@ onUnmounted(() => {
   50% { box-shadow: 0 3px 18px rgba(13, 45, 107, 0.40); }
 }
 .recent-count-badge {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: #16468e;
   background: #e0ecff;
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: 999px;
 }
 .recent-refresh-btn {
   display: inline-flex;
   align-items: center;
   gap: .4rem;
-  padding: .35rem .7rem;
-  border-radius: 8px;
-  font-size: 11px;
+  padding: .4rem .8rem;
+  border-radius: 9px;
+  font-size: 12px;
   font-weight: 600;
   color: #64748b;
   background: #f1f5f9;
@@ -2750,13 +2712,15 @@ onUnmounted(() => {
 
 /* ── Responsive móvil ── */
 @media (max-width: 640px) {
-  .hero-card { padding: .75rem !important; }
+  .hero-card { padding: 1rem !important; }
   .hero-link { padding: .5rem .9rem !important; font-size: .72rem !important; }
   .hero-link span { display: none; }
-  .distrib-card { padding: .6rem !important; }
+  .distrib-card { padding: .75rem !important; }
   .distrib-card .flex.items-center.gap-4 { gap: .5rem !important; flex-wrap: wrap; }
-  .metric-card { padding: .6rem !important; }
-  .metric-ring { width: 40px !important; height: 40px !important; }
-  .metric-ring svg { width: 40px !important; height: 40px !important; }
+  .stat-card { padding: .75rem !important; }
+  .stat-value { font-size: 22px !important; }
+  .operations-card, .flow-card { padding: .75rem !important; }
+  .quick-actions { gap: .5rem !important; }
+  .quick-action { padding: .5rem !important; }
 }
 </style>

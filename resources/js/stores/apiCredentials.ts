@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { ElMessage } from 'element-plus';
+import notify from '@/plugins/toast';
 import http from '@/plugins/axios';
 
 export interface ApiCredential {
@@ -49,7 +49,7 @@ export const useApiCredentialsStore = defineStore('apiCredentials', () => {
       pagination.value.total = data.data?.total || 0;
     } catch (e: any) {
       console.error(e);
-      ElMessage.error('Error cargando credenciales API');
+      notify.error('Error cargando credenciales API');
     } finally {
       loading.value = false;
     }
@@ -59,12 +59,12 @@ export const useApiCredentialsStore = defineStore('apiCredentials', () => {
     saving.value = true;
     try {
       const { data } = await http.post('/api/api-credentials', payload, { headers: { 'X-Skip-Auth-Redirect': '1' } });
-      ElMessage.success('Credencial API creada exitosamente');
+      notify.success('Credencial API creada exitosamente');
       await loadCredentials();
       return data.data;
     } catch (e: any) {
       console.error(e);
-      ElMessage.error(e?.response?.data?.message || 'Error al crear credencial API');
+      notify.error(e?.response?.data?.message || 'Error al crear credencial API');
       throw e;
     } finally {
       saving.value = false;
@@ -75,12 +75,12 @@ export const useApiCredentialsStore = defineStore('apiCredentials', () => {
     saving.value = true;
     try {
       const { data } = await http.put(`/api/api-credentials/${id}`, payload, { headers: { 'X-Skip-Auth-Redirect': '1' } });
-      ElMessage.success('Credencial API actualizada exitosamente');
+      notify.success('Credencial API actualizada exitosamente');
       await loadCredentials();
       return data.data;
     } catch (e: any) {
       console.error(e);
-      ElMessage.error(e?.response?.data?.message || 'Error al actualizar credencial API');
+      notify.error(e?.response?.data?.message || 'Error al actualizar credencial API');
       throw e;
     } finally {
       saving.value = false;
@@ -90,11 +90,11 @@ export const useApiCredentialsStore = defineStore('apiCredentials', () => {
   async function deleteCredential(id: number) {
     try {
       await http.delete(`/api/api-credentials/${id}`, { headers: { 'X-Skip-Auth-Redirect': '1' } });
-      ElMessage.success('Credencial API eliminada exitosamente');
+      notify.success('Credencial API eliminada exitosamente');
       await loadCredentials();
     } catch (e: any) {
       console.error(e);
-      ElMessage.error(e?.response?.data?.message || 'Error al eliminar credencial API');
+      notify.error(e?.response?.data?.message || 'Error al eliminar credencial API');
       throw e;
     }
   }
@@ -102,12 +102,12 @@ export const useApiCredentialsStore = defineStore('apiCredentials', () => {
   async function regenerateCredential(id: number): Promise<any> {
     try {
       const { data } = await http.post(`/api/api-credentials/${id}/regenerate`, {}, { headers: { 'X-Skip-Auth-Redirect': '1' } });
-      ElMessage.success('Credenciales regeneradas exitosamente');
+      notify.success('Credenciales regeneradas exitosamente');
       await loadCredentials();
       return data.data;
     } catch (e: any) {
       console.error(e);
-      ElMessage.error(e?.response?.data?.message || 'Error al regenerar credenciales');
+      notify.error(e?.response?.data?.message || 'Error al regenerar credenciales');
       throw e;
     }
   }
@@ -115,11 +115,11 @@ export const useApiCredentialsStore = defineStore('apiCredentials', () => {
   async function toggleStatus(id: number) {
     try {
       const { data } = await http.patch(`/api/api-credentials/${id}/toggle-status`, {}, { headers: { 'X-Skip-Auth-Redirect': '1' } });
-      ElMessage.success(data.message || 'Estado actualizado');
+      notify.success(data.message || 'Estado actualizado');
       await loadCredentials();
     } catch (e: any) {
       console.error(e);
-      ElMessage.error(e?.response?.data?.message || 'Error al cambiar estado');
+      notify.error(e?.response?.data?.message || 'Error al cambiar estado');
       throw e;
     }
   }
@@ -127,11 +127,11 @@ export const useApiCredentialsStore = defineStore('apiCredentials', () => {
   async function revokeCredential(id: number) {
     try {
       await http.post(`/api/api-credentials/${id}/revoke`, {}, { headers: { 'X-Skip-Auth-Redirect': '1' } });
-      ElMessage.success('Credencial API revocada exitosamente');
+      notify.success('Credencial API revocada exitosamente');
       await loadCredentials();
     } catch (e: any) {
       console.error(e);
-      ElMessage.error(e?.response?.data?.message || 'Error al revocar credencial');
+      notify.error(e?.response?.data?.message || 'Error al revocar credencial');
       throw e;
     }
   }
@@ -145,7 +145,7 @@ export const useApiCredentialsStore = defineStore('apiCredentials', () => {
       return data.data;
     } catch (e: any) {
       console.error(e);
-      ElMessage.error('Error al cargar logs');
+      notify.error('Error al cargar logs');
       throw e;
     }
   }
@@ -156,7 +156,7 @@ export const useApiCredentialsStore = defineStore('apiCredentials', () => {
       return data.data;
     } catch (e: any) {
       console.error(e);
-      ElMessage.error('Error al cargar estadísticas');
+      notify.error('Error al cargar estadísticas');
       throw e;
     }
   }

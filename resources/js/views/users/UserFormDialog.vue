@@ -74,7 +74,7 @@
 import { ref, computed, watch } from 'vue';
 import { useWindowSize } from '@vueuse/core';
 import { UserPlus as UserPlusIcon, UserCog as UserCogIcon } from '@lucide/vue';
-import { ElMessage } from 'element-plus';
+import notify from '@/plugins/toast';
 import BaseModal from '@/components/ui/BaseModal.vue';
 import { useUsersStore } from '@/stores/users';
 import { storeToRefs } from 'pinia';
@@ -211,7 +211,7 @@ async function save() {
       await formRef.value.validate();
     }
   } catch {
-    ElMessage.error('Por favor, corrija los errores en el formulario');
+    notify.error('Por favor, corrija los errores en el formulario');
     return;
   }
 
@@ -245,7 +245,7 @@ async function save() {
       await usersStore.updateUser(form.value.id, payload);
     }
 
-    ElMessage.success(props.mode === 'create' ? 'Usuario creado correctamente' : 'Usuario actualizado correctamente');
+    notify.success(props.mode === 'create' ? 'Usuario creado correctamente' : 'Usuario actualizado correctamente');
     emit('update:modelValue', false);
     emit('saved');
   } catch (e: any) {
@@ -254,12 +254,12 @@ async function save() {
       const errors = e.response.data?.data?.errors || e.response.data?.errors;
       if (errors) {
         const errorMessages = Object.values(errors).flat().join('\n');
-        ElMessage.error(errorMessages || 'Error de validación');
+        notify.error(errorMessages || 'Error de validación');
       } else {
-        ElMessage.error(e.response.data?.message || 'Error de validación');
+        notify.error(e.response.data?.message || 'Error de validación');
       }
     } else {
-      ElMessage.error('Error al guardar el usuario');
+      notify.error('Error al guardar el usuario');
     }
   } finally {
     loading.value = false;

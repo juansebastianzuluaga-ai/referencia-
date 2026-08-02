@@ -1,8 +1,6 @@
 <template>
-  <div class="historial-page h-full overflow-y-auto p-4 sm:p-5"
-    v-motion
-    :initial="{ opacity: 0, y: 20 }"
-    :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
+  <div class="historial-page h-full overflow-y-auto p-4 sm:p-5 animate-fade-in-up"
+    style="animation-duration: 0.4s; animation-fill-mode: both;">
 
     <!-- ── Header ── -->
     <div class="historial-header rounded-2xl p-4 sm:p-5 flex items-center justify-between mb-4 shrink-0 anim-fade-down">
@@ -348,7 +346,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { ElMessage } from 'element-plus';
+import notify from '@/plugins/toast';
 import {
   Search as SearchIcon,
   Clock as ClockIcon,
@@ -429,7 +427,7 @@ async function cargar() {
     const { data } = await http.get('/api/externo/solicitudes');
     solicitudes.value = data.data;
   } catch {
-    ElMessage.error('Error al cargar el historial');
+    notify.error('Error al cargar el historial');
   } finally {
     cargando.value = false;
   }
@@ -448,7 +446,7 @@ function limpiarFiltros() {
   filtroDesde.value = '';
   filtroHasta.value = '';
   pagina.value = 1;
-  ElMessage.info('Filtros limpiados');
+  notify.info('Filtros limpiados');
 }
 
 function formatFecha(fecha: string) {
@@ -473,10 +471,10 @@ function exportarPdf() {
 
   const win = window.open('', '_blank', 'width=800,height=900');
   if (!win) {
-    ElMessage.error('El navegador bloqueó la ventana emergente. Permita popups para exportar.');
+    notify.error('El navegador bloqueó la ventana emergente. Permita popups para exportar.');
     return;
   }
-  ElMessage.success('Generando documento PDF...');
+  notify.success('Generando documento PDF...');
 
   win.document.write(`
     <!DOCTYPE html>

@@ -1,8 +1,7 @@
 <template>
   <ContentCard title="Roles y Permisos" subtitle="Gestión de roles de sistema y asignación de permisos"
-    v-motion
-    :initial="{ opacity: 0, y: 20 }"
-    :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
+    class="animate-fade-in-up"
+    style="animation-duration: 0.4s; animation-fill-mode: both;">
     <template #actions>
       <el-button v-permission="'roles.create'" type="primary" :icon="PlusIcon" @click="openCreateDialog">
         Nuevo Rol
@@ -113,7 +112,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { Plus as PlusIcon, ChevronRight as ChevronRightIcon, ShieldCheck as ShieldCheckIcon, Edit as EditIcon, Trash as TrashIcon } from '@lucide/vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessageBox } from 'element-plus';
+import notify from '@/plugins/toast';
 import ContentCard from '@/components/ui/ContentCard.vue';
 import RoleFormDialog from './RoleFormDialog.vue';
 import { useRolesStore } from '@/stores/roles';
@@ -211,14 +211,14 @@ async function deleteRole(role: any) {
   rolesStore.loading = true;
   try {
     await rolesStore.deleteRole(role.id);
-    ElMessage.success('Rol eliminado correctamente');
+    notify.success('Rol eliminado correctamente');
     if (selectedRole.value?.id === role.id) {
       selectedRole.value = null;
     }
     await rolesStore.loadRoles({}, { force: true });
   } catch (e: any) {
     console.error(e);
-    ElMessage.error('Error al eliminar el rol');
+    notify.error('Error al eliminar el rol');
   } finally {
     rolesStore.loading = false;
   }
@@ -231,11 +231,11 @@ async function savePermissions() {
       permissions: selectedPermissions.value,
     });
     
-    ElMessage.success('Permisos actualizados correctamente');
+    notify.success('Permisos actualizados correctamente');
     await selectRole(selectedRole.value);
   } catch (e: any) {
     console.error(e);
-    ElMessage.error('Error al guardar los permisos');
+    notify.error('Error al guardar los permisos');
   } finally {
     saving.value = false;
   }

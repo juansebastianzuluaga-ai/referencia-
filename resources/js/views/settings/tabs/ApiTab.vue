@@ -337,7 +337,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus';
+import { useClipboard } from '@vueuse/core';
+import { ElMessageBox, type FormInstance } from 'element-plus';
+import notify from '@/plugins/toast';
 import {
   Plus as PlusIcon, Search as SearchIcon, Key as KeyIcon, Copy as CopyIcon,
   MoreVertical as MoreIcon, Pencil as EditIcon, Trash as DeleteIcon,
@@ -649,16 +651,18 @@ curl -X GET ${baseUrl}/api/v1/health \\
   a.download = `api-credentials-${Date.now()}.txt`;
   a.click();
   URL.revokeObjectURL(url);
-  ElMessage.success('Archivo descargado correctamente');
+  notify.success('Archivo descargado correctamente');
 }
 
+const { copy, isSupported: clipboardSupported } = useClipboard();
+
 async function copyToClipboard(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    ElMessage.success('Copiado al portapapeles');
-  } catch {
-    ElMessage.error('No se pudo copiar');
+  if (!clipboardSupported) {
+    notify.error('No se pudo copiar');
+    return;
   }
+  await copy(text);
+  notify.success('Copiado al portapapeles');
 }
 
 onMounted(() => {

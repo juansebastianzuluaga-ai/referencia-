@@ -1,9 +1,7 @@
 <template>
   <div class="h-screen overflow-y-auto flex items-center justify-center bg-gradient-to-b from-blue-50 to-white py-12">
-    <div class="w-full max-w-lg mx-4 my-auto"
-      v-motion
-      :initial="{ opacity: 0, y: 30, scale: 0.96 }"
-      :enter="{ opacity: 1, y: 0, scale: 1, transition: { duration: 600, ease: 'easeOut' } }">
+    <div class="w-full max-w-lg mx-4 my-auto animate-fade-in-up"
+      style="animation-duration: 0.5s; animation-fill-mode: both;">
       <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
         <div class="p-8">
           <div class="flex flex-col items-center mb-6">

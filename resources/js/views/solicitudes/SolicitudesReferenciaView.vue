@@ -2,10 +2,8 @@
   <div class="ph-solicitudes h-full flex flex-col gap-2 p-3 sm:p-4 overflow-hidden">
 
     <!-- ── Header ── -->
-    <div class="sol-header shrink-0"
-      v-motion
-      :initial="{ opacity: 0, y: 20 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 500, ease: 'easeOut' } }">
+    <div class="sol-header shrink-0 animate-fade-in-up"
+      style="animation-duration: 0.4s; animation-fill-mode: both;">
       <div class="sol-header-icon">
         <component :is="ClipboardListIcon" class="w-5 h-5" />
       </div>
@@ -414,7 +412,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
+import { useStorage } from '@vueuse/core';
+import notify from '@/plugins/toast';
 import {
   Search as SearchIcon,
   RefreshCw as RefreshIcon,
@@ -482,8 +481,8 @@ interface Solicitud {
 const solicitudes = ref<Solicitud[]>([]);
 const cargando = ref(false);
 const procesando = ref(false);
-const filtro = ref({ buscar: '' });
-const tabActiva = ref<'todas' | 'pendiente' | 'aceptado' | 'en_espera' | 'completado' | 'negado'>('todas');
+const filtro = useStorage('sol-filtro', { buscar: '' });
+const tabActiva = useStorage<'todas' | 'pendiente' | 'aceptado' | 'en_espera' | 'completado' | 'negado'>('sol-tab', 'todas');
 
 const modalDetalle = ref(false);
 const modalHistoriaClinica = ref(false);
@@ -612,7 +611,7 @@ async function cargar() {
     solicitudes.value = data.data;
     animateCounters([resumen.value.total, resumen.value.pendientes, resumen.value.aceptadas, resumen.value.negadas]);
   } catch {
-    ElMessage.error('Error al cargar las solicitudes');
+    notify.error('Error al cargar las solicitudes');
   } finally {
     cargando.value = false;
   }
@@ -668,18 +667,18 @@ function abrirNegar(s: Solicitud) {
 
 async function aceptar() {
   if (!formAceptar.value.hora_respuesta || !formAceptar.value.nombre_quien_responde.trim()) {
-    ElMessage.warning('Complete los campos obligatorios');
+    notify.warning('Complete los campos obligatorios');
     return;
   }
   try {
     procesando.value = true;
     const { data } = await http.post(`/api/solicitudes-referencia/${solicitudSeleccionada.value!.id}/aceptar`, formAceptar.value);
-    ElMessage.success('Solicitud aceptada correctamente');
+    notify.success('Solicitud aceptada correctamente');
     const idx = solicitudes.value.findIndex(s => s.id === solicitudSeleccionada.value!.id);
     if (idx !== -1) solicitudes.value[idx] = data.data;
     modalAceptar.value = false;
   } catch {
-    ElMessage.error('Error al aceptar la solicitud');
+    notify.error('Error al aceptar la solicitud');
   } finally {
     procesando.value = false;
   }
@@ -687,18 +686,18 @@ async function aceptar() {
 
 async function negar() {
   if (!formNegar.value.hora_respuesta || !formNegar.value.motivo_negacion.trim() || !formNegar.value.nombre_quien_responde.trim()) {
-    ElMessage.warning('Complete los campos obligatorios');
+    notify.warning('Complete los campos obligatorios');
     return;
   }
   try {
     procesando.value = true;
     const { data } = await http.post(`/api/solicitudes-referencia/${solicitudSeleccionada.value!.id}/negar`, formNegar.value);
-    ElMessage.success('Solicitud negada');
+    notify.success('Solicitud negada');
     const idx = solicitudes.value.findIndex(s => s.id === solicitudSeleccionada.value!.id);
     if (idx !== -1) solicitudes.value[idx] = data.data;
     modalNegar.value = false;
   } catch {
-    ElMessage.error('Error al negar la solicitud');
+    notify.error('Error al negar la solicitud');
   } finally {
     procesando.value = false;
   }
@@ -708,11 +707,11 @@ async function marcarEnEspera(s: Solicitud) {
   try {
     procesando.value = true;
     const { data } = await http.post(`/api/solicitudes-referencia/${s.id}/en-espera`, {});
-    ElMessage.success('Solicitud marcada en espera de llegada del paciente');
+    notify.success('Solicitud marcada en espera de llegada del paciente');
     const idx = solicitudes.value.findIndex(x => x.id === s.id);
     if (idx !== -1) solicitudes.value[idx] = data.data;
   } catch {
-    ElMessage.error('Error al marcar en espera');
+    notify.error('Error al marcar en espera');
   } finally {
     procesando.value = false;
   }
@@ -722,11 +721,11 @@ async function marcarCompletado(s: Solicitud) {
   try {
     procesando.value = true;
     const { data } = await http.post(`/api/solicitudes-referencia/${s.id}/completado`, {});
-    ElMessage.success('Solicitud completada');
+    notify.success('Solicitud completada');
     const idx = solicitudes.value.findIndex(x => x.id === s.id);
     if (idx !== -1) solicitudes.value[idx] = data.data;
   } catch {
-    ElMessage.error('Error al completar la solicitud');
+    notify.error('Error al completar la solicitud');
   } finally {
     procesando.value = false;
   }

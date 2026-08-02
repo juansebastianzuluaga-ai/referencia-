@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { ElMessage } from 'element-plus';
+import notify from '@/plugins/toast';
 import http from '@/plugins/axios';
 
 export const useUsersStore = defineStore('users', () => {
@@ -30,7 +30,7 @@ export const useUsersStore = defineStore('users', () => {
       rolesLoaded.value = true;
     } catch (e: any) {
       roles.value = [];
-      ElMessage.error('Error cargando roles.');
+      notify.error('Error cargando roles.');
     }
   }
 
@@ -45,7 +45,7 @@ export const useUsersStore = defineStore('users', () => {
       identificationTypesLoaded.value = true;
     } catch (e: any) {
       identificationTypes.value = [];
-      ElMessage.error('Error cargando tipos de identificación.');
+      notify.error('Error cargando tipos de identificación.');
     }
   }
 
@@ -71,9 +71,9 @@ export const useUsersStore = defineStore('users', () => {
     } catch (e: any) {
       users.value = [];
       if (e?.response?.status === 403) {
-        ElMessage.error('No tiene permiso para ver usuarios.');
+        notify.error('No tiene permiso para ver usuarios.');
       } else {
-        ElMessage.error('Error cargando usuarios.');
+        notify.error('Error cargando usuarios.');
       }
     } finally {
       loading.value = false;

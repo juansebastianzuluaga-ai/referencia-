@@ -36,7 +36,7 @@
 import { ref, computed, watch } from 'vue';
 import { useWindowSize } from '@vueuse/core';
 import { Shield as ShieldIcon, ShieldCheck as ShieldCheckIcon } from '@lucide/vue';
-import { ElMessage } from 'element-plus';
+import notify from '@/plugins/toast';
 import BaseModal from '@/components/ui/BaseModal.vue';
 import { useRolesStore } from '@/stores/roles';
 import { storeToRefs } from 'pinia';
@@ -127,7 +127,7 @@ async function save() {
       await formRef.value.validate();
     }
   } catch {
-    ElMessage.error('Por favor, corrija los errores en el formulario');
+    notify.error('Por favor, corrija los errores en el formulario');
     return;
   }
 
@@ -146,7 +146,7 @@ async function save() {
       await rolesStore.updateRole(form.value.id, payload);
     }
 
-    ElMessage.success(props.mode === 'create' ? 'Rol creado correctamente' : 'Rol actualizado correctamente');
+    notify.success(props.mode === 'create' ? 'Rol creado correctamente' : 'Rol actualizado correctamente');
     emit('update:modelValue', false);
     emit('saved');
   } catch (e: any) {
@@ -155,12 +155,12 @@ async function save() {
       const errors = e.response.data?.data?.errors || e.response.data?.errors;
       if (errors) {
         const errorMessages = Object.values(errors).flat().join('\n');
-        ElMessage.error(errorMessages || 'Error de validación');
+        notify.error(errorMessages || 'Error de validación');
       } else {
-        ElMessage.error(e.response.data?.message || 'Error de validación');
+        notify.error(e.response.data?.message || 'Error de validación');
       }
     } else {
-      ElMessage.error('Error al guardar el rol');
+      notify.error('Error al guardar el rol');
     }
   } finally {
     loading.value = false;

@@ -1,9 +1,7 @@
 <template>
   <div class="h-screen overflow-y-auto flex items-center justify-center bg-gradient-to-b from-blue-50 to-white py-12">
-    <div class="w-full max-w-lg mx-4 my-auto"
-      v-motion
-      :initial="{ opacity: 0, y: 30, scale: 0.96 }"
-      :enter="{ opacity: 1, y: 0, scale: 1, transition: { duration: 600, ease: 'easeOut' } }">
+    <div class="w-full max-w-lg mx-4 my-auto animate-fade-in-up"
+      style="animation-duration: 0.5s; animation-fill-mode: both;">
       <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
         <div class="p-8">
           <div class="flex flex-col items-center mb-6">
@@ -101,7 +99,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import notify from '@/plugins/toast';
 import type { FormInstance, FormRules } from 'element-plus';
 import { Mail as MailIcon, Lock as LockIcon, KeyRound as KeyRoundIcon, ArrowLeft as ArrowLeftIcon, CheckCircle as CheckCircleIcon, ShieldCheck as ShieldCheckIcon } from '@lucide/vue';
 import http from '@/plugins/axios';
@@ -153,7 +151,7 @@ onMounted(async () => {
   form.email = (route.query.email as string) || '';
 
   if (!form.token || !form.email) {
-    ElMessage.error('Enlace inválido. Solicite un nuevo enlace de recuperación.');
+    notify.error('Enlace inválido. Solicite un nuevo enlace de recuperación.');
     router.push({ name: 'forgot-password' });
     return;
   }
@@ -187,7 +185,7 @@ async function handleResetPassword() {
         password_confirmation: form.password_confirmation,
       });
 
-      ElMessage.success('Contraseña restablecida correctamente');
+      notify.success('Contraseña restablecida correctamente');
       router.push({ name: 'login' });
     } catch (error: any) {
       if (error.response?.status === 422) {
