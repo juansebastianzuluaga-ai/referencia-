@@ -44,6 +44,7 @@ Route::prefix('api')->name('api.')->group(function (): void {
 
     Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
         Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
+        Route::get('analytics/stats', [AnalyticsController::class, 'stats'])->name('analytics.stats');
 
         Route::get('user', CurrentUserController::class)->name('user');
         Route::put('user/profile', [CurrentUserController::class, 'updateProfile'])->name('user.profile.update');
