@@ -200,50 +200,6 @@
         </div>
 
       </el-form>
-
-      <!-- Panel lateral: Resumen en tiempo real -->
-      <aside class="rf-summary-panel">
-        <div class="rf-summary-panel-header">
-          <component :is="FileCheckIcon" class="w-4 h-4" />
-          <span>Vista previa</span>
-        </div>
-        <div class="rf-summary-panel-body">
-          <div class="rf-sp-block">
-            <span class="rf-sp-label">Paciente</span>
-            <strong class="rf-sp-value">{{ nombreCompleto }}</strong>
-            <span class="rf-sp-sub">{{ form.tipo_documento }} {{ form.numero_documento }} · {{ form.edad || '—' }} años · {{ form.genero === 'M' ? 'Masc.' : form.genero === 'F' ? 'Fem.' : '—' }}</span>
-          </div>
-          <div class="rf-sp-block">
-            <span class="rf-sp-label">EPS / Municipio</span>
-            <strong class="rf-sp-value">{{ form.eps || '—' }}</strong>
-            <span class="rf-sp-sub">{{ form.municipio_capita || '—' }}</span>
-          </div>
-          <div class="rf-sp-block">
-            <span class="rf-sp-label">Diagnósticos</span>
-            <div v-if="diagnosticos.filter(d => d.codigo_cie10 || d.descripcion).length" class="rf-sp-dx-list">
-              <div v-for="(dx, i) in diagnosticos.filter(d => d.codigo_cie10 || d.descripcion)" :key="i" class="rf-sp-dx-item">
-                <span class="rf-sp-dx-code">{{ dx.codigo_cie10 }}</span>
-                <span class="rf-sp-dx-desc">{{ dx.descripcion }}</span>
-              </div>
-            </div>
-            <span v-else class="rf-sp-empty">Sin diagnósticos</span>
-          </div>
-          <div class="rf-sp-block">
-            <span class="rf-sp-label">Especialidad</span>
-            <strong class="rf-sp-value">{{ form.especialidad_requerida || '—' }}</strong>
-            <span class="rf-sp-sub">{{ form.servicio_ubicacion_actual || '—' }} → {{ form.servicio_remision || '—' }}</span>
-          </div>
-          <div class="rf-sp-block">
-            <span class="rf-sp-label">Quien remite</span>
-            <strong class="rf-sp-value">{{ form.quien_remitente || '—' }}</strong>
-            <span class="rf-sp-sub">{{ form.telefono_contacto || '—' }} · {{ form.correo_contacto || '—' }}</span>
-          </div>
-          <div class="rf-sp-block">
-            <span class="rf-sp-label">Adjuntos</span>
-            <strong class="rf-sp-value">{{ adjuntos.length }} archivo(s)</strong>
-          </div>
-        </div>
-      </aside>
     </div>
 
     <!-- Footer -->
@@ -749,17 +705,14 @@ onMounted(() => {
 }
 .rf-step.active .rf-step-label { color: #0D2D6B; }
 
-/* ── Layout 2 columnas ── */
+/* ── Layout ── */
 .rf-body {
-  display: flex;
-  gap: .75rem;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
 .rf-form-col {
-  flex: 1;
-  min-width: 0;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -987,81 +940,6 @@ onMounted(() => {
 }
 .rf-file-remove:hover { color: #DC2626; }
 
-/* ── Panel lateral ── */
-.rf-summary-panel {
-  width: 280px;
-  flex-shrink: 0;
-  background: linear-gradient(180deg, #EFF6FF, #F8FAFC);
-  border: 1px solid #BFDBFE;
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.rf-summary-panel-header {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  padding: .6rem .75rem;
-  background: linear-gradient(135deg, #0D2D6B, #16468E);
-  color: #fff;
-  font-size: .78rem;
-  font-weight: 700;
-}
-.rf-summary-panel-header svg { color: #fff; }
-.rf-summary-panel-body {
-  padding: .6rem .75rem;
-  overflow-y: auto;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: .5rem;
-}
-.rf-sp-block {
-  display: flex;
-  flex-direction: column;
-  gap: .1rem;
-  padding-bottom: .4rem;
-  border-bottom: 1px solid #DBEAFE;
-}
-.rf-sp-block:last-child { border-bottom: none; padding-bottom: 0; }
-.rf-sp-label {
-  font-size: .62rem;
-  font-weight: 700;
-  color: #64748B;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-}
-.rf-sp-value {
-  font-size: .78rem;
-  font-weight: 700;
-  color: #0D2D6B;
-  word-break: break-word;
-}
-.rf-sp-sub {
-  font-size: .68rem;
-  color: #3B82F6;
-  font-weight: 500;
-}
-.rf-sp-dx-list { display: flex; flex-direction: column; gap: .2rem; margin-top: .15rem; }
-.rf-sp-dx-item {
-  display: flex;
-  align-items: baseline;
-  gap: .3rem;
-  padding: .2rem .35rem;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, .7);
-}
-.rf-sp-dx-code {
-  font-size: .68rem;
-  font-weight: 800;
-  color: #15803D;
-  font-family: monospace;
-  flex-shrink: 0;
-}
-.rf-sp-dx-desc { font-size: .68rem; color: #166534; }
-.rf-sp-empty { font-size: .68rem; color: #94A3B8; font-style: italic; }
-
 /* ── Footer ── */
 .rf-footer {
   display: flex;
@@ -1182,9 +1060,7 @@ onMounted(() => {
 }
 
 /* ── Responsive ── */
-@media (max-width: 900px) {
-  .rf-body { flex-direction: column; }
-  .rf-summary-panel { width: 100%; max-height: 200px; }
+@media (max-width: 768px) {
   .rf-grid { grid-template-columns: repeat(2, 1fr); }
   .rf-col-3 { grid-column: span 2; }
 }

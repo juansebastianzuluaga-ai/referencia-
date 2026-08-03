@@ -2104,6 +2104,40 @@ onUnmounted(() => {
   font-weight: 900;
 }
 
+.hero-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  color: #0d2d6b;
+  background: #fff;
+  border: 0;
+  padding: .75rem 1.4rem;
+  font-size: .85rem;
+  font-weight: 800;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .15);
+  transition: transform .25s ease, box-shadow .25s ease;
+  position: relative;
+  overflow: hidden;
+}
+.hero-link::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(13, 45, 107, 0.1), transparent);
+  transform: translateX(-100%);
+  transition: transform .6s ease;
+}
+.hero-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .22), 0 0 22px rgba(126, 179, 255, .35);
+}
+.hero-link:hover::before {
+  transform: translateX(100%);
+}
+.hero-link:active { transform: translateY(0); }
+
 /* ── Stat cards ── */
 .stat-card {
   background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, color-mix(in srgb, var(--accent) 12%, white) 100%);
