@@ -51,6 +51,7 @@ export const useAuthStore = defineStore('auth', () => {
       return;
     }
     try {
+      await initCsrf();
       const { data } = await http.get('/api/user', {
         headers: { 'X-Skip-Auth-Redirect': '1' },
         timeout: 8000,

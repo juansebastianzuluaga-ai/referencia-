@@ -91,6 +91,11 @@ const router = createRouter({
           component: () => import('@/views/DashboardView.vue'),
         },
         {
+          path: 'analitica',
+          name: 'analytics',
+          component: () => import('@/views/AnalyticsView.vue'),
+        },
+        {
           path: 'usuarios',
           name: 'users',
           component: () => import('@/views/users/UsersView.vue'),
@@ -130,7 +135,7 @@ const router = createRouter({
   ],
 });
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore();
   const clinicaAuth = useClinicaAuthStore();
 
@@ -145,42 +150,42 @@ router.beforeEach(async (to, from, next) => {
 
   // Rutas totalmente públicas — pasar directo sin hidratar ningún store
   if (isPublic) {
-    return next();
+    return true;
   }
 
   // Guard para rutas de clínica externa
   if (requiresClinicaAuth) {
     const token = clinicaAuth.getToken();
     if (!token) {
-      return next({ name: 'login' });
+      return { name: 'login' };
     }
     const isOriginal = await clinicaAuth.checkDuplicate();
     if (!isOriginal) {
-      return next({ name: 'login' });
+      return { name: 'login' };
     }
     if (!clinicaAuth.isHydrated) {
       await clinicaAuth.fetchClinica();
     }
     if (!clinicaAuth.isAuthenticated) {
-      return next({ name: 'login' });
+      return { name: 'login' };
     }
-    return next();
+    return true;
   }
 
   if (!auth.isHydrated) {
     const isOriginal = await auth.checkDuplicate();
     if (!isOriginal) {
-      return next({ name: 'login' });
+      return { name: 'login' };
     }
     await auth.fetchUser();
   }
 
   if (requiresAuth && !auth.isAuthenticated) {
-    return next({ name: 'login' });
+    return { name: 'login' };
   }
 
   if (requiresGuest && auth.isAuthenticated) {
-    return next({ name: 'dashboard' });
+    return { name: 'dashboard' };
   }
 
   if (permissions.length) {
@@ -188,11 +193,11 @@ router.beforeEach(async (to, from, next) => {
     const hasAccess = required.some((p: string) => auth.hasPermission(p));
     if (!hasAccess) {
       notify.error('No tiene permisos para acceder a este módulo.');
-      return next({ name: 'dashboard' });
+      return { name: 'dashboard' };
     }
   }
 
-  next();
+  return true;
 });
 
 export default router;

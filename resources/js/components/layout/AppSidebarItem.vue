@@ -12,7 +12,7 @@
       </div>
       <span
         class="menu-label"
-        :class="layout.isSidebarCollapsed ? 'opacity-0 max-w-0' : 'opacity-100 max-w-[200px]'"
+        :class="layout.isSidebarCollapsed ? 'opacity-0 max-w-0' : 'opacity-100 max-w-[240px]'"
       >
         {{ text }}
       </span>
@@ -106,6 +106,8 @@ const resolvedIcon = computed(() => {
   color: #8294b8;
   transition: all .2s ease;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .menu-item:hover .menu-label {
   color: #a0b3d0;

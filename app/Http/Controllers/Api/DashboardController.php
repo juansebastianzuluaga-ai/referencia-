@@ -73,6 +73,26 @@ class DashboardController extends BaseController
             ->filter()
             ->values();
 
+        $tendencia = $this->tendenciaUltimosDias(14);
+
+        $topEspecialidades = (clone $query)
+            ->select('especialidad_requerida')
+            ->selectRaw('COUNT(*) as total')
+            ->whereNotNull('especialidad_requerida')
+            ->groupBy('especialidad_requerida')
+            ->orderByDesc('total')
+            ->limit(5)
+            ->get()
+            ->map(fn ($r) => [
+                'especialidad' => mb_strlen($r->especialidad_requerida) > 30
+                    ? mb_substr($r->especialidad_requerida, 0, 30).'...'
+                    : $r->especialidad_requerida,
+                'total' => (int) $r->total,
+            ]);
+
+        $resueltas = $solicitudesAceptadas + $solicitudesNegadas;
+        $tasaAceptacion = $resueltas > 0 ? round(($solicitudesAceptadas / $resueltas) * 100) : 0;
+
         return $this->sendResponse([
             'solicitudes' => [
                 'total' => $solicitudesTotal,
@@ -96,6 +116,33 @@ class DashboardController extends BaseController
                 'especialidades' => $especialidades,
                 'eps' => $epsList,
             ],
+            'tendencia' => $tendencia,
+            'top_especialidades' => $topEspecialidades,
+            'tasa_aceptacion' => $tasaAceptacion,
         ], 'Estadísticas del dashboard');
+    }
+
+    /**
+     * @return array<int, array{fecha: string, total: int}>
+     */
+    private function tendenciaUltimosDias(int $dias): array
+    {
+        $desde = now()->subDays($dias - 1)->startOfDay();
+
+        $conteos = SolicitudReferencia::selectRaw('DATE(created_at) as fecha, COUNT(*) as total')
+            ->where('created_at', '>=', $desde)
+            ->groupByRaw('DATE(created_at)')
+            ->pluck('total', 'fecha');
+
+        $resultado = [];
+        for ($i = $dias - 1; $i >= 0; $i--) {
+            $fecha = now()->subDays($i)->format('Y-m-d');
+            $resultado[] = [
+                'fecha' => $fecha,
+                'total' => (int) ($conteos[$fecha] ?? 0),
+            ];
+        }
+
+        return $resultado;
     }
 }

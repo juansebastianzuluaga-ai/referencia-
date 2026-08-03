@@ -36,6 +36,11 @@
           icon="LayoutDashboard"
           text="Panel principal"
         />
+        <AppSidebarItem
+          to="/analitica"
+          icon="Flame"
+          text="Analítica avanzada"
+        />
       </div>
 
       <div class="sidebar-divider"></div>

@@ -42,29 +42,30 @@
     </div>
 
     <!-- ── Stat cards ── -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 shrink-0 animate-fade-in-up"
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0 animate-fade-in-up"
       style="animation-duration: 0.4s; animation-delay: 0.1s; animation-fill-mode: both;">
       <div
         v-for="(card, i) in statCards" :key="i"
-        class="stat-card rounded-xl p-2.5 flex flex-col gap-1.5 anim-slide-up"
-        :style="{ animationDelay: (i * 0.06) + 's', '--accent': card.color, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
+        class="stat-card rounded-2xl p-3.5 flex items-center gap-3 anim-slide-up"
+        :style="{ animationDelay: (i * 0.06) + 's', '--accent': card.color, '--accent-2': card.color2, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
       >
-        <div class="stat-card-top-bar"></div>
-        <div class="stat-card-glow" :style="{ background: 'radial-gradient(circle at 80% 20%, ' + card.color + '15, transparent 60%)' }"></div>
-        <div class="flex items-center justify-between relative z-10">
-          <div class="stat-icon-wrap">
-            <component :is="card.icon" class="w-4 h-4" />
+        <div class="stat-card-mesh"></div>
+        <div class="stat-card-glow"></div>
+
+        <div class="stat-ring shrink-0" :style="{ '--ring-pct': card.percent }">
+          <svg viewBox="0 0 64 64" class="stat-ring-svg">
+            <circle cx="32" cy="32" r="27" class="stat-ring-track" />
+            <circle cx="32" cy="32" r="27" class="stat-ring-fill" :style="{ strokeDashoffset: 169.6 - (169.6 * card.percent / 100) }" />
+          </svg>
+          <div class="stat-ring-icon">
+            <component :is="card.icon" class="w-[18px] h-[18px]" />
           </div>
-          <span class="stat-delta-badge">
-            {{ card.delta }}
-          </span>
         </div>
-        <div class="mt-auto relative z-10">
+
+        <div class="flex-1 min-w-0 relative z-10">
           <p class="stat-value">{{ card.value }}</p>
           <p class="stat-label">{{ card.label }}</p>
-        </div>
-        <div class="stat-progress-track relative z-10">
-          <div class="stat-progress-fill" :style="{ width: card.percent + '%' }"></div>
+          <span class="stat-delta-badge">{{ card.delta }}</span>
         </div>
       </div>
     </div>
@@ -72,127 +73,120 @@
     <!-- ── Distribución + Donut ── -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 shrink-0 animate-fade-in-up"
       style="animation-duration: 0.4s; animation-delay: 0.18s; animation-fill-mode: both;">
-      <div class="distrib-card rounded-xl p-3 flex flex-col lg:col-span-2">
+      <div class="distrib-card rounded-xl p-3 flex flex-col lg:col-span-2 distrib-card-hover">
         <div class="flex items-center justify-between mb-1">
-          <div>
-            <p class="text-xs font-bold" style="color:#1e2d55;">Distribución de solicitudes</p>
-            <p class="text-[10px] mt-0.5" style="color:#8a9ab5;">{{ stats.solicitudes.total }} en total · por estado</p>
+          <div class="flex items-center gap-2">
+            <div class="chart-header-icon" style="background: linear-gradient(135deg,#eaf4ff,#dbeafe); color:#16468E;">
+              <component :is="TrendingUpIcon" class="w-3.5 h-3.5" />
+            </div>
+            <div>
+              <p class="text-xs font-bold" style="color:#1e2d55;">Tendencia de solicitudes</p>
+              <p class="text-[10px] mt-0.5" style="color:#8a9ab5;">Últimos 14 días · {{ tendenciaTotal }} solicitudes</p>
+            </div>
           </div>
+          <span class="trend-badge" :class="tendenciaCambioPct >= 0 ? 'trend-badge-up' : 'trend-badge-down'">
+            <component :is="tendenciaCambioPct >= 0 ? TrendingUpIcon : TrendingDownIcon" class="w-3 h-3" />
+            {{ tendenciaCambioPct >= 0 ? '+' : '' }}{{ tendenciaCambioPct }}%
+          </span>
         </div>
         <div class="flex-1">
           <apexchart
-            type="bar"
+            type="area"
             height="140"
-            :options="distribChartOptions"
-            :series="distribChartSeries"
+            :options="tendenciaChartOptions"
+            :series="tendenciaChartSeries"
           />
         </div>
       </div>
 
-      <div class="distrib-card rounded-xl p-3 flex flex-col items-center justify-center">
-        <p class="text-xs font-bold mb-1 self-start" style="color:#1e2d55;">Proporción de estados</p>
-        <div class="flex-1 w-full flex items-center justify-center">
-          <apexchart
-            type="donut"
-            height="160"
-            :options="donutChartOptions"
-            :series="donutChartSeries"
-          />
+      <div class="distrib-card rounded-xl p-3 flex flex-col distrib-card-hover">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="donut-header-icon">
+            <component :is="PieChartIcon" class="w-3.5 h-3.5" />
+          </div>
+          <p class="text-xs font-bold" style="color:#1e2d55;">Proporción de estados</p>
+          <span class="estado-total-badge">{{ stats.solicitudes.total }} total</span>
+        </div>
+        <div class="flex-1 w-full flex flex-col justify-center gap-2.5 min-h-0">
+          <div v-for="(item, i) in donutBars" :key="item.label"
+            class="estado-bar-wrap anim-slide-up"
+            :style="{ animationDelay: (i * 0.08) + 's', '--bar-color': item.color, '--bar-color2': item.color2 }">
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-1.5">
+                <span class="estado-bar-dot" :style="{ background: item.color }"></span>
+                <span class="estado-bar-label">{{ item.label }}</span>
+              </div>
+              <span class="estado-bar-value" :style="{ color: item.color }">{{ item.value }}</span>
+            </div>
+            <div class="estado-bar-track">
+              <div class="estado-bar-fill"
+                :style="{ width: item.pct + '%', background: `linear-gradient(90deg, ${item.color}, ${item.color2})` }">
+                <div class="estado-bar-shine"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="operations-grid animate-fade-in-up min-h-0"
       style="animation-duration: 0.4s; animation-delay: 0.25s; animation-fill-mode: both;">
-      <section class="operations-card">
+      <section class="operations-card operations-card-hover">
         <div class="operations-glow"></div>
         <div class="operations-heading">
-          <div>
-            <p class="panel-eyebrow">Navegación operativa</p>
-            <h3 class="panel-title">Accesos rápidos</h3>
+          <div class="flex items-center gap-2">
+            <div class="donut-header-icon">
+              <component :is="BarChart3Icon" class="w-3.5 h-3.5" />
+            </div>
+            <div>
+              <p class="panel-eyebrow">Demanda por servicio</p>
+              <h3 class="panel-title">Especialidades más solicitadas</h3>
+            </div>
           </div>
-          <span class="operations-hint">Gestione el sistema desde un solo lugar</span>
+          <span class="operations-hint">Top 5 · periodo filtrado</span>
         </div>
 
-        <div class="quick-actions">
-          <router-link to="/solicitudes-referencia" class="quick-action quick-action-blue">
-            <div class="quick-action-icon">
-              <component :is="ClipboardListIcon" />
-            </div>
-            <div class="quick-action-copy">
-              <strong>Solicitudes</strong>
-              <span>Revisar y responder remisiones</span>
-            </div>
-            <component :is="ArrowRightIcon" class="quick-action-arrow" />
-          </router-link>
-
-          <router-link to="/clinicas" class="quick-action quick-action-green">
-            <div class="quick-action-icon">
-              <component :is="HospitalIcon" />
-            </div>
-            <div class="quick-action-copy">
-              <strong>Clínicas</strong>
-              <span>Consultar entidades registradas</span>
-            </div>
-            <component :is="ArrowRightIcon" class="quick-action-arrow" />
-          </router-link>
-
-          <router-link to="/usuarios" class="quick-action quick-action-purple">
-            <div class="quick-action-icon">
-              <component :is="UsersIcon" />
-            </div>
-            <div class="quick-action-copy">
-              <strong>Usuarios</strong>
-              <span>Administrar accesos internos</span>
-            </div>
-            <component :is="ArrowRightIcon" class="quick-action-arrow" />
-          </router-link>
+        <div class="specialties-chart-wrap">
+          <apexchart
+            v-if="topEspecialidadesSeries[0]?.data?.length"
+            type="bar"
+            height="100%"
+            :options="topEspecialidadesOptions"
+            :series="topEspecialidadesSeries"
+          />
+          <div v-else class="specialties-empty">
+            <component :is="StethoscopeIcon" class="w-6 h-6" />
+            <span>Sin datos suficientes</span>
+          </div>
         </div>
       </section>
 
-      <section class="flow-card">
+      <section class="flow-card flow-card-hover">
         <div class="flow-orbit flow-orbit-one"></div>
         <div class="flow-orbit flow-orbit-two"></div>
-        <div class="flow-content">
+        <div class="flow-content h-full flex flex-col">
           <div class="flow-heading">
-            <div>
-              <p class="flow-eyebrow">Proceso asistencial</p>
-              <h3>Flujo de referencia</h3>
+            <div class="flex items-center gap-2">
+              <div class="gauge-header-icon">
+                <component :is="TargetIcon" class="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <p class="flow-eyebrow">Efectividad</p>
+                <h3>Tasa de aceptación</h3>
+              </div>
             </div>
             <span class="flow-live"><i></i> En línea</span>
           </div>
 
-          <div class="flow-steps">
-            <div class="flow-step">
-              <div class="flow-step-icon">
-                <component :is="ClipboardListIcon" />
-              </div>
-              <div>
-                <strong>Recepción</strong>
-                <span>Ingreso de solicitud</span>
-              </div>
-            </div>
-            <div class="flow-connector"><span></span></div>
-            <div class="flow-step">
-              <div class="flow-step-icon">
-                <component :is="StethoscopeIcon" />
-              </div>
-              <div>
-                <strong>Evaluación</strong>
-                <span>Revisión clínica</span>
-              </div>
-            </div>
-            <div class="flow-connector"><span></span></div>
-            <div class="flow-step">
-              <div class="flow-step-icon flow-step-success">
-                <component :is="CheckCircleIcon" />
-              </div>
-              <div>
-                <strong>Respuesta</strong>
-                <span>Decisión asistencial</span>
-              </div>
-            </div>
+          <div class="gauge-wrap flex-1">
+            <apexchart
+              type="radialBar"
+              height="100%"
+              :options="tasaAceptacionOptions"
+              :series="[stats.tasa_aceptacion]"
+            />
           </div>
+          <p class="gauge-caption">De las solicitudes resueltas fueron aceptadas</p>
         </div>
       </section>
     </div>
@@ -220,6 +214,11 @@ import {
   Hospital as HospitalIcon,
   Filter as FilterIcon,
   X as XIcon,
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  PieChart as PieChartIcon,
+  BarChart3 as BarChart3Icon,
+  Target as TargetIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 
@@ -244,6 +243,9 @@ const stats = ref({
     id: number; paciente: string; estado: string; especialidad: string; clinica: string | null; created_at: string | null;
   }>,
   filtros: { especialidades: [] as string[], eps: [] as string[] },
+  tendencia: [] as Array<{ fecha: string; total: number }>,
+  top_especialidades: [] as Array<{ especialidad: string; total: number }>,
+  tasa_aceptacion: 0,
 });
 
 const filtros = ref({
@@ -297,6 +299,7 @@ const statCards = computed(() => [
     value: String(displayStats.value[0]),
     icon: ClipboardListIcon,
     color: '#2563c4',
+    color2: '#60a5fa',
     iconBg: '#dbe1ff',
     delta: `${stats.value.solicitudes.pendientes} pend.`,
     deltaBg: '#dbeafe',
@@ -308,6 +311,7 @@ const statCards = computed(() => [
     value: String(displayStats.value[1]),
     icon: HospitalIcon,
     color: '#15966a',
+    color2: '#4ade80',
     iconBg: '#d3f9d8',
     delta: `${stats.value.clinicas.activas} activas`,
     deltaBg: '#dcfce7',
@@ -319,6 +323,7 @@ const statCards = computed(() => [
     value: String(displayStats.value[2]),
     icon: ClockIcon,
     color: '#e67700',
+    color2: '#fbbf24',
     iconBg: '#fff3cd',
     delta: `${stats.value.solicitudes.aceptadas} aceptadas`,
     deltaBg: '#fef3c7',
@@ -330,6 +335,7 @@ const statCards = computed(() => [
     value: String(displayStats.value[3]),
     icon: UsersIcon,
     color: '#7048e8',
+    color2: '#c4b5fd',
     iconBg: '#ede9fe',
     delta: `${stats.value.usuarios.total} total`,
     deltaBg: '#ede9fe',
@@ -383,14 +389,7 @@ const donutChartOptions = computed(() => ({
       opacityTo: 0.85,
     },
   },
-  legend: {
-    position: 'bottom' as const,
-    fontSize: '11px',
-    fontWeight: 600,
-    labels: { colors: '#475569' },
-    markers: { size: 5, strokeWidth: 0 },
-    itemMargin: { horizontal: 8, vertical: 6 },
-  },
+  legend: { show: false },
   dataLabels: {
     enabled: true,
     formatter: (val: number) => `${Math.round(val)}%`,
@@ -405,15 +404,15 @@ const donutChartOptions = computed(() => ({
   plotOptions: {
     pie: {
       donut: {
-        size: '72%',
+        size: '65%',
         labels: {
           show: true,
-          name: { fontSize: '11px', color: '#8a9ab5', fontWeight: 600 },
-          value: { fontSize: '24px', fontWeight: 800, color: '#1e2d55', formatter: (val: string) => val },
+          name: { fontSize: '10px', color: '#8a9ab5', fontWeight: 600 },
+          value: { fontSize: '20px', fontWeight: 800, color: '#1e2d55', formatter: (val: string) => val },
           total: {
             show: true,
-            label: 'Total solicitudes',
-            fontSize: '10px',
+            label: 'Total',
+            fontSize: '9px',
             color: '#8a9ab5',
             fontWeight: 600,
             formatter: () => String(stats.value.solicitudes.total),
@@ -425,59 +424,74 @@ const donutChartOptions = computed(() => ({
   stroke: { width: 2, colors: ['#fff'] },
 }));
 
-const distribChartSeries = computed(() => [{
+const donutBars = computed(() => {
+  const s = stats.value.solicitudes;
+  const total = Math.max(1, s.total);
+  return [
+    { label: 'Pendientes', value: s.pendientes, color: '#f59e0b', color2: '#fbbf24', pct: Math.round((s.pendientes / total) * 100) },
+    { label: 'En espera', value: s.en_espera, color: '#3b82f6', color2: '#60a5fa', pct: Math.round((s.en_espera / total) * 100) },
+    { label: 'Aceptadas', value: s.aceptadas, color: '#10b981', color2: '#34d399', pct: Math.round((s.aceptadas / total) * 100) },
+    { label: 'Negadas', value: s.negadas, color: '#ef4444', color2: '#f87171', pct: Math.round((s.negadas / total) * 100) },
+  ];
+});
+
+const tendenciaChartSeries = computed(() => [{
   name: 'Solicitudes',
-  data: [
-    stats.value.solicitudes.pendientes,
-    stats.value.solicitudes.en_espera,
-    stats.value.solicitudes.aceptadas,
-    stats.value.solicitudes.negadas,
-  ],
+  data: stats.value.tendencia.map(t => t.total),
 }]);
 
-const distribChartOptions = computed(() => ({
+const tendenciaChartOptions = computed(() => ({
   chart: {
-    type: 'bar' as const,
+    type: 'area' as const,
     fontFamily: 'inherit',
     toolbar: { show: false },
-    sparkline: { enabled: false },
+    zoom: { enabled: false },
     animations: {
       enabled: true,
       easing: 'easeinout' as const,
-      speed: 700,
+      speed: 900,
       animateGradually: { enabled: true, delay: 100 },
-      dynamicAnimation: { enabled: true, speed: 350 },
+      dynamicAnimation: { enabled: true, speed: 400 },
+    },
+    dropShadow: {
+      enabled: true,
+      top: 6,
+      left: 0,
+      blur: 6,
+      opacity: 0.15,
+      color: '#2563c4',
     },
   },
-  plotOptions: {
-    bar: {
-      distributed: true,
-      borderRadius: 8,
-      borderRadiusApplication: 'end' as const,
-      columnWidth: '55%',
-      dataLabels: { position: 'top' as const },
-    },
-  },
-  colors: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'],
+  stroke: { curve: 'smooth' as const, width: 3, colors: ['#2563c4'] },
+  colors: ['#2563c4'],
   fill: {
     type: 'gradient',
     gradient: {
-      shade: 'light',
-      type: 'vertical',
-      shadeIntensity: 0.25,
-      gradientToColors: ['#fbbf24', '#60a5fa', '#34d399', '#f87171'],
-      inverseColors: false,
-      opacityFrom: 1,
-      opacityTo: 0.7,
+      shadeIntensity: 1,
+      opacityFrom: 0.45,
+      opacityTo: 0.02,
+      stops: [0, 90, 100],
+      colorStops: [
+        { offset: 0, color: '#2563c4', opacity: 0.4 },
+        { offset: 100, color: '#2563c4', opacity: 0.02 },
+      ],
     },
   },
+  markers: {
+    size: 0,
+    hover: { size: 6 },
+    strokeWidth: 2,
+    strokeColors: '#fff',
+    colors: ['#2563c4'],
+  },
   xaxis: {
-    categories: ['Pendientes', 'En espera', 'Aceptadas', 'Negadas'],
-    labels: {
-      style: { fontSize: '11px', fontWeight: 600, colors: '#475569' },
-    },
+    categories: stats.value.tendencia.map(t =>
+      new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short' }).format(new Date(t.fecha + 'T00:00:00'))
+    ),
+    labels: { style: { fontSize: '10px', fontWeight: 600, colors: '#94a3b8' } },
     axisBorder: { show: false },
     axisTicks: { show: false },
+    tooltip: { enabled: false },
   },
   yaxis: {
     labels: { style: { fontSize: '10px', colors: '#94a3b8' } },
@@ -486,23 +500,148 @@ const distribChartOptions = computed(() => ({
     borderColor: '#f1f5f9',
     strokeDashArray: 4,
     xaxis: { lines: { show: false } },
-    padding: { top: -10, right: 0, bottom: 0, left: 0 },
+    padding: { top: 0, right: 8, bottom: 0, left: 0 },
+  },
+  dataLabels: { enabled: false },
+  tooltip: {
+    y: { formatter: (val: number) => `${val} solicitud${val === 1 ? '' : 'es'}` },
+    style: { fontSize: '12px', fontFamily: 'inherit' },
+    x: { show: true },
+  },
+}));
+
+const tendenciaTotal = computed(() => stats.value.tendencia.reduce((acc, t) => acc + t.total, 0));
+
+const tendenciaCambioPct = computed(() => {
+  const dias = stats.value.tendencia;
+  const mitad = Math.floor(dias.length / 2);
+  if (!mitad) return 0;
+  const primeraMitad = dias.slice(0, mitad).reduce((acc, t) => acc + t.total, 0);
+  const segundaMitad = dias.slice(mitad).reduce((acc, t) => acc + t.total, 0);
+  if (primeraMitad === 0) return segundaMitad > 0 ? 100 : 0;
+  return Math.round(((segundaMitad - primeraMitad) / primeraMitad) * 100);
+});
+
+const topEspecialidadesSeries = computed(() => [{
+  name: 'Solicitudes',
+  data: stats.value.top_especialidades.map(e => e.total),
+}]);
+
+const topEspecialidadesOptions = computed(() => ({
+  chart: {
+    type: 'bar' as const,
+    fontFamily: 'inherit',
+    toolbar: { show: false },
+    animations: {
+      enabled: true,
+      easing: 'easeinout' as const,
+      speed: 700,
+      animateGradually: { enabled: true, delay: 90 },
+      dynamicAnimation: { enabled: true, speed: 350 },
+    },
+  },
+  plotOptions: {
+    bar: {
+      horizontal: true,
+      borderRadius: 6,
+      borderRadiusApplication: 'end' as const,
+      barHeight: '60%',
+      distributed: true,
+      dataLabels: { position: 'end' as const },
+    },
+  },
+  colors: ['#2563c4', '#3b82c9', '#4f9dcf', '#5cb8d1', '#7dd3c0'],
+  fill: {
+    type: 'gradient',
+    gradient: {
+      shade: 'light',
+      type: 'horizontal',
+      shadeIntensity: 0.3,
+      gradientToColors: ['#60a5fa'],
+      inverseColors: false,
+      opacityFrom: 1,
+      opacityTo: 0.85,
+    },
+  },
+  xaxis: {
+    categories: stats.value.top_especialidades.map(e => e.especialidad),
+    labels: { style: { fontSize: '10px', colors: '#94a3b8' } },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  },
+  yaxis: {
+    labels: {
+      style: { fontSize: '9px', fontWeight: 600, colors: '#475569' },
+      maxWidth: 280,
+      trim: true,
+    },
+  },
+  grid: {
+    borderColor: '#f1f5f9',
+    strokeDashArray: 4,
+    yaxis: { lines: { show: false } },
+    padding: { top: -8, right: 20, bottom: -8, left: 16 },
   },
   dataLabels: {
     enabled: true,
-    enabledOnSeries: undefined,
     formatter: (val: number) => String(val),
-    position: 'top' as const,
-    style: { fontSize: '11px', fontWeight: 700, colors: ['#475569'] },
-    background: { enabled: false },
+    position: 'end' as const,
+    textAnchor: 'start' as const,
+    style: { fontSize: '10.5px', fontWeight: 800, colors: ['#fff'] },
     dropShadow: { enabled: false },
+    offsetX: -4,
   },
   tooltip: {
     y: { formatter: (val: number) => `${val} solicitudes` },
     style: { fontSize: '12px', fontFamily: 'inherit' },
-    fillSeriesColor: false,
   },
   legend: { show: false },
+}));
+
+const tasaAceptacionOptions = computed(() => ({
+  chart: {
+    type: 'radialBar' as const,
+    fontFamily: 'inherit',
+    animations: {
+      enabled: true,
+      easing: 'easeinout' as const,
+      speed: 900,
+      dynamicAnimation: { enabled: true, speed: 500 },
+    },
+  },
+  plotOptions: {
+    radialBar: {
+      startAngle: -130,
+      endAngle: 130,
+      hollow: { size: '55%' },
+      track: {
+        background: '#eef2f7',
+        strokeWidth: '100%',
+      },
+      dataLabels: {
+        name: { show: false },
+        value: {
+          fontSize: '30px',
+          fontWeight: 900,
+          color: '#15966a',
+          offsetY: 10,
+          formatter: (val: number) => `${val}%`,
+        },
+      },
+    },
+  },
+  fill: {
+    type: 'gradient',
+    gradient: {
+      shade: 'light',
+      type: 'horizontal',
+      gradientToColors: ['#4ade80'],
+      stops: [0, 100],
+    },
+  },
+  stroke: { lineCap: 'round' as const },
+  colors: ['#15966a'],
+  labels: ['Tasa'],
 }));
 
 const services = computed(() => {
@@ -670,6 +809,11 @@ onMounted(cargarStats);
   border-radius: 50%;
   background: radial-gradient(circle, rgba(126,179,255,0.22), transparent 70%);
   pointer-events: none;
+  animation: heroGlowFloat 8s ease-in-out infinite;
+}
+@keyframes heroGlowFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  50% { transform: translate(-12px, 8px) scale(1.1); opacity: 0.7; }
 }
 .hero-glow-2 {
   position: absolute;
@@ -729,6 +873,10 @@ onMounted(cargarStats);
   font-weight: 800;
   color: #fff;
   line-height: 1;
+  transition: transform .3s ease;
+}
+.hero-mini-stats:hover .hero-mini-stat-num {
+  transform: scale(1.1);
 }
 .hero-mini-stat-label {
   font-size: 9px;
@@ -765,99 +913,121 @@ onMounted(cargarStats);
 
 /* ── Stat cards ── */
 .stat-card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, color-mix(in srgb, var(--accent) 12%, white) 100%);
-  border: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 14%, transparent), 0 0 0 1px rgba(255,255,255,0.5) inset;
+  background: linear-gradient(145deg, #ffffff 0%, #fbfdff 100%);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, #e2e8f0);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 10%, transparent), 0 1px 0 rgba(255,255,255,0.8) inset;
   transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1), border-color .3s ease;
   position: relative;
   overflow: hidden;
 }
-.stat-card::before {
-  content: '';
+.stat-card-mesh {
   position: absolute;
-  top: 0; left: 0; width: 6px; height: 100%;
-  background: var(--accent);
-  opacity: .9;
+  inset: 0;
+  background: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%);
+  pointer-events: none;
 }
-.stat-card::after {
-  content: '';
+.stat-card-glow {
   position: absolute;
-  top: -40px; right: -40px;
-  width: 110px; height: 110px;
+  top: -50%; right: -30%;
+  width: 140px; height: 140px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  filter: blur(24px);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-2) 45%, transparent), transparent 70%);
+  filter: blur(20px);
+  opacity: .7;
+  transition: opacity .3s ease, transform .5s ease;
+  pointer-events: none;
 }
 .stat-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 18px 36px color-mix(in srgb, var(--accent) 22%, transparent);
-  border-color: var(--accent);
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 20px 40px color-mix(in srgb, var(--accent) 24%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, #e2e8f0);
 }
-.stat-icon-wrap {
-  width: 34px; height: 34px;
-  border-radius: 10px;
+.stat-card:hover .stat-card-glow {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+/* Circular progress ring */
+.stat-ring {
+  position: relative;
+  width: 58px; height: 58px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  background: var(--icon-bg);
-  color: var(--icon-color);
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--icon-color) 20%, transparent);
-  transition: transform .25s ease, box-shadow .25s ease;
-  position: relative;
   z-index: 10;
 }
-.stat-card:hover .stat-icon-wrap {
-  transform: scale(1.12) rotate(-6deg);
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--icon-color) 35%, transparent);
+.stat-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  transform: rotate(-90deg);
 }
+.stat-ring-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 14%, #eef2f7);
+  stroke-width: 5;
+}
+.stat-ring-fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 169.6;
+  stroke-dashoffset: 169.6;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 55%, transparent));
+  transition: stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1);
+}
+.stat-ring-icon {
+  position: relative;
+  z-index: 1;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--icon-bg);
+  color: var(--icon-color);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--icon-color) 25%, transparent);
+  transition: transform .3s cubic-bezier(.22,1,.36,1);
+}
+.stat-card:hover .stat-ring-icon {
+  transform: scale(1.12) rotate(-6deg);
+}
+
 .stat-delta-badge {
-  font-size: 10px;
+  display: inline-block;
+  font-size: 9.5px;
   font-weight: 800;
-  padding: 5px 12px;
+  padding: 3px 9px;
   border-radius: 999px;
   white-space: nowrap;
   background: var(--delta-bg);
   color: var(--delta-color);
-  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  margin-top: 4px;
   position: relative;
   z-index: 10;
 }
 .stat-value {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 900;
-  line-height: 1;
+  line-height: 1.1;
   letter-spacing: -.03em;
   color: #1e293b;
-  text-shadow: 0 2px 0 rgba(255,255,255,0.8);
   position: relative;
   z-index: 10;
 }
 .stat-label {
-  font-size: 11px;
-  font-weight: 800;
-  color: #475569;
-  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748b;
+  margin-top: 1px;
   text-transform: uppercase;
-  letter-spacing: .05em;
+  letter-spacing: .04em;
   position: relative;
   z-index: 10;
-}
-.stat-progress-track {
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.6);
+  white-space: nowrap;
   overflow: hidden;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,.08);
-  position: relative;
-  z-index: 10;
-}
-.stat-progress-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, white));
-  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent);
-  transition: width .8s cubic-bezier(.22,1,.36,1);
+  text-overflow: ellipsis;
 }
 
 /* ── Panel cards ── */
@@ -1063,6 +1233,211 @@ onMounted(cargarStats);
   opacity: 0.8;
 }
 .distrib-card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(22,70,142,.12); }
+.distrib-card-hover {
+  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1);
+}
+.distrib-card-hover:hover {
+  transform: translateY(-4px) scale(1.005);
+  box-shadow: 0 16px 36px rgba(22,70,142,.14);
+}
+
+/* ── Chart header icon ── */
+.chart-header-icon {
+  width: 24px; height: 24px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Estado total badge ── */
+.estado-total-badge {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e0ecff;
+  color: #16468e;
+}
+
+/* ── Trend badge ── */
+.trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .3rem .6rem;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.trend-badge-up { background: #dcfce7; color: #15966a; }
+.trend-badge-down { background: #fee2e2; color: #c92a2a; }
+
+/* ── Donut header + custom legend ── */
+.donut-header-icon {
+  width: 24px; height: 24px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #eaf4ff, #dbeafe);
+  color: #16468E;
+  flex-shrink: 0;
+}
+.donut-chart-wrap {
+  flex-shrink: 0;
+  width: 55%;
+  min-height: 140px;
+}
+.donut-legend {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+.donut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .3rem .5rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  transition: background .2s ease, transform .2s ease;
+}
+.donut-legend-item:hover {
+  background: #eff6ff;
+  transform: translateX(2px);
+}
+.donut-legend-dot {
+  width: 8px; height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.9);
+}
+.donut-legend-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #475569;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.donut-legend-value {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1e2d55;
+}
+
+/* ── Estado bars (reemplazo del donut) ── */
+.estado-bar-wrap {
+  position: relative;
+  transition: transform .25s ease;
+}
+.estado-bar-wrap:hover {
+  transform: translateX(3px);
+}
+.estado-bar-dot {
+  width: 8px; height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.9);
+  animation: barDotPulse 2.5s ease-in-out infinite;
+}
+@keyframes barDotPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(255,255,255,0.9); }
+  50% { box-shadow: 0 0 0 5px rgba(255,255,255,0.6); }
+}
+.estado-bar-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+.estado-bar-value {
+  font-size: 13px;
+  font-weight: 800;
+  transition: transform .25s ease;
+}
+.estado-bar-wrap:hover .estado-bar-value {
+  transform: scale(1.15);
+}
+.estado-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+}
+.estado-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 1s cubic-bezier(.22,1,.36,1);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  position: relative;
+  overflow: hidden;
+}
+.estado-bar-shine {
+  position: absolute;
+  top: 0; left: -40%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: barShine 2.5s ease-in-out infinite;
+}
+@keyframes barShine {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
+/* ── Specialties bar chart ── */
+.specialties-chart-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
+}
+.specialties-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ── Acceptance gauge ── */
+.gauge-header-icon {
+  width: 24px; height: 24px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #15966a;
+  flex-shrink: 0;
+}
+.gauge-wrap {
+  min-height: 160px;
+  position: relative;
+  z-index: 1;
+}
+.gauge-caption {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #8a9ab5;
+  position: relative;
+  z-index: 1;
+  margin-top: -.25rem;
+}
 
 /* ── Legend tooltips ── */
 .legend-tip-wrap { position: relative; }
@@ -1120,7 +1495,7 @@ onMounted(cargarStats);
 /* ── Operations ── */
 .operations-grid {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+  grid-template-columns: minmax(0, 4fr) minmax(280px, 2fr);
   gap: .5rem;
   flex: 1;
   min-height: 0;
@@ -1130,6 +1505,9 @@ onMounted(cargarStats);
   position: relative;
   overflow: hidden;
   border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .operations-card {
   padding: .65rem;
@@ -1137,6 +1515,11 @@ onMounted(cargarStats);
   border: 1px solid rgba(212, 222, 234, .65);
   box-shadow: 0 4px 16px rgba(22, 70, 142, .06);
   backdrop-filter: blur(10px);
+  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1);
+}
+.operations-card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px rgba(22, 70, 142, .12);
 }
 .operations-card::before {
   content: '';
@@ -1154,6 +1537,7 @@ onMounted(cargarStats);
   border-radius: 50%;
   background: radial-gradient(circle, rgba(126, 179, 255, .16), transparent 70%);
   pointer-events: none;
+  animation: orbitFloat 7s ease-in-out infinite;
 }
 .operations-heading,
 .flow-heading {
@@ -1265,6 +1649,11 @@ onMounted(cargarStats);
   border: 1px solid rgba(212, 222, 234, 0.6);
   box-shadow: 0 4px 16px rgba(22, 70, 142, .06);
   backdrop-filter: blur(10px);
+  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1);
+}
+.flow-card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px rgba(22, 70, 142, .12);
 }
 .flow-card::before {
   content: '';
@@ -1278,6 +1667,7 @@ onMounted(cargarStats);
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
+  animation: orbitFloat 6s ease-in-out infinite;
 }
 .flow-orbit-one {
   top: -60px;
@@ -1285,6 +1675,7 @@ onMounted(cargarStats);
   width: 160px;
   height: 160px;
   background: radial-gradient(circle, rgba(74,222,128,.10), transparent 70%);
+  animation-delay: 0s;
 }
 .flow-orbit-two {
   right: 30px;
@@ -1292,6 +1683,11 @@ onMounted(cargarStats);
   width: 120px;
   height: 120px;
   background: radial-gradient(circle, rgba(126,179,255,.08), transparent 70%);
+  animation-delay: 2s;
+}
+@keyframes orbitFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  50% { transform: translate(-8px, 6px) scale(1.08); opacity: 0.7; }
 }
 .flow-content { position: relative; z-index: 1; }
 .flow-eyebrow {

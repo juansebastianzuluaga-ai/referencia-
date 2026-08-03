@@ -2,12 +2,13 @@
   <div class="ph-dashboard h-full flex overflow-hidden">
 
     <!-- ══ Columna principal ═══════════════════════════════════════════════ -->
-    <div class="flex-1 flex flex-col gap-3 p-4 sm:p-6 min-w-0 overflow-hidden animate-fade-in-up"
-      style="animation-duration: 0.4s; animation-fill-mode: both;">
+    <div class="flex-1 flex flex-col gap-3 p-4 sm:p-5 min-w-0 overflow-hidden">
 
-      <!-- ── Hero compacto ── -->
-      <div class="hero-card rounded-3xl p-5 sm:p-6 flex items-center gap-5 relative overflow-hidden shrink-0">
+      <!-- ── Hero ── -->
+      <div class="hero-card rounded-2xl p-4 sm:p-5 flex items-center gap-4 relative overflow-hidden shrink-0 animate-fade-in-down"
+        style="animation-duration: 0.4s; animation-fill-mode: both;">
         <div class="hero-glow"></div>
+        <div class="hero-glow-2"></div>
         <div class="hero-pattern"></div>
         <div class="flex items-center gap-4 z-10 shrink-0">
           <div class="hero-logo">
@@ -15,16 +16,16 @@
           </div>
         </div>
         <div class="flex-1 min-w-0 z-10">
-          <div class="flex items-center gap-2 mb-1.5">
+          <div class="flex items-center gap-2 mb-1">
             <span class="hero-live-dot"></span>
-            <p class="text-[11px] font-semibold uppercase tracking-[0.12em]" style="color:rgba(255,255,255,0.6);">Sistema de referencia · En línea</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.12em]" style="color:rgba(255,255,255,0.6);">Sistema de referencia · En línea</p>
           </div>
           <h1 class="text-lg sm:text-xl font-bold leading-tight text-white">
             {{ saludoTexto }}, <span class="clinic-name font-extrabold">{{ clinicaAuth.clinica?.nombre }}</span>
           </h1>
-          <p class="text-xs sm:text-sm mt-1.5" style="color:rgba(255,255,255,0.65);">{{ fechaHoy }} · Gestione sus remisiones al centro de referencia.</p>
+          <p class="text-xs sm:text-sm mt-1" style="color:rgba(255,255,255,0.65);">{{ fechaHoy }} · Gestione sus remisiones al centro de referencia.</p>
         </div>
-        <div class="hero-right z-10 shrink-0 hidden sm:flex flex-col items-end gap-3">
+        <div class="hero-right z-10 shrink-0 hidden sm:flex items-center gap-4">
           <button @click="router.push('/clinica/solicitud')" class="hero-link">
             <component :is="PlusIcon" class="w-4 h-4" />
             <span>Nueva solicitud</span>
@@ -49,277 +50,182 @@
       </div>
 
       <!-- ── Stat cards ── -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 animate-fade-in-up"
+        style="animation-duration: 0.4s; animation-delay: 0.1s; animation-fill-mode: both;">
         <template v-if="cargando">
-          <div v-for="i in 4" :key="i" class="stat-card rounded-2xl p-4 flex flex-col gap-2">
-            <div class="flex items-center gap-2 mb-1">
-              <div class="shimmer-box" style="width:40px; height:40px; border-radius:12px;"></div>
-              <div class="shimmer-bar" style="width:50px; height:12px;"></div>
+          <Card v-for="i in 4" :key="i" class="stat-card rounded-2xl p-4 flex items-center gap-3">
+            <div class="shimmer-box" style="width:54px; height:54px; border-radius:50%;"></div>
+            <div class="flex-1 space-y-2">
+              <div class="shimmer-bar" style="width:70%; height:20px;"></div>
+              <div class="shimmer-bar" style="width:50%; height:10px;"></div>
+              <div class="shimmer-bar" style="width:40%; height:7px; border-radius:999px;"></div>
             </div>
-            <div class="shimmer-bar" style="width:70%; height:28px;"></div>
-            <div class="shimmer-bar" style="width:40%; height:6px; border-radius:999px;"></div>
-          </div>
+          </Card>
         </template>
         <template v-else>
           <div
             v-for="(card, i) in statCards" :key="i"
-            class="stat-card rounded-2xl p-4 flex flex-col gap-2 anim-slide-up"
-            :style="{ animationDelay: (i * 0.08) + 's', '--accent': card.color, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
+            class="stat-card rounded-2xl p-4 flex items-center gap-3 anim-slide-up"
+            :style="{ animationDelay: (i * 0.06) + 's', '--accent': card.color, '--accent-2': card.color2, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
           >
-            <div class="stat-card-glow" :style="{ background: 'radial-gradient(circle at 80% 20%, ' + card.color + '18, transparent 60%)' }"></div>
-            <div class="flex items-center justify-between relative z-10">
-              <div class="stat-icon-wrap">
-                <component :is="card.icon" class="w-5 h-5" />
+            <div class="stat-card-mesh"></div>
+            <div class="stat-card-glow" :style="{ background: 'radial-gradient(circle, ' + card.color2 + '45, transparent 70%)' }"></div>
+
+            <div class="stat-ring shrink-0" :style="{ '--ring-pct': card.percent }">
+              <svg viewBox="0 0 64 64" class="stat-ring-svg">
+                <circle cx="32" cy="32" r="27" class="stat-ring-track" />
+                <circle cx="32" cy="32" r="27" class="stat-ring-fill" :style="{ strokeDashoffset: 169.6 - (169.6 * card.percent / 100) }" />
+              </svg>
+              <div class="stat-ring-icon">
+                <component :is="card.icon" class="w-[18px] h-[18px]" />
               </div>
-              <span class="stat-delta-badge">{{ card.delta }}</span>
             </div>
-            <div class="mt-auto relative z-10">
-              <p class="stat-value">{{ displayStats[i] }}</p>
+
+            <div class="flex-1 min-w-0 relative z-10">
+              <p class="stat-value">{{ card.value }}</p>
               <p class="stat-label">{{ card.label }}</p>
-            </div>
-            <div class="stat-progress-track relative z-10">
-              <div class="stat-progress-fill" :style="{ width: statPercents[i] + '%' }"></div>
+              <span class="stat-delta-badge">{{ card.delta }}</span>
             </div>
           </div>
         </template>
       </div>
 
-      <!-- ── Distribución + Donut ── -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 shrink-0">
-        <div v-if="cargando" class="distrib-card rounded-2xl p-4 flex items-center gap-4 lg:col-span-2">
-          <div class="flex-1">
-            <div class="flex items-center justify-between mb-2">
-              <div class="shimmer-bar" style="width:140px; height:12px;"></div>
-              <div class="shimmer-bar" style="width:60px; height:10px;"></div>
-            </div>
-            <div class="shimmer-bar w-full" style="height:10px; border-radius:999px;"></div>
-          </div>
-        </div>
-        <div v-else class="distrib-card rounded-2xl p-4 flex items-center gap-4 anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
+      <!-- ── Gráficos: Tendencia + Tasa ── -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 shrink-0 animate-fade-in-up"
+        style="animation-duration: 0.4s; animation-delay: 0.18s; animation-fill-mode: both;">
+
+        <!-- Tendencia area chart -->
+        <Card v-if="cargando" class="distrib-card rounded-2xl p-4 lg:col-span-2">
+          <div class="shimmer-bar" style="width:160px; height:14px; margin-bottom:12px;"></div>
+          <div class="shimmer-bar w-full" style="height:120px; border-radius:8px;"></div>
+        </Card>
+        <Card v-else class="distrib-card rounded-2xl p-4 flex flex-col anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
           <div class="distrib-card-glow"></div>
-          <div class="flex-1 relative z-10">
-            <div class="flex items-center justify-between mb-2.5">
-              <p class="text-sm font-bold" style="color:#1e2d55;">Distribución de solicitudes</p>
-              <p class="text-xs" style="color:#8a9ab5;">{{ stats.total }} en total</p>
-            </div>
-            <div class="flex h-3 rounded-full overflow-hidden" style="background:#edf2f7;">
-              <div v-if="stats.pendientes" class="distrib-segment transition-all duration-700" :style="{ width: (stats.pendientes / Math.max(1, stats.total)) * 100 + '%', background: 'linear-gradient(90deg, #fbbf24, #f59e0b)' }"
-                :data-tooltip="`${stats.pendientes} pendientes (${Math.round(stats.pendientes / Math.max(1, stats.total) * 100)}%)`"></div>
-              <div v-if="stats.aceptadas" class="distrib-segment transition-all duration-700" :style="{ width: (stats.aceptadas / Math.max(1, stats.total)) * 100 + '%', background: 'linear-gradient(90deg, #4ade80, #22c55e)' }"
-                :data-tooltip="`${stats.aceptadas} aceptadas (${Math.round(stats.aceptadas / Math.max(1, stats.total) * 100)}%)`"></div>
-              <div v-if="stats.negadas" class="distrib-segment transition-all duration-700" :style="{ width: (stats.negadas / Math.max(1, stats.total)) * 100 + '%', background: 'linear-gradient(90deg, #f87171, #ef4444)' }"
-                :data-tooltip="`${stats.negadas} negadas (${Math.round(stats.negadas / Math.max(1, stats.total) * 100)}%)`"></div>
-            </div>
-            <div class="flex items-center gap-4 mt-3">
-              <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full" style="background:#fbbf24;"></span>
-                <span class="text-xs font-medium" style="color:#8a9ab5;">Pendientes <strong style="color:#d97706;">{{ stats.pendientes }}</strong></span>
+          <div class="flex items-center justify-between mb-2 relative z-10">
+            <div class="flex items-center gap-2">
+              <div class="chart-header-icon" style="background: linear-gradient(135deg,#dbeafe,#bfdbfe); color:#2563c4;">
+                <component :is="TrendingUpIcon" class="w-4 h-4" />
               </div>
-              <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full" style="background:#22c55e;"></span>
-                <span class="text-xs font-medium" style="color:#8a9ab5;">Aceptadas <strong style="color:#16a34a;">{{ stats.aceptadas }}</strong></span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full" style="background:#f87171;"></span>
-                <span class="text-xs font-medium" style="color:#8a9ab5;">Negadas <strong style="color:#dc2626;">{{ stats.negadas }}</strong></span>
-              </div>
+              <p class="text-sm font-bold" style="color:#1e2d55;">Tendencia de solicitudes</p>
             </div>
+            <span class="estado-total-badge">Últimos 14 días</span>
           </div>
-        </div>
+          <div class="flex-1 w-full min-h-[120px] relative z-10">
+            <component :is="apexchart" type="area" :series="tendenciaSeries" :options="tendenciaOptions" height="140" />
+          </div>
+        </Card>
 
-        <!-- Donut chart CSS -->
-        <div v-if="!cargando" class="distrib-card rounded-2xl p-4 flex items-center justify-center gap-4 anim-slide-up" style="animation-delay:0.2s">
-          <div class="donut-chart relative z-10" :style="donutStyle">
-            <div class="donut-center">
-              <span class="donut-num">{{ stats.total }}</span>
-              <span class="donut-label">Total</span>
+        <!-- Tasa de aceptación radial bar -->
+        <Card v-if="cargando" class="distrib-card rounded-2xl p-4 flex flex-col">
+          <div class="shimmer-bar" style="width:120px; height:14px; margin-bottom:12px;"></div>
+          <div class="shimmer-bar w-full" style="height:120px; border-radius:50%;"></div>
+        </Card>
+        <Card v-else class="distrib-card rounded-2xl p-4 flex flex-col anim-slide-up" style="animation-delay:0.2s">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="chart-header-icon" style="background: linear-gradient(135deg,#dcfce7,#bbf7d0); color:#15966a;">
+              <component :is="TargetIcon" class="w-4 h-4" />
             </div>
+            <p class="text-sm font-bold" style="color:#1e2d55;">Tasa de aceptación</p>
           </div>
-          <div class="flex flex-col gap-2 relative z-10">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full" style="background:#fbbf24;"></span>
-              <span class="text-xs font-semibold" style="color:#d97706;">{{ Math.round(donutPercents[0]) }}%</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full" style="background:#22c55e;"></span>
-              <span class="text-xs font-semibold" style="color:#16a34a;">{{ Math.round(donutPercents[1]) }}%</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full" style="background:#f87171;"></span>
-              <span class="text-xs font-semibold" style="color:#dc2626;">{{ Math.round(donutPercents[2]) }}%</span>
-            </div>
+          <div class="flex-1 w-full flex items-center justify-center min-h-[120px] gauge-wrap">
+            <component :is="apexchart" type="radialBar" :series="tasaSeries" :options="tasaOptions" height="150" />
           </div>
-        </div>
+        </Card>
       </div>
 
-      <!-- ── Accesos rápidos + Flujo ── -->
-      <div class="operations-grid anim-slide-up" style="animation-delay:0.24s">
-        <section class="operations-card">
-          <div class="operations-glow"></div>
-          <div class="operations-heading">
-            <div>
-              <p class="panel-eyebrow">Navegación operativa</p>
-              <h3 class="panel-title">Accesos rápidos</h3>
-            </div>
-            <span class="operations-hint">Gestione sus remisiones desde un solo lugar</span>
-          </div>
+      <!-- ── Acciones + Solicitudes recientes ── -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 flex-1 min-h-0 animate-fade-in-up"
+        style="animation-duration: 0.4s; animation-delay: 0.24s; animation-fill-mode: both;">
 
-          <div class="quick-actions">
-            <button @click="abrirFormulario" class="quick-action quick-action-blue">
-              <div class="quick-action-icon">
-                <component :is="PlusIcon" />
-              </div>
-              <div class="quick-action-copy">
-                <strong>Nueva solicitud</strong>
-                <span>Registrar una remisión</span>
-              </div>
-              <component :is="ArrowRightIcon" class="quick-action-arrow" />
-            </button>
-
-            <button @click="irHistorial" class="quick-action quick-action-green">
-              <div class="quick-action-icon">
-                <component :is="ClipboardListIcon" />
-              </div>
-              <div class="quick-action-copy">
-                <strong>Historial</strong>
-                <span>{{ stats.total }} solicitudes registradas</span>
-              </div>
-              <component :is="ArrowRightIcon" class="quick-action-arrow" />
-            </button>
-
-            <button @click="cargar" class="quick-action quick-action-purple">
-              <div class="quick-action-icon">
-                <component :is="RefreshCwIcon" :class="{ 'animate-spin': cargando }" />
-              </div>
-              <div class="quick-action-copy">
-                <strong>Actualizar</strong>
-                <span>Sincronizar información</span>
-              </div>
-              <component :is="ArrowRightIcon" class="quick-action-arrow" />
-            </button>
-          </div>
-        </section>
-
-        <section class="flow-card">
-          <div class="flow-orbit flow-orbit-one"></div>
-          <div class="flow-orbit flow-orbit-two"></div>
-          <div class="flow-content">
-            <div class="flow-heading">
-              <div>
-                <p class="flow-eyebrow">Proceso asistencial</p>
-                <h3>Flujo de referencia</h3>
-              </div>
-              <span class="flow-live"><i></i> En línea</span>
-            </div>
-
-            <div class="flow-steps">
-              <div class="flow-step">
-                <div class="flow-step-icon">
-                  <component :is="ClipboardListIcon" />
-                </div>
-                <div>
-                  <strong>Recepción</strong>
-                  <span>Ingreso de solicitud</span>
-                </div>
-              </div>
-              <div class="flow-connector"><span></span></div>
-              <div class="flow-step">
-                <div class="flow-step-icon">
-                  <component :is="StethoscopeIcon" />
-                </div>
-                <div>
-                  <strong>Evaluación</strong>
-                  <span>Revisión clínica</span>
-                </div>
-              </div>
-              <div class="flow-connector"><span></span></div>
-              <div class="flow-step">
-                <div class="flow-step-icon flow-step-success">
-                  <component :is="CheckCircle2Icon" />
-                </div>
-                <div>
-                  <strong>Respuesta</strong>
-                  <span>Decisión asistencial</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <!-- ── Solicitudes recientes ── -->
-      <div class="flex-1 min-h-0 flex flex-col">
-        <div class="flex items-center justify-between mb-2 shrink-0">
-          <div class="flex items-center gap-2.5">
-            <div class="recent-header-icon">
-              <component :is="ClipboardListIcon" class="w-4 h-4" />
-            </div>
-            <h2 class="font-bold text-base" style="color:#1e2d55;">Solicitudes recientes</h2>
-            <span v-if="!cargando && solicitudes.length > 0" class="recent-count-badge">{{ solicitudes.length }}</span>
-          </div>
-          <button @click="cargar" class="recent-refresh-btn">
-            <component :is="RefreshCwIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': cargando }" />
-            <span>Actualizar</span>
+        <!-- Botones de acción -->
+        <div class="flex flex-col gap-3 shrink-0">
+          <button @click="abrirFormulario" class="action-btn action-btn-blue anim-slide-up" style="animation-delay:0.26s">
+            <div class="action-btn-icon"><component :is="PlusIcon" class="w-5 h-5" /></div>
+            <div class="action-btn-text"><strong>Nueva solicitud</strong><span>Registrar remisión</span></div>
+            <component :is="ArrowRightIcon" class="w-4 h-4 action-btn-arrow" />
+          </button>
+          <button @click="irHistorial" class="action-btn action-btn-green anim-slide-up" style="animation-delay:0.28s">
+            <div class="action-btn-icon"><component :is="ClipboardListIcon" class="w-5 h-5" /></div>
+            <div class="action-btn-text"><strong>Historial</strong><span>{{ stats.total }} registradas</span></div>
+            <component :is="ArrowRightIcon" class="w-4 h-4 action-btn-arrow" />
+          </button>
+          <button @click="cargar" class="action-btn action-btn-purple anim-slide-up" style="animation-delay:0.3s">
+            <div class="action-btn-icon"><component :is="RefreshCwIcon" :class="{ 'animate-spin': cargando }" class="w-5 h-5" /></div>
+            <div class="action-btn-text"><strong>Actualizar</strong><span>Sincronizar datos</span></div>
+            <component :is="ArrowRightIcon" class="w-4 h-4 action-btn-arrow" />
           </button>
         </div>
 
-        <div v-if="cargando" class="space-y-2">
-          <div v-for="i in 4" :key="i" class="skeleton-row rounded-xl px-4 py-3 flex items-center gap-3">
-            <div class="shimmer-box" style="width:36px; height:36px; border-radius:10px;"></div>
-            <div class="flex-1 space-y-1.5">
-              <div class="shimmer-bar" style="width:45%; height:12px;"></div>
-              <div class="shimmer-bar" style="width:70%; height:9px;"></div>
+        <!-- Solicitudes recientes -->
+        <Card class="recent-card lg:col-span-2 flex flex-col rounded-2xl p-4 min-h-0">
+          <div class="flex items-center justify-between mb-2 shrink-0">
+            <div class="flex items-center gap-2.5">
+              <div class="recent-header-icon">
+                <component :is="ClipboardListIcon" class="w-4 h-4" />
+              </div>
+              <CardTitle class="font-bold text-base" style="color:#1e2d55;">Solicitudes recientes</CardTitle>
+              <Badge v-if="!cargando && solicitudes.length > 0" variant="secondary">{{ solicitudes.length }}</Badge>
             </div>
-            <div class="shimmer-box" style="width:56px; height:20px; border-radius:999px;"></div>
+            <button @click="cargar" class="recent-refresh-btn">
+              <component :is="RefreshCwIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': cargando }" />
+              <span>Actualizar</span>
+            </button>
           </div>
-        </div>
 
-        <div v-else-if="solicitudes.length === 0" class="flex-1 flex flex-col items-center justify-center py-8 text-center">
-          <div class="empty-state-icon w-14 h-14 rounded-2xl flex items-center justify-center mb-4">
-            <component :is="ClipboardListIcon" class="w-7 h-7" />
+          <div v-if="cargando" class="space-y-2.5 flex-1">
+            <div v-for="i in 3" :key="i" class="skeleton-row rounded-xl px-4 py-3 flex items-center gap-3">
+              <div class="shimmer-box" style="width:36px; height:36px; border-radius:10px;"></div>
+              <div class="flex-1 space-y-1.5">
+                <div class="shimmer-bar" style="width:45%; height:12px;"></div>
+                <div class="shimmer-bar" style="width:70%; height:9px;"></div>
+              </div>
+              <div class="shimmer-box" style="width:56px; height:20px; border-radius:999px;"></div>
+            </div>
           </div>
-          <p class="font-semibold text-base mb-1" style="color:#0d2d5e;">Aún no hay solicitudes</p>
-          <p class="text-sm max-w-[280px]" style="color:#64748b;">Cree la primera remisión para iniciar el seguimiento.</p>
-          <button class="empty-state-action mt-4" @click="abrirFormulario"><component :is="PlusIcon" class="w-4 h-4" /> Crear primera solicitud</button>
-        </div>
 
-        <div v-else class="flex-1 overflow-y-auto space-y-2 pr-1">
-          <div
-            v-for="(sol, idx) in solicitudes.slice(0, 5)"
-            :key="sol.id"
-            class="med-row rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer transition-all anim-row-in"
-            :style="[
-          { borderLeftColor: sol.estado === 'pendiente' ? '#fbbf24' : sol.estado === 'aceptado' ? '#22c55e' : sol.estado === 'en_espera' ? '#3b82f6' : sol.estado === 'completado' ? '#6366f1' : '#f87171' },
-          { animationDelay: (idx * 0.06) + 's' }
-        ]"
-            @click="verDetalle(sol)"
-          >
-            <div class="med-icon w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-              :style="{ background: sol.estado === 'pendiente' ? '#fef3c7' : sol.estado === 'aceptado' ? '#dcfce7' : sol.estado === 'en_espera' ? '#dbeafe' : sol.estado === 'completado' ? '#e0e7ff' : '#fee2e2', color: sol.estado === 'pendiente' ? '#d97706' : sol.estado === 'aceptado' ? '#16a34a' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#dc2626' }">
-              {{ initialesPaciente(sol) }}
+          <div v-else-if="solicitudes.length === 0" class="flex-1 flex flex-col items-center justify-center py-8 text-center">
+            <div class="empty-state-icon w-14 h-14 rounded-2xl flex items-center justify-center mb-4">
+              <component :is="ClipboardListIcon" class="w-7 h-7" />
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-bold truncate" style="color:#1e2d55;">
-                {{ sol.primer_nombre }} {{ sol.primer_apellido }}
-              </p>
-              <p class="text-xs truncate mt-0.5" style="color:#8a9ab5;">
-                {{ sol.especialidad_requerida }} · {{ sol.eps }} · {{ tiempoRelativo(sol.created_at) }}
-              </p>
-            </div>
-            <svg class="w-16 h-6 shrink-0" viewBox="0 0 64 24" fill="none">
-              <path :d="sparklinePath(idx)" stroke-width="2" stroke-linecap="round" fill="none"
-                :stroke="sol.estado === 'pendiente' ? '#eab308' : sol.estado === 'aceptado' ? '#22c55e' : sol.estado === 'en_espera' ? '#3b82f6' : sol.estado === 'completado' ? '#6366f1' : '#f87171'" />
-            </svg>
-            <span class="text-xs font-bold px-2.5 py-1 rounded-full shrink-0"
-              :style="{
-                background: sol.estado === 'pendiente' ? '#fff3cd' : sol.estado === 'aceptado' ? '#d3f9d8' : sol.estado === 'en_espera' ? '#d0e3ff' : sol.estado === 'completado' ? '#e0e0ff' : '#ffe0e0',
-                color: sol.estado === 'pendiente' ? '#b96800' : sol.estado === 'aceptado' ? '#2f9e44' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#c92a2a',
-              }"
+            <p class="font-semibold text-base mb-1" style="color:#0d2d5e;">Aún no hay solicitudes</p>
+            <p class="text-sm max-w-[280px]" style="color:#64748b;">Cree la primera remisión para iniciar el seguimiento.</p>
+            <button class="empty-state-action mt-4" @click="abrirFormulario"><component :is="PlusIcon" class="w-4 h-4" /> Crear primera solicitud</button>
+          </div>
+
+          <div v-else class="flex-1 overflow-y-auto space-y-2 pr-1">
+            <div
+              v-for="(sol, idx) in solicitudes.slice(0, 4)"
+              :key="sol.id"
+              class="med-row rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer transition-all anim-row-in"
+              :style="[
+                { borderLeftColor: sol.estado === 'pendiente' ? '#fbbf24' : sol.estado === 'aceptado' ? '#22c55e' : sol.estado === 'en_espera' ? '#3b82f6' : sol.estado === 'completado' ? '#6366f1' : '#f87171' },
+                { animationDelay: (idx * 0.06) + 's' }
+              ]"
+              @click="verDetalle(sol)"
             >
-              {{ estadoLabel(sol.estado) }}
-            </span>
+              <div class="med-icon w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold"
+                :style="{ background: sol.estado === 'pendiente' ? '#fef3c7' : sol.estado === 'aceptado' ? '#dcfce7' : sol.estado === 'en_espera' ? '#dbeafe' : sol.estado === 'completado' ? '#e0e7ff' : '#fee2e2', color: sol.estado === 'pendiente' ? '#d97706' : sol.estado === 'aceptado' ? '#16a34a' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#dc2626' }">
+                {{ initialesPaciente(sol) }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold truncate" style="color:#1e2d55;">
+                  {{ sol.primer_nombre }} {{ sol.primer_apellido }}
+                </p>
+                <p class="text-xs truncate mt-0.5" style="color:#8a9ab5;">
+                  {{ sol.especialidad_requerida }} · {{ sol.eps }} · {{ tiempoRelativo(sol.created_at) }}
+                </p>
+              </div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-full shrink-0"
+                :style="{
+                  background: sol.estado === 'pendiente' ? '#fff3cd' : sol.estado === 'aceptado' ? '#d3f9d8' : sol.estado === 'en_espera' ? '#d0e3ff' : sol.estado === 'completado' ? '#e0e0ff' : '#ffe0e0',
+                  color: sol.estado === 'pendiente' ? '#b96800' : sol.estado === 'aceptado' ? '#2f9e44' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#c92a2a',
+                }"
+              >
+                {{ estadoLabel(sol.estado) }}
+              </span>
+            </div>
           </div>
-        </div>
+        </Card>
       </div>
 
     </div>
@@ -495,6 +401,7 @@ import {
   CheckCircle as CheckCircleIcon,
   XCircle as XCircleIcon,
   RefreshCw as RefreshCwIcon,
+  PieChart as PieChartIcon,
   ChevronRight as ChevronRightIcon,
   ArrowRight as ArrowRightIcon,
   Paperclip as PaperclipIcon,
@@ -504,11 +411,24 @@ import {
   User as UserIcon,
   UserCheck as UserCheckIcon,
   FileCheck as FileCheckIcon,
+  TrendingUp as TrendingUpIcon,
+  Activity as ActivityIcon,
+  Target as TargetIcon,
+  BarChart3 as BarChart3Icon,
 } from '@lucide/vue';
+import VueApexCharts from 'vue3-apexcharts';
 import http from '@/plugins/axios';
+import Card from '@/components/ui/card/Card.vue';
+import CardHeader from '@/components/ui/card/CardHeader.vue';
+import CardTitle from '@/components/ui/card/CardTitle.vue';
+import CardDescription from '@/components/ui/card/CardDescription.vue';
+import CardContent from '@/components/ui/card/CardContent.vue';
+import Badge from '@/components/ui/badge/Badge.vue';
 import { useClinicaAuthStore } from '@/stores/clinicaAuth';
 import { TIPOS_DOCUMENTO, EPS_LIST, ESPECIALIDADES, SERVICIOS } from '@/data/referencia';
 import { CIE10 } from '@/data/cie10';
+
+const apexchart = VueApexCharts;
 
 const clinicaAuth = useClinicaAuthStore();
 const router = useRouter();
@@ -602,32 +522,191 @@ const formSteps = [
 
 // ── Stat cards config ───────────────────────────────────────────────────────
 const statCards = computed(() => [
-  { label: 'Solicitudes totales', icon: ClipboardListIcon, color: '#2563c4', iconBg: '#dbe1ff', delta: stats.value.pendientes ? `${stats.value.pendientes} pend.` : 'sin pendientes', deltaBg: '#dbeafe', deltaColor: '#2563c4' },
-  { label: 'Pendientes', icon: ClockIcon, color: '#e67700', iconBg: '#fff3cd', delta: stats.value.pendientes ? 'En espera' : 'Al día', deltaBg: '#fef3c7', deltaColor: '#e67700' },
-  { label: 'Aceptadas', icon: CheckCircleIcon, color: '#15966a', iconBg: '#d3f9d8', delta: `${tasaAceptacion.value}% tasa`, deltaBg: '#dcfce7', deltaColor: '#15966a' },
-  { label: 'Negadas', icon: XCircleIcon, color: '#c92a2a', iconBg: '#ffe3e3', delta: stats.value.negadas ? 'Revisar' : 'Sin rechazos', deltaBg: '#fee2e2', deltaColor: '#c92a2a' },
+  {
+    label: 'Solicitudes totales',
+    value: String(displayStats.value[0]),
+    icon: ClipboardListIcon,
+    color: '#2563c4',
+    color2: '#60a5fa',
+    iconBg: '#dbe1ff',
+    delta: stats.value.pendientes ? `${stats.value.pendientes} pend.` : 'sin pendientes',
+    deltaBg: '#dbeafe',
+    deltaColor: '#2563c4',
+    percent: stats.value.total ? Math.round((stats.value.aceptadas / stats.value.total) * 100) : 0,
+  },
+  {
+    label: 'Pendientes',
+    value: String(displayStats.value[1]),
+    icon: ClockIcon,
+    color: '#e67700',
+    color2: '#fbbf24',
+    iconBg: '#fff3cd',
+    delta: stats.value.pendientes ? 'En espera' : 'Al día',
+    deltaBg: '#fef3c7',
+    deltaColor: '#e67700',
+    percent: stats.value.total ? Math.round((stats.value.pendientes / stats.value.total) * 100) : 0,
+  },
+  {
+    label: 'Aceptadas',
+    value: String(displayStats.value[2]),
+    icon: CheckCircleIcon,
+    color: '#15966a',
+    color2: '#4ade80',
+    iconBg: '#d3f9d8',
+    delta: `${tasaAceptacion.value}% tasa`,
+    deltaBg: '#dcfce7',
+    deltaColor: '#15966a',
+    percent: stats.value.total ? Math.round((stats.value.aceptadas / stats.value.total) * 100) : 0,
+  },
+  {
+    label: 'Negadas',
+    value: String(displayStats.value[3]),
+    icon: XCircleIcon,
+    color: '#c92a2a',
+    color2: '#f87171',
+    iconBg: '#ffe3e3',
+    delta: stats.value.negadas ? 'Revisar' : 'Sin rechazos',
+    deltaBg: '#fee2e2',
+    deltaColor: '#c92a2a',
+    percent: stats.value.total ? Math.round((stats.value.negadas / stats.value.total) * 100) : 0,
+  },
 ]);
 
-const donutPercents = computed(() => {
+const estadoBars = computed(() => {
   const total = Math.max(1, stats.value.total);
   return [
-    (stats.value.pendientes / total) * 100,
-    (stats.value.aceptadas / total) * 100,
-    (stats.value.negadas / total) * 100,
+    { label: 'Pendientes', value: stats.value.pendientes, color: '#f59e0b', color2: '#fbbf24', pct: Math.round((stats.value.pendientes / total) * 100) },
+    { label: 'Aceptadas', value: stats.value.aceptadas, color: '#10b981', color2: '#34d399', pct: Math.round((stats.value.aceptadas / total) * 100) },
+    { label: 'En espera', value: stats.value.enEspera, color: '#3b82f6', color2: '#60a5fa', pct: Math.round((stats.value.enEspera / total) * 100) },
+    { label: 'Negadas', value: stats.value.negadas, color: '#ef4444', color2: '#f87171', pct: Math.round((stats.value.negadas / total) * 100) },
   ];
 });
 
-const donutStyle = computed(() => {
-  const [p, a, n] = donutPercents.value;
-  return {
-    background: `conic-gradient(
-      #fbbf24 0% ${p}%,
-      #22c55e ${p}% ${p + a}%,
-      #f87171 ${p + a}% ${p + a + n}%,
-      #edf2f7 ${p + a + n}% 100%
-    )`,
-  };
+// ── Tendencia chart (area) ──────────────────────────────────────────────────
+const tendenciaSeries = computed(() => {
+  const dias = 14;
+  const conteo: Record<string, number> = {};
+  solicitudes.value.forEach(s => {
+    const fecha = new Date(s.created_at).toISOString().slice(0, 10);
+    conteo[fecha] = (conteo[fecha] ?? 0) + 1;
+  });
+  const datos: number[] = [];
+  for (let i = dias - 1; i >= 0; i--) {
+    const fecha = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    datos.push(conteo[fecha] ?? 0);
+  }
+  return [{ name: 'Solicitudes', data }];
 });
+
+const tendenciaOptions = computed(() => ({
+  chart: {
+    type: 'area' as const,
+    fontFamily: 'inherit',
+    toolbar: { show: false },
+    sparkline: { enabled: false },
+    animations: {
+      enabled: true,
+      easing: 'easeinout' as const,
+      speed: 800,
+      animateGradually: { enabled: true, delay: 150 },
+      dynamicAnimation: { enabled: true, speed: 350 },
+    },
+  },
+  colors: ['#2563c4'],
+  stroke: { curve: 'smooth' as const, width: 2.5 },
+  fill: {
+    type: 'gradient',
+    gradient: {
+      shadeIntensity: 1,
+      opacityFrom: 0.35,
+      opacityTo: 0.05,
+      stops: [0, 100],
+    },
+  },
+  dataLabels: { enabled: false },
+  grid: {
+    borderColor: '#f1f5f9',
+    strokeDashArray: 4,
+    padding: { top: 0, right: 8, bottom: 0, left: 8 },
+    yaxis: { lines: { show: false } },
+  },
+  xaxis: {
+    categories: Array.from({ length: 14 }, (_, i) => {
+      const d = new Date(Date.now() - (13 - i) * 86400000);
+      return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
+    }),
+    labels: { style: { fontSize: '9px', colors: '#94a3b8' }, rotate: 0 },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  },
+  yaxis: { show: false },
+  tooltip: {
+    y: { formatter: (val: number) => `${val} solicitudes` },
+    style: { fontSize: '11px', fontFamily: 'inherit' },
+    theme: 'light' as const,
+  },
+  markers: {
+    size: 0,
+    hover: { size: 5, sizeOffset: 3 },
+  },
+}));
+
+// ── Tasa de aceptación (radial bar) ─────────────────────────────────────────
+const tasaSeries = computed(() => [tasaAceptacion.value]);
+
+const tasaOptions = computed(() => ({
+  chart: {
+    type: 'radialBar' as const,
+    fontFamily: 'inherit',
+    toolbar: { show: false },
+    animations: {
+      enabled: true,
+      easing: 'easeinout' as const,
+      speed: 900,
+      animateGradually: { enabled: true, delay: 200 },
+      dynamicAnimation: { enabled: true, speed: 400 },
+    },
+  },
+  plotOptions: {
+    radialBar: {
+      startAngle: -135,
+      endAngle: 135,
+      radius: '62%' as const,
+      hollow: { size: '65%' as const },
+      track: {
+        background: '#eef2f7',
+        strokeWidth: '100%' as const,
+        margin: 2,
+      },
+      dataLabels: {
+        name: { show: false },
+        value: {
+          show: true,
+          fontSize: '22px',
+          fontWeight: 800,
+          color: '#1e2d55',
+          formatter: (val: number) => `${Math.round(val)}%`,
+          offsetY: 5,
+        },
+      },
+    },
+  },
+  fill: {
+    type: 'gradient',
+    gradient: {
+      shade: 'light' as const,
+      type: 'horizontal' as const,
+      shadeIntensity: 0.4,
+      gradientToColors: ['#60a5fa'],
+      inverseColors: false,
+      opacityFrom: 1,
+      opacityTo: 1,
+      stops: [0, 100],
+    },
+  },
+  stroke: { lineCap: 'round' as const },
+  labels: ['Tasa de aceptación'],
+}));
 
 // Contador animado
 const displayStats = ref([0, 0, 0, 0]);
@@ -2055,6 +2134,21 @@ onUnmounted(() => {
   border-radius: 50%;
   background: radial-gradient(circle, rgba(126, 179, 255, .12), transparent 70%);
   pointer-events: none;
+  animation: heroGlowFloat 8s ease-in-out infinite;
+}
+@keyframes heroGlowFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  50% { transform: translate(-12px, 8px) scale(1.1); opacity: 0.7; }
+}
+.hero-glow-2 {
+  position: absolute;
+  bottom: -60px; left: 30%;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(74,222,128,0.08), transparent 70%);
+  pointer-events: none;
+  animation: heroGlowFloat 10s ease-in-out infinite;
+  animation-delay: 3s;
 }
 
 .hero-logo {
@@ -2085,6 +2179,10 @@ onUnmounted(() => {
   font-weight: 800;
   color: #fff;
   line-height: 1;
+  transition: transform .3s ease;
+}
+.hero-mini-stats:hover .hero-mini-stat-num {
+  transform: scale(1.1);
 }
 .hero-mini-stat-label {
   font-size: 9px;
@@ -2138,109 +2236,142 @@ onUnmounted(() => {
 }
 .hero-link:active { transform: translateY(0); }
 
-/* ── Stat cards ── */
+/* ── Stat cards (dashboard interno style) ── */
 .stat-card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, color-mix(in srgb, var(--accent) 12%, white) 100%);
-  border: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 18%, transparent), 0 0 0 1px rgba(255,255,255,0.5) inset;
+  background: linear-gradient(145deg, #ffffff 0%, color-mix(in srgb, var(--accent) 6%, #ffffff) 100%);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, #e2e8f0);
+  border-top: 3px solid var(--accent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 15%, transparent), 0 1px 0 rgba(255,255,255,0.8) inset;
   transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1), border-color .3s ease;
   position: relative;
   overflow: hidden;
 }
-.stat-card::before {
-  content: '';
+.stat-card-mesh {
   position: absolute;
-  top: 0; left: 0; width: 5px; height: 100%;
-  background: var(--accent);
-  opacity: .9;
+  inset: 0;
+  background: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%);
+  pointer-events: none;
 }
 .stat-card-glow {
-  content: '';
   position: absolute;
-  top: -30px; right: -30px;
-  width: 90px; height: 90px;
+  top: -50%; right: -30%;
+  width: 140px; height: 140px;
   border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-2) 55%, transparent), transparent 70%);
   filter: blur(20px);
+  opacity: .8;
+  transition: opacity .3s ease, transform .5s ease;
   pointer-events: none;
 }
 .stat-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 20px 44px color-mix(in srgb, var(--accent) 24%, transparent);
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 20px 40px color-mix(in srgb, var(--accent) 30%, transparent);
   border-color: var(--accent);
 }
-.stat-icon-wrap {
-  width: 42px; height: 42px;
-  border-radius: 12px;
+.stat-card:hover .stat-card-glow {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+/* Circular progress ring */
+.stat-ring {
+  position: relative;
+  width: 54px; height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  z-index: 10;
+}
+.stat-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  transform: rotate(-90deg);
+}
+.stat-ring-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 14%, #eef2f7);
+  stroke-width: 5;
+}
+.stat-ring-fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 169.6;
+  stroke-dashoffset: 169.6;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 55%, transparent));
+  transition: stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1);
+}
+.stat-ring-icon {
+  position: relative;
+  z-index: 1;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--icon-bg);
   color: var(--icon-color);
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--icon-color) 25%, transparent);
-  transition: transform .25s ease, box-shadow .25s ease;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--icon-color) 25%, transparent);
+  transition: transform .3s cubic-bezier(.22,1,.36,1);
 }
-.stat-card:hover .stat-icon-wrap {
-  transform: scale(1.12) rotate(-5deg);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--icon-color) 40%, transparent);
+.stat-card:hover .stat-ring-icon {
+  transform: scale(1.12) rotate(-6deg);
 }
+
 .stat-delta-badge {
-  font-size: 9px;
+  display: inline-block;
+  font-size: 9.5px;
   font-weight: 800;
   padding: 3px 9px;
   border-radius: 999px;
   white-space: nowrap;
   background: var(--delta-bg);
   color: var(--delta-color);
-  box-shadow: 0 2px 6px rgba(0,0,0,.06);
+  margin-top: 4px;
+  position: relative;
+  z-index: 10;
 }
 .stat-value {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 900;
-  line-height: 1;
-  letter-spacing: -.02em;
+  line-height: 1.1;
+  letter-spacing: -.03em;
   color: #1e293b;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.8);
+  position: relative;
+  z-index: 10;
 }
 .stat-label {
-  font-size: 10px;
-  font-weight: 800;
-  color: #475569;
-  margin-top: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748b;
+  margin-top: 1px;
   text-transform: uppercase;
   letter-spacing: .04em;
-}
-.stat-progress-track {
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.6);
+  position: relative;
+  z-index: 10;
+  white-space: nowrap;
   overflow: hidden;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,.08);
-}
-.stat-progress-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, white));
-  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
-  transition: width .8s cubic-bezier(.22,1,.36,1);
+  text-overflow: ellipsis;
 }
 
-/* ── Distribución + Donut ── */
+/* ── Distribución + charts ── */
 .distrib-card {
-  background: rgba(255,255,255,0.92);
-  border: 1px solid rgba(212, 222, 234, 0.6);
-  box-shadow: 0 4px 16px rgba(22, 70, 142, .08);
-  border-radius: 14px;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafe 100%) !important;
+  border: 1px solid #dbe4f0 !important;
+  border-top: 3px solid #2563c4 !important;
+  box-shadow: 0 8px 24px rgba(22,70,142,.10) !important;
   position: relative;
   overflow: hidden;
   transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1);
 }
 .distrib-card-glow {
-  position: absolute; top: -40px; right: -40px; width: 140px; height: 140px;
+  position: absolute; top: -40px; right: -40px; width: 160px; height: 160px;
   border-radius: 50%; pointer-events: none;
-  background: radial-gradient(circle, rgba(126,179,255,0.12), transparent 70%);
+  background: radial-gradient(circle, rgba(126,179,255,0.20), transparent 70%);
 }
-.distrib-card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(22,70,142,.14); }
+.distrib-card:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(22,70,142,.16) !important; }
 .distrib-segment { position: relative; cursor: pointer; transition: opacity .2s ease; }
 .distrib-segment:hover { opacity: .85; }
 .distrib-segment::after {
@@ -2267,6 +2398,92 @@ onUnmounted(() => {
 .donut-num { font-size: 16px; font-weight: 800; color: #1e2d55; line-height: 1; }
 .donut-label { font-size: 8px; color: #8a9ab5; margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
 
+/* ── Chart header icon ── */
+.chart-header-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Estado total badge ── */
+.estado-total-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e0ecff;
+  color: #16468e;
+}
+
+/* ── Estado bars (reemplazo del donut) ── */
+.gauge-wrap {
+  min-height: 120px;
+  position: relative;
+  z-index: 1;
+}
+.estado-bar-wrap {
+  position: relative;
+  transition: transform .25s ease;
+}
+.estado-bar-wrap:hover {
+  transform: translateX(3px);
+}
+.estado-bar-dot {
+  width: 8px; height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.9);
+  animation: barDotPulse 2.5s ease-in-out infinite;
+}
+@keyframes barDotPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(255,255,255,0.9); }
+  50% { box-shadow: 0 0 0 5px rgba(255,255,255,0.6); }
+}
+.estado-bar-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+.estado-bar-value {
+  font-size: 13px;
+  font-weight: 800;
+  transition: transform .25s ease;
+}
+.estado-bar-wrap:hover .estado-bar-value {
+  transform: scale(1.15);
+}
+.estado-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+}
+.estado-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 1s cubic-bezier(.22,1,.36,1);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  position: relative;
+  overflow: hidden;
+}
+.estado-bar-shine {
+  position: absolute;
+  top: 0; left: -40%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: barShine 2.5s ease-in-out infinite;
+}
+@keyframes barShine {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
 /* ── Operations / Accesos rápidos ── */
 .operations-grid {
   display: grid;
@@ -2278,13 +2495,18 @@ onUnmounted(() => {
 .flow-card {
   position: relative;
   overflow: hidden;
-  border-radius: 1rem;
 }
 .operations-card {
   padding: 1rem;
-  background: rgba(255, 255, 255, .92);
-  border: 1px solid rgba(212, 222, 234, .65);
-  box-shadow: 0 4px 16px rgba(22, 70, 142, .08);
+  background: linear-gradient(145deg, #ffffff 0%, #f5f8ff 100%) !important;
+  border: 1px solid #dbe4f0 !important;
+  border-top: 3px solid #0D2D6B !important;
+  box-shadow: 0 6px 20px rgba(22,70,142,.08) !important;
+  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1);
+}
+.operations-card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px rgba(22, 70, 142, .14) !important;
 }
 .operations-card::before {
   content: '';
@@ -2302,6 +2524,7 @@ onUnmounted(() => {
   border-radius: 50%;
   background: radial-gradient(circle, rgba(126, 179, 255, .16), transparent 70%);
   pointer-events: none;
+  animation: orbitFloat 7s ease-in-out infinite;
 }
 .operations-heading,
 .flow-heading {
@@ -2333,6 +2556,72 @@ onUnmounted(() => {
   font-weight: 500;
   white-space: nowrap;
 }
+
+/* ── Action buttons (simplified) ── */
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafe 100%);
+  cursor: pointer;
+  transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s ease, border-color .25s ease;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+.action-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--btn-color, #2563c4), var(--btn-color2, #60a5fa));
+}
+.action-btn-icon {
+  width: 44px; height: 44px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--btn-color, #2563c4), var(--btn-color2, #60a5fa));
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--btn-color, #2563c4) 35%, transparent);
+  flex-shrink: 0;
+}
+.action-btn-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.action-btn-text strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1e2d55;
+}
+.action-btn-text span {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+.action-btn-arrow {
+  color: #cbd5e1;
+  transition: transform .2s ease, color .2s ease;
+}
+.action-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--btn-color, #2563c4) 18%, transparent);
+  border-color: var(--btn-color, #2563c4);
+}
+.action-btn:hover .action-btn-arrow {
+  color: var(--btn-color, #2563c4);
+  transform: translateX(4px);
+}
+.action-btn-blue { --btn-color: #2563c4; --btn-color2: #60a5fa; }
+.action-btn-green { --btn-color: #15966a; --btn-color2: #4ade80; }
+.action-btn-purple { --btn-color: #7048e8; --btn-color2: #c4b5fd; }
+
 .quick-actions {
   position: relative;
   z-index: 1;
@@ -2425,9 +2714,15 @@ onUnmounted(() => {
 }
 .flow-card {
   padding: 1rem;
-  background: rgba(255,255,255,0.92);
-  border: 1px solid rgba(212, 222, 234, 0.6);
-  box-shadow: 0 4px 16px rgba(22, 70, 142, .08);
+  background: linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%) !important;
+  border: 1px solid #d1e7db !important;
+  border-top: 3px solid #15966a !important;
+  box-shadow: 0 6px 20px rgba(22,70,142,.08) !important;
+  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1);
+}
+.flow-card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px rgba(22, 70, 142, .14) !important;
 }
 .flow-card::before {
   content: '';
@@ -2440,6 +2735,7 @@ onUnmounted(() => {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
+  animation: orbitFloat 6s ease-in-out infinite;
 }
 .flow-orbit-one {
   top: -60px;
@@ -2447,6 +2743,7 @@ onUnmounted(() => {
   width: 140px;
   height: 140px;
   background: radial-gradient(circle, rgba(74,222,128,.10), transparent 70%);
+  animation-delay: 0s;
 }
 .flow-orbit-two {
   right: 30px;
@@ -2454,6 +2751,11 @@ onUnmounted(() => {
   width: 100px;
   height: 100px;
   background: radial-gradient(circle, rgba(126,179,255,.08), transparent 70%);
+  animation-delay: 2s;
+}
+@keyframes orbitFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  50% { transform: translate(-8px, 6px) scale(1.08); opacity: 0.7; }
 }
 .flow-content { position: relative; z-index: 1; }
 .flow-eyebrow {
@@ -2628,9 +2930,15 @@ onUnmounted(() => {
 .anim-fade-down  { animation: fadeDown  0.5s cubic-bezier(.22,1,.36,1) both; }
 
 /* ── Header solicitudes recientes ── */
+.recent-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafe 100%) !important;
+  border: 1px solid #dbe4f0 !important;
+  border-top: 3px solid #4f46e5 !important;
+  box-shadow: 0 8px 24px rgba(22,70,142,.10) !important;
+}
 .recent-header-icon {
-  width: 30px; height: 30px;
-  border-radius: 8px;
+  width: 34px; height: 34px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #0D2D6B, #16468E);
   color: #fff;
   display: flex; align-items: center; justify-content: center;
@@ -2676,6 +2984,8 @@ onUnmounted(() => {
 .anim-slide-up   { animation: slideUp   0.5s cubic-bezier(.22,1,.36,1) both; }
 .anim-fade-left  { animation: fadeLeft  0.5s cubic-bezier(.22,1,.36,1) both; }
 .anim-row-in     { animation: rowIn     0.4s cubic-bezier(.22,1,.36,1) both; }
+.animate-fade-in-down { animation: fadeDown 0.5s cubic-bezier(.22,1,.36,1) both; }
+.animate-fade-in-up   { animation: slideUp 0.5s cubic-bezier(.22,1,.36,1) both; }
 
 @keyframes fadeDown  { from { opacity:0; transform:translateY(-18px); } to { opacity:1; transform:none; } }
 @keyframes slideUp   { from { opacity:0; transform:translateY(20px);  } to { opacity:1; transform:none; } }
