@@ -128,27 +128,27 @@
                 </td>
                 <td class="sol-td">
                   <div class="sol-table-actions">
-                    <el-tooltip content="Ver detalle" placement="top">
+                    <el-tooltip :key="`ver-${s.id}`" content="Ver detalle" placement="top" :popper-options="{ strategy: 'fixed' }">
                       <el-button circle size="small" @click="verDetalle(s)">
                         <component :is="EyeIcon" class="w-3.5 h-3.5" />
                       </el-button>
                     </el-tooltip>
-                    <el-tooltip v-if="s.estado === 'pendiente'" content="Aceptar" placement="top">
+                    <el-tooltip v-if="s.estado === 'pendiente'" :key="`aceptar-${s.id}`" content="Aceptar" placement="top" :popper-options="{ strategy: 'fixed' }">
                       <el-button type="success" circle size="small" @click="abrirAceptar(s)">
                         <component :is="CheckIcon" class="w-3.5 h-3.5" />
                       </el-button>
                     </el-tooltip>
-                    <el-tooltip v-if="s.estado === 'aceptado'" content="Marcar en espera" placement="top">
+                    <el-tooltip v-if="s.estado === 'aceptado'" :key="`espera-${s.id}`" content="Marcar en espera" placement="top" :popper-options="{ strategy: 'fixed' }">
                       <el-button type="primary" circle size="small" @click="marcarEnEspera(s)">
                         <component :is="ClockIcon" class="w-3.5 h-3.5" />
                       </el-button>
                     </el-tooltip>
-                    <el-tooltip v-if="s.estado === 'en_espera'" content="Completar" placement="top">
+                    <el-tooltip v-if="s.estado === 'en_espera'" :key="`completar-${s.id}`" content="Completar" placement="top" :popper-options="{ strategy: 'fixed' }">
                       <el-button type="primary" circle size="small" @click="marcarCompletado(s)">
                         <component :is="CheckCircleIcon" class="w-3.5 h-3.5" />
                       </el-button>
                     </el-tooltip>
-                    <el-tooltip v-if="s.estado !== 'negado' && s.estado !== 'completado'" content="Negar" placement="top">
+                    <el-tooltip v-if="s.estado !== 'negado' && s.estado !== 'completado'" :key="`negar-${s.id}`" content="Negar" placement="top" :popper-options="{ strategy: 'fixed' }">
                       <el-button type="danger" circle size="small" @click="abrirNegar(s)">
                         <component :is="XIcon" class="w-3.5 h-3.5" />
                       </el-button>
@@ -922,11 +922,10 @@ onMounted(cargar);
   transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s ease, filter .2s ease;
 }
 .sol-table-actions .el-button:hover {
-  transform: translateY(-2px) scale(1.1);
   filter: brightness(1.08);
 }
 .sol-table-actions .el-button:active {
-  transform: translateY(0) scale(.98);
+  filter: brightness(0.95);
 }
 .sol-table-actions .el-button--success:hover {
   box-shadow: 0 6px 16px rgba(22,163,74,.30);

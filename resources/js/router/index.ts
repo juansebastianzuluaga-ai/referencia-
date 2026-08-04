@@ -91,11 +91,6 @@ const router = createRouter({
           component: () => import('@/views/DashboardView.vue'),
         },
         {
-          path: 'analitica',
-          name: 'analytics',
-          component: () => import('@/views/AnalyticsView.vue'),
-        },
-        {
           path: 'usuarios',
           name: 'users',
           component: () => import('@/views/users/UsersView.vue'),

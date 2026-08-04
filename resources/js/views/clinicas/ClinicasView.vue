@@ -152,7 +152,7 @@
     </div>
 
     <!-- Modal: Detalle -->
-    <BaseModal v-model="modalDetalle" width="620px" class="detalle-clinica-dialog" :show-close="true" align-center :title="'Detalle de clínica'" :subtitle="clinicaSeleccionada ? clinicaSeleccionada.nit + ' · ' + clinicaSeleccionada.nombre : ''">
+    <BaseModal v-model="modalDetalle" width="620px" class="detalle-clinica-dialog" align-center :title="'Detalle de clínica'" :subtitle="clinicaSeleccionada ? clinicaSeleccionada.nit + ' · ' + clinicaSeleccionada.nombre : ''">
       <template v-if="clinicaSeleccionada">
         <div class="detalle-clinica-content">
           <!-- Header azul -->

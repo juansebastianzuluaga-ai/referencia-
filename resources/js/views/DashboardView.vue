@@ -168,11 +168,11 @@
           <div class="flow-heading">
             <div class="flex items-center gap-2">
               <div class="gauge-header-icon">
-                <component :is="TargetIcon" class="w-3.5 h-3.5" />
+                <component :is="ClipboardListIcon" class="w-3.5 h-3.5" />
               </div>
               <div>
-                <p class="flow-eyebrow">Efectividad</p>
-                <h3>Tasa de aceptación</h3>
+                <p class="flow-eyebrow">Recientes</p>
+                <h3>Últimas 5 referencias</h3>
               </div>
             </div>
             <span class="flow-live"><i></i> En línea</span>
@@ -180,13 +180,18 @@
 
           <div class="gauge-wrap flex-1">
             <apexchart
-              type="radialBar"
+              v-if="ultimasRefSeries[0]?.data?.length"
+              type="bar"
               height="100%"
-              :options="tasaAceptacionOptions"
-              :series="[stats.tasa_aceptacion]"
+              :options="ultimasRefOptions"
+              :series="ultimasRefSeries"
             />
+            <div v-else class="specialties-empty">
+              <component :is="ClipboardListIcon" class="w-6 h-6" />
+              <span>Sin solicitudes</span>
+            </div>
           </div>
-          <p class="gauge-caption">De las solicitudes resueltas fueron aceptadas</p>
+          <p class="gauge-caption">Click en una barra para ver solicitudes de referencia</p>
         </div>
       </section>
     </div>
@@ -196,6 +201,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import {
   ArrowRight as ArrowRightIcon,
   CalendarDays as CalendarDaysIcon,
@@ -222,6 +228,8 @@ import {
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 
+const router = useRouter();
+
 const today = new Intl.DateTimeFormat('es-CO', {
   weekday: 'long',
   day: 'numeric',
@@ -240,7 +248,7 @@ const stats = ref({
   clinicas: { total: 0, activas: 0, pendientes: 0 },
   usuarios: { total: 0, activos: 0 },
   solicitudes_recientes: [] as Array<{
-    id: number; paciente: string; estado: string; especialidad: string; clinica: string | null; created_at: string | null;
+    id: number; paciente: string; nombre_completo: string; tipo_documento: string; numero_documento: string; telefono_contacto: string; estado: string; especialidad: string; clinica: string | null; created_at: string | null;
   }>,
   filtros: { especialidades: [] as string[], eps: [] as string[] },
   tendencia: [] as Array<{ fecha: string; total: number }>,
@@ -598,50 +606,166 @@ const topEspecialidadesOptions = computed(() => ({
   legend: { show: false },
 }));
 
-const tasaAceptacionOptions = computed(() => ({
+// ── Últimas 5 referencias (bar chart horizontal) ───────────────────────────
+const estadoColorMap: Record<string, string> = {
+  pendiente: '#f59e0b',
+  aceptado: '#22c55e',
+  en_espera: '#3b82f6',
+  completado: '#6366f1',
+  negado: '#ef4444',
+};
+
+const estadoGradientMap: Record<string, string[]> = {
+  pendiente: ['#fbbf24', '#f59e0b'],
+  aceptado: ['#34d399', '#22c55e'],
+  en_espera: ['#60a5fa', '#3b82f6'],
+  completado: ['#818cf8', '#6366f1'],
+  negado: ['#f87171', '#ef4444'],
+};
+
+function estadoLabel(estado: string): string {
+  return { pendiente: 'Pendiente', aceptado: 'Aceptada', en_espera: 'En espera', completado: 'Completada', negado: 'Negada' }[estado] ?? estado;
+}
+
+function estadoLabelShort(estado: string): string {
+  return { pendiente: 'Pend', aceptado: 'Acept', en_espera: 'Espera', completado: 'Compl', negado: 'Negada' }[estado] ?? estado;
+}
+
+const ultimas5Ref = computed(() => stats.value.solicitudes_recientes.slice(0, 5));
+
+const ultimasRefSeries = computed(() => [{
+  name: 'Referencias',
+  data: ultimas5Ref.value.map(() => 1),
+}]);
+
+const ultimasRefOptions = computed(() => ({
   chart: {
-    type: 'radialBar' as const,
+    type: 'bar' as const,
     fontFamily: 'inherit',
+    toolbar: { show: false },
     animations: {
       enabled: true,
       easing: 'easeinout' as const,
-      speed: 900,
-      dynamicAnimation: { enabled: true, speed: 500 },
+      speed: 800,
+      animateGradually: { enabled: true, delay: 60 },
+      dynamicAnimation: { enabled: true, speed: 350 },
+    },
+    events: {
+      click: () => { router.push('/solicitudes-referencia'); },
+    },
+    dropShadow: {
+      enabled: true,
+      top: 2,
+      left: 0,
+      blur: 6,
+      opacity: 0.12,
     },
   },
   plotOptions: {
-    radialBar: {
-      startAngle: -130,
-      endAngle: 130,
-      hollow: { size: '55%' },
-      track: {
-        background: '#eef2f7',
-        strokeWidth: '100%',
-      },
-      dataLabels: {
-        name: { show: false },
-        value: {
-          fontSize: '30px',
-          fontWeight: 900,
-          color: '#15966a',
-          offsetY: 10,
-          formatter: (val: number) => `${val}%`,
-        },
-      },
+    bar: {
+      horizontal: true,
+      barHeight: '68%',
+      borderRadius: 10,
+      borderRadiusApplication: 'end' as const,
+      distributed: true,
     },
   },
   fill: {
-    type: 'gradient',
-    gradient: {
-      shade: 'light',
-      type: 'horizontal',
-      gradientToColors: ['#4ade80'],
-      stops: [0, 100],
+    type: 'solid',
+    opacity: 1,
+  },
+  colors: ultimas5Ref.value.map(s => estadoColorMap[s.estado] ?? '#94a3b8'),
+  stroke: {
+    show: true,
+    width: 0,
+  },
+  dataLabels: {
+    enabled: true,
+    textAnchor: 'start' as const,
+    offsetX: 14,
+    style: { fontSize: '10px', fontWeight: 700, colors: ['#fff'] },
+    formatter: (_val: number, opts: any) => {
+      const s = ultimas5Ref.value[opts.dataPointIndex];
+      if (!s) return '';
+      return estadoLabelShort(s.estado);
+    },
+    dropShadow: { enabled: false },
+  },
+  xaxis: {
+    categories: ultimas5Ref.value.map(s => s.paciente),
+    labels: { show: false },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  },
+  yaxis: {
+    show: true,
+    labels: {
+      show: true,
+      align: 'right' as const,
+      minWidth: 0,
+      maxWidth: 160,
+      style: {
+        fontSize: '11px',
+        fontWeight: 600,
+        colors: ['#334155'],
+      },
+      formatter: (_val: number, index: number) => {
+        const s = ultimas5Ref.value[index];
+        if (!s) return '';
+        const nombre = s.paciente;
+        return nombre.length > 18 ? nombre.slice(0, 18) + '…' : nombre;
+      },
+    },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  },
+  grid: { show: false, padding: { left: 0, right: 0, top: -6, bottom: -6 } },
+  legend: { show: false },
+  tooltip: {
+    enabled: true,
+    custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
+      const s = ultimas5Ref.value[dataPointIndex];
+      if (!s) return '';
+      const nombre = s.nombre_completo || s.paciente;
+      const doc = `${s.tipo_documento ?? ''} ${s.numero_documento ?? ''}`.trim() || '—';
+      const tel = s.telefono_contacto || '—';
+      const estado = estadoLabel(s.estado);
+      const estadoShort = estadoLabelShort(s.estado);
+      const color = estadoColorMap[s.estado] ?? '#94a3b8';
+      const grad = estadoGradientMap[s.estado] ?? ['#94a3b8', '#94a3b8'];
+      return `
+        <div style="padding:0; border-radius:12px; font-family:inherit; min-width:230px; overflow:hidden; box-shadow:0 8px 28px rgba(0,0,0,0.16); border:1px solid #e2e8f0; background:#fff;">
+          <div style="background:linear-gradient(135deg, ${grad[0]}, ${grad[1]}); padding:10px 14px; display:flex; align-items:center; gap:8px;">
+            <div style="width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,0.22); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <p style="font-size:12px; font-weight:800; color:#fff; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${nombre}</p>
+              <p style="font-size:9px; font-weight:600; color:rgba(255,255,255,0.75); margin:2px 0 0; text-transform:uppercase; letter-spacing:0.05em;">${estadoShort}</p>
+            </div>
+          </div>
+          <div style="padding:10px 14px;">
+            <div style="display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #f1f5f9;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect width="18" height="14" x="3" y="5" rx="2"/><path d="M3 10h18"/></svg>
+              <span style="font-size:11px; color:#64748b;"><strong style="color:#475569;">Doc:</strong> ${doc}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #f1f5f9;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              <span style="font-size:11px; color:#64748b;"><strong style="color:#475569;">Tel:</strong> ${tel}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding:5px 0;">
+              <div style="width:13px; height:13px; border-radius:50%; background:${color}; flex-shrink:0; box-shadow:0 0 0 3px ${color}25;"></div>
+              <span style="font-size:11px; color:#64748b;"><strong style="color:#475569;">Estado:</strong> <span style="color:${color}; font-weight:700;">${estado}</span></span>
+            </div>
+          </div>
+        </div>
+      `;
     },
   },
-  stroke: { lineCap: 'round' as const },
-  colors: ['#15966a'],
-  labels: ['Tasa'],
+  states: {
+    hover: { filter: { type: 'darken' as const, value: 0.88 } },
+    active: { filter: { type: 'darken' as const, value: 0.82 } },
+  },
 }));
 
 const services = computed(() => {

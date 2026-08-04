@@ -45,13 +45,17 @@ class DashboardController extends BaseController
         $usuariosActivos = User::where('is_active', true)->count();
 
         $solicitudesRecientes = (clone $query)->with('clinica:id,nombre')
-            ->select('id', 'clinica_id', 'primer_nombre', 'primer_apellido', 'estado', 'especialidad_requerida', 'eps', 'created_at')
+            ->select('id', 'clinica_id', 'tipo_documento', 'numero_documento', 'primer_nombre', 'segundo_nombre', 'primer_apellido', 'segundo_apellido', 'telefono_contacto', 'estado', 'especialidad_requerida', 'eps', 'created_at')
             ->latest()
             ->limit(8)
             ->get()
             ->map(fn ($s) => [
                 'id' => $s->id,
                 'paciente' => trim("{$s->primer_nombre} {$s->primer_apellido}"),
+                'nombre_completo' => trim("{$s->primer_nombre} {$s->segundo_nombre} {$s->primer_apellido} {$s->segundo_apellido}"),
+                'tipo_documento' => $s->tipo_documento,
+                'numero_documento' => $s->numero_documento,
+                'telefono_contacto' => $s->telefono_contacto,
                 'estado' => $s->estado,
                 'especialidad' => $s->especialidad_requerida,
                 'eps' => $s->eps,

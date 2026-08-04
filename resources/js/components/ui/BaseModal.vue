@@ -1,5 +1,6 @@
 <template>
   <el-dialog
+    v-bind="$attrs"
     :model-value="modelValue"
     @update:model-value="(val: boolean) => emit('update:modelValue', val)"
     :width="width"
@@ -62,6 +63,8 @@
 <script setup lang="ts">
 import { X as XIcon, Save as SaveIcon, type LucideIcon } from '@lucide/vue';
 
+defineOptions({ inheritAttrs: false });
+
 withDefaults(defineProps<{
   modelValue: boolean;
   title: string;
@@ -77,6 +80,8 @@ withDefaults(defineProps<{
   confirmIcon?: LucideIcon;
   destroyOnClose?: boolean;
   closeOnClickModal?: boolean;
+  /** Ignored: BaseModal always renders its own close button in the header. Declared to prevent fallthrough to el-dialog. */
+  showClose?: boolean;
 }>(), {
   subtitle: undefined,
   icon: undefined,
