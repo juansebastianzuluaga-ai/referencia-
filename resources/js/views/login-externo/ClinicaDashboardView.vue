@@ -5,11 +5,13 @@
     <div class="flex-1 flex flex-col gap-3 p-4 sm:p-5 min-w-0 overflow-hidden">
 
       <!-- ── Hero ── -->
-      <div class="hero-card rounded-2xl p-4 sm:p-5 flex items-center gap-4 relative overflow-hidden shrink-0 animate-fade-in-down"
+      <div class="hero-card rounded-2xl p-5 sm:p-6 flex items-center gap-4 relative overflow-hidden shrink-0 animate-fade-in-down"
         style="animation-duration: 0.4s; animation-fill-mode: both;">
         <div class="hero-glow"></div>
         <div class="hero-glow-2"></div>
         <div class="hero-pattern"></div>
+        <div class="hero-bubble hero-bubble-1"></div>
+        <div class="hero-bubble hero-bubble-2"></div>
         <div class="flex items-center gap-4 z-10 shrink-0">
           <div class="hero-logo">
             <component :is="ClipboardListIcon" class="w-7 h-7" />
@@ -18,14 +20,14 @@
         <div class="flex-1 min-w-0 z-10">
           <div class="flex items-center gap-2 mb-1">
             <span class="hero-live-dot"></span>
-            <p class="text-xs font-semibold uppercase tracking-[0.12em]" style="color:rgba(255,255,255,0.6);">Sistema de referencia · En línea</p>
+            <p class="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.12em]" style="color:rgba(255,255,255,0.6);">Sistema de referencia · En línea</p>
           </div>
-          <h1 class="text-lg sm:text-xl font-bold leading-tight text-white">
+          <h1 class="text-lg sm:text-2xl font-bold leading-tight text-white tracking-tight">
             {{ saludoTexto }}, <span class="clinic-name font-extrabold">{{ clinicaAuth.clinica?.nombre }}</span>
           </h1>
-          <p class="text-xs sm:text-sm mt-1" style="color:rgba(255,255,255,0.65);">{{ fechaHoy }} · Gestione sus remisiones al centro de referencia.</p>
+          <p class="text-xs sm:text-sm mt-1.5" style="color:rgba(255,255,255,0.65);">{{ fechaHoy }} · Gestione sus remisiones al centro de referencia.</p>
         </div>
-        <div class="hero-right z-10 shrink-0 hidden sm:flex items-center gap-4">
+        <div class="hero-right z-10 shrink-0 hidden sm:flex items-center gap-3">
           <button @click="router.push('/clinica/solicitud')" class="hero-link">
             <component :is="PlusIcon" class="w-4 h-4" />
             <span>Nueva solicitud</span>
@@ -50,11 +52,11 @@
       </div>
 
       <!-- ── Stat cards ── -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 animate-fade-in-up"
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 animate-fade-in-up"
         style="animation-duration: 0.4s; animation-delay: 0.1s; animation-fill-mode: both;">
         <template v-if="cargando">
-          <Card v-for="i in 4" :key="i" class="stat-card rounded-2xl p-4 flex items-center gap-3">
-            <div class="shimmer-box" style="width:54px; height:54px; border-radius:50%;"></div>
+          <Card v-for="i in 4" :key="i" class="stat-card rounded-2xl p-4 flex items-center gap-4">
+            <div class="shimmer-box" style="width:52px; height:52px; border-radius:14px;"></div>
             <div class="flex-1 space-y-2">
               <div class="shimmer-bar" style="width:70%; height:20px;"></div>
               <div class="shimmer-bar" style="width:50%; height:10px;"></div>
@@ -65,20 +67,13 @@
         <template v-else>
           <div
             v-for="(card, i) in statCards" :key="i"
-            class="stat-card rounded-2xl p-4 flex items-center gap-3 anim-slide-up"
+            class="stat-card rounded-2xl p-4 sm:p-5 flex items-center gap-4 anim-slide-up group"
             :style="{ animationDelay: (i * 0.06) + 's', '--accent': card.color, '--accent-2': card.color2, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
           >
-            <div class="stat-card-mesh"></div>
             <div class="stat-card-glow" :style="{ background: 'radial-gradient(circle, ' + card.color2 + '45, transparent 70%)' }"></div>
 
-            <div class="stat-ring shrink-0" :style="{ '--ring-pct': card.percent }">
-              <svg viewBox="0 0 64 64" class="stat-ring-svg">
-                <circle cx="32" cy="32" r="27" class="stat-ring-track" />
-                <circle cx="32" cy="32" r="27" class="stat-ring-fill" :style="{ strokeDashoffset: 169.6 - (169.6 * card.percent / 100) }" />
-              </svg>
-              <div class="stat-ring-icon">
-                <component :is="card.icon" class="w-[18px] h-[18px]" />
-              </div>
+            <div class="stat-icon-chip shrink-0">
+              <component :is="card.icon" class="w-[22px] h-[22px]" />
             </div>
 
             <div class="flex-1 min-w-0 relative z-10">
@@ -95,39 +90,45 @@
         style="animation-duration: 0.4s; animation-delay: 0.18s; animation-fill-mode: both;">
 
         <!-- Tendencia area chart -->
-        <Card v-if="cargando" class="distrib-card rounded-2xl p-4 lg:col-span-2">
+        <Card v-if="cargando" class="distrib-card rounded-2xl p-5 lg:col-span-2">
           <div class="shimmer-bar" style="width:160px; height:14px; margin-bottom:12px;"></div>
           <div class="shimmer-bar w-full" style="height:120px; border-radius:8px;"></div>
         </Card>
-        <Card v-else class="distrib-card rounded-2xl p-4 flex flex-col anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
+        <Card v-else class="distrib-card rounded-2xl p-5 flex flex-col anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
           <div class="distrib-card-glow"></div>
-          <div class="flex items-center justify-between mb-2 relative z-10">
-            <div class="flex items-center gap-2">
+          <div class="flex items-center justify-between mb-3 relative z-10">
+            <div class="flex items-center gap-3">
               <div class="chart-header-icon" style="background: linear-gradient(135deg,#dbeafe,#bfdbfe); color:#2563c4;">
                 <component :is="TrendingUpIcon" class="w-4 h-4" />
               </div>
-              <p class="text-sm font-bold" style="color:#1e2d55;">Tendencia de solicitudes</p>
+              <div>
+                <p class="text-sm font-bold" style="color:#1e2d55;">Tendencia de solicitudes</p>
+                <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Volumen de remisiones por día</p>
+              </div>
             </div>
             <span class="estado-total-badge">Últimos 14 días</span>
           </div>
-          <div class="flex-1 w-full min-h-[120px] relative z-10">
+          <div v-if="chartsReady" class="flex-1 w-full min-h-[120px] relative z-10">
             <component :is="apexchart" type="area" :series="tendenciaSeries" :options="tendenciaOptions" height="140" />
           </div>
         </Card>
 
         <!-- Tasa de aceptación radial bar -->
-        <Card v-if="cargando" class="distrib-card rounded-2xl p-4 flex flex-col">
+        <Card v-if="cargando" class="distrib-card rounded-2xl p-5 flex flex-col">
           <div class="shimmer-bar" style="width:120px; height:14px; margin-bottom:12px;"></div>
           <div class="shimmer-bar w-full" style="height:120px; border-radius:50%;"></div>
         </Card>
-        <Card v-else class="distrib-card rounded-2xl p-4 flex flex-col anim-slide-up" style="animation-delay:0.2s">
-          <div class="flex items-center gap-2 mb-1">
+        <Card v-else class="distrib-card rounded-2xl p-5 flex flex-col anim-slide-up" style="animation-delay:0.2s">
+          <div class="flex items-center gap-3 mb-2">
             <div class="chart-header-icon" style="background: linear-gradient(135deg,#dcfce7,#bbf7d0); color:#15966a;">
               <component :is="TargetIcon" class="w-4 h-4" />
             </div>
-            <p class="text-sm font-bold" style="color:#1e2d55;">Tasa de aceptación</p>
+            <div>
+              <p class="text-sm font-bold" style="color:#1e2d55;">Tasa de aceptación</p>
+              <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Resoluciones positivas</p>
+            </div>
           </div>
-          <div class="flex-1 w-full flex items-center justify-center min-h-[120px] gauge-wrap">
+          <div v-if="chartsReady" class="flex-1 w-full flex items-center justify-center min-h-[120px] gauge-wrap">
             <component :is="apexchart" type="radialBar" :series="tasaSeries" :options="tasaOptions" height="150" />
           </div>
         </Card>
@@ -157,13 +158,16 @@
         </div>
 
         <!-- Solicitudes recientes -->
-        <Card class="recent-card lg:col-span-2 flex flex-col rounded-2xl p-4 min-h-0">
-          <div class="flex items-center justify-between mb-2 shrink-0">
-            <div class="flex items-center gap-2.5">
+        <Card class="recent-card lg:col-span-2 flex flex-col rounded-2xl p-5 min-h-0">
+          <div class="flex items-center justify-between mb-3 shrink-0">
+            <div class="flex items-center gap-3">
               <div class="recent-header-icon">
                 <component :is="ClipboardListIcon" class="w-4 h-4" />
               </div>
-              <CardTitle class="font-bold text-base" style="color:#1e2d55;">Solicitudes recientes</CardTitle>
+              <div>
+                <CardTitle class="font-bold text-base" style="color:#1e2d55;">Solicitudes recientes</CardTitle>
+                <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Últimas remisiones registradas</p>
+              </div>
               <Badge v-if="!cargando && solicitudes.length > 0" variant="secondary">{{ solicitudes.length }}</Badge>
             </div>
             <button @click="cargar" class="recent-refresh-btn">
@@ -203,7 +207,7 @@
               ]"
               @click="verDetalle(sol)"
             >
-              <div class="med-icon w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold"
+              <div class="med-icon w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold"
                 :style="{ background: sol.estado === 'pendiente' ? '#fef3c7' : sol.estado === 'aceptado' ? '#dcfce7' : sol.estado === 'en_espera' ? '#dbeafe' : sol.estado === 'completado' ? '#e0e7ff' : '#fee2e2', color: sol.estado === 'pendiente' ? '#d97706' : sol.estado === 'aceptado' ? '#16a34a' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#dc2626' }">
                 {{ initialesPaciente(sol) }}
               </div>
@@ -211,18 +215,21 @@
                 <p class="text-sm font-bold truncate" style="color:#1e2d55;">
                   {{ sol.primer_nombre }} {{ sol.primer_apellido }}
                 </p>
-                <p class="text-xs truncate mt-0.5" style="color:#8a9ab5;">
-                  {{ sol.especialidad_requerida }} · {{ sol.eps }} · {{ tiempoRelativo(sol.created_at) }}
+                <p class="text-xs truncate mt-1" style="color:#8a9ab5;">
+                  {{ sol.especialidad_requerida }} · {{ sol.eps }}
                 </p>
               </div>
-              <span class="text-xs font-bold px-2.5 py-1 rounded-full shrink-0"
-                :style="{
-                  background: sol.estado === 'pendiente' ? '#fff3cd' : sol.estado === 'aceptado' ? '#d3f9d8' : sol.estado === 'en_espera' ? '#d0e3ff' : sol.estado === 'completado' ? '#e0e0ff' : '#ffe0e0',
-                  color: sol.estado === 'pendiente' ? '#b96800' : sol.estado === 'aceptado' ? '#2f9e44' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#c92a2a',
-                }"
-              >
-                {{ estadoLabel(sol.estado) }}
-              </span>
+              <div class="flex flex-col items-end gap-1 shrink-0">
+                <span class="text-xs font-bold px-2.5 py-1 rounded-full shrink-0"
+                  :style="{
+                    background: sol.estado === 'pendiente' ? '#fff3cd' : sol.estado === 'aceptado' ? '#d3f9d8' : sol.estado === 'en_espera' ? '#d0e3ff' : sol.estado === 'completado' ? '#e0e0ff' : '#ffe0e0',
+                    color: sol.estado === 'pendiente' ? '#b96800' : sol.estado === 'aceptado' ? '#2f9e44' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#c92a2a',
+                  }"
+                >
+                  {{ estadoLabel(sol.estado) }}
+                </span>
+                <span class="text-[10px] font-medium" style="color:#94a3b8;">{{ tiempoRelativo(sol.created_at) }}</span>
+              </div>
             </div>
           </div>
         </Card>
@@ -389,7 +396,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
 import notify from '@/plugins/toast';
@@ -434,6 +441,7 @@ const clinicaAuth = useClinicaAuthStore();
 const router = useRouter();
 const solicitudes = ref<any[]>([]);
 const cargando = ref(false);
+const chartsReady = ref(false);
 const drawerVisible = ref(false);
 const guardando = ref(false);
 const showConfirmResumen = ref(false);
@@ -595,7 +603,7 @@ const tendenciaSeries = computed(() => {
     const fecha = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
     datos.push(conteo[fecha] ?? 0);
   }
-  return [{ name: 'Solicitudes', data }];
+  return [{ name: 'Solicitudes', data: datos }];
 });
 
 const tendenciaOptions = computed(() => ({
@@ -833,7 +841,12 @@ async function cargar() {
     const { data } = await http.get('/api/externo/solicitudes');
     solicitudes.value = data.data;
   } catch { notify.error('Error al cargar solicitudes'); }
-  finally { cargando.value = false; }
+  finally {
+    cargando.value = false;
+    await nextTick();
+    await nextTick();
+    chartsReady.value = true;
+  }
 }
 
 function abrirFormulario() { router.push('/clinica/solicitud'); }
@@ -1080,7 +1093,6 @@ onMounted(() => {
     if (!cargando.value && !drawerVisible.value) cargar();
   }, 30000);
 });
-
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown);
   if (pollTimer) clearInterval(pollTimer);
@@ -2077,23 +2089,23 @@ onUnmounted(() => {
 
 .ph-dashboard {
   background:
-    radial-gradient(ellipse at 90% 0%, rgba(188, 218, 255, 0.35), transparent 35rem),
-    radial-gradient(ellipse at 10% 100%, rgba(208, 230, 255, 0.3), transparent 32rem),
-    linear-gradient(165deg, #e8f0fc 0%, #dbe7f6 40%, #eef4fc 100%);
+    radial-gradient(ellipse at 85% -10%, rgba(59, 130, 246, 0.12), transparent 32rem),
+    radial-gradient(ellipse at 5% 110%, rgba(16, 185, 129, 0.08), transparent 30rem),
+    linear-gradient(165deg, #f6f8fc 0%, #eef2fb 45%, #f4f8fd 100%);
 }
 
 /* ── Hero banner ── */
 .hero-card {
-  background: linear-gradient(120deg, #0d2d6b 0%, #16468e 55%, #1e3a7a 100%);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 12px 32px rgba(13, 45, 107, .22), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  background: linear-gradient(125deg, #0a2a66 0%, #123f8f 45%, #2563eb 110%);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 16px 40px rgba(13, 45, 107, .28), 0 0 0 1px rgba(255,255,255,0.05) inset;
   position: relative;
   overflow: hidden;
 }
 .hero-card::before {
   content: '';
   position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, #2563eb, #60a5fa, #2563eb);
+  background: linear-gradient(90deg, #60a5fa, #93c5fd, #60a5fa);
   background-size: 200% 100%;
   animation: heroShimmer 3s linear infinite;
   z-index: 20;
@@ -2101,6 +2113,28 @@ onUnmounted(() => {
 @keyframes heroShimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+.hero-bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  pointer-events: none;
+  animation: heroBubbleFloat 9s ease-in-out infinite;
+}
+.hero-bubble-1 {
+  width: 120px; height: 120px;
+  bottom: -40px; left: 18%;
+}
+.hero-bubble-2 {
+  width: 60px; height: 60px;
+  top: -20px; left: 42%;
+  animation-delay: 2.5s;
+}
+@keyframes heroBubbleFloat {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(6px, -10px); }
 }
 
 .hero-pattern {
@@ -2246,12 +2280,6 @@ onUnmounted(() => {
   position: relative;
   overflow: hidden;
 }
-.stat-card-mesh {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%);
-  pointer-events: none;
-}
 .stat-card-glow {
   position: absolute;
   top: -50%; right: -30%;
@@ -2273,51 +2301,23 @@ onUnmounted(() => {
   transform: scale(1.15);
 }
 
-/* Circular progress ring */
-.stat-ring {
+/* Icon chip */
+.stat-icon-chip {
   position: relative;
-  width: 54px; height: 54px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 10;
-}
-.stat-ring-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%; height: 100%;
-  transform: rotate(-90deg);
-}
-.stat-ring-track {
-  fill: none;
-  stroke: color-mix(in srgb, var(--accent) 14%, #eef2f7);
-  stroke-width: 5;
-}
-.stat-ring-fill {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 5;
-  stroke-linecap: round;
-  stroke-dasharray: 169.6;
-  stroke-dashoffset: 169.6;
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 55%, transparent));
-  transition: stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1);
-}
-.stat-ring-icon {
-  position: relative;
-  z-index: 1;
-  width: 32px; height: 32px;
-  border-radius: 50%;
+  width: 52px; height: 52px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--icon-bg);
   color: var(--icon-color);
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--icon-color) 25%, transparent);
-  transition: transform .3s cubic-bezier(.22,1,.36,1);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--icon-color) 28%, transparent);
+  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s ease;
 }
-.stat-card:hover .stat-ring-icon {
-  transform: scale(1.12) rotate(-6deg);
+.stat-card:hover .stat-icon-chip {
+  transform: translateY(-3px) scale(1.06);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--icon-color) 38%, transparent);
 }
 
 .stat-delta-badge {
@@ -2360,8 +2360,7 @@ onUnmounted(() => {
 .distrib-card {
   background: linear-gradient(145deg, #ffffff 0%, #f8fafe 100%) !important;
   border: 1px solid #dbe4f0 !important;
-  border-top: 3px solid #2563c4 !important;
-  box-shadow: 0 8px 24px rgba(22,70,142,.10) !important;
+  box-shadow: 0 10px 30px rgba(22,70,142,.10) !important;
   position: relative;
   overflow: hidden;
   transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1);
@@ -2875,13 +2874,18 @@ onUnmounted(() => {
 
 /* ── Filas tipo medicamento ── */
 .med-row {
-  background: linear-gradient(135deg, #ffffff 0%, #f0f6ff 100%);
-  border: 1px solid #c5d5e8;
+  background: #ffffff;
+  border: 1px solid #e8eef6;
   border-left: 4px solid transparent;
-  box-shadow: 0 3px 10px rgba(22, 70, 142, .06);
-  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  box-shadow: 0 2px 8px rgba(22, 70, 142, .05);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
 }
-.med-row:hover { transform: translateX(4px); box-shadow: 0 10px 22px rgba(22, 70, 142, .13); border-color: #94a3c4; }
+.med-row:hover {
+  transform: translateX(4px);
+  box-shadow: 0 10px 24px rgba(22, 70, 142, .12);
+  border-color: #b9c8e0;
+  background: #f8fbff;
+}
 
 .med-row--active {
   background: linear-gradient(135deg, #16468e, #0d2d6b);
@@ -2891,11 +2895,12 @@ onUnmounted(() => {
 .med-row--active:hover { transform: translateX(3px); box-shadow: 0 16px 34px rgba(13, 45, 107, .40); }
 
 .med-icon {
-  background: #eaf2fd;
+  background: linear-gradient(135deg, #eaf2fd, #dbe9fb);
   color: #16468e;
   font-size: .75rem;
   font-weight: 800;
-  transition: transform .2s ease;
+  box-shadow: 0 3px 8px rgba(22, 70, 142, .12);
+  transition: transform .2s ease, box-shadow .2s ease;
 }
 .med-row:hover .med-icon { transform: scale(1.08); }
 .med-icon--active {
@@ -2933,16 +2938,15 @@ onUnmounted(() => {
 .recent-card {
   background: linear-gradient(145deg, #ffffff 0%, #f8fafe 100%) !important;
   border: 1px solid #dbe4f0 !important;
-  border-top: 3px solid #4f46e5 !important;
-  box-shadow: 0 8px 24px rgba(22,70,142,.10) !important;
+  box-shadow: 0 10px 30px rgba(22,70,142,.10) !important;
 }
 .recent-header-icon {
-  width: 34px; height: 34px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #0D2D6B, #16468E);
+  width: 36px; height: 36px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #0D2D6B, #2563eb);
   color: #fff;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 3px 10px rgba(13, 45, 107, 0.25);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
   animation: recentIconPulse 2.5s ease-in-out infinite;
 }
 @keyframes recentIconPulse {
