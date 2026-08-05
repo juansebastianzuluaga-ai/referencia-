@@ -75,6 +75,9 @@ Route::prefix('api')->name('api.')->group(function (): void {
         Route::get('api-credentials/{id}/stats', [ApiCredentialController::class, 'stats'])->name('api-credentials.stats');
 
         Route::get('clinicas', [ClinicaController::class, 'index'])->name('clinicas.index');
+        Route::post('clinicas', [ClinicaController::class, 'store'])->name('clinicas.store');
+        Route::put('clinicas/{clinica}', [ClinicaController::class, 'update'])->name('clinicas.update');
+        Route::post('clinicas/carga-masiva', [ClinicaController::class, 'cargaMasiva'])->name('clinicas.carga-masiva');
         Route::post('clinicas/{clinica}/aprobar', [ClinicaController::class, 'aprobar'])->name('clinicas.aprobar');
         Route::post('clinicas/{clinica}/rechazar', [ClinicaController::class, 'rechazar'])->name('clinicas.rechazar');
         Route::post('clinicas/{clinica}/reactivar', [ClinicaController::class, 'reactivar'])->name('clinicas.reactivar');

@@ -21,6 +21,49 @@ class ClinicaController extends Controller
         return response()->json(['data' => $clinicas]);
     }
 
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'nit' => ['required', 'string', 'max:20', 'unique:clinicas,nit'],
+            'nombre' => ['required', 'string', 'max:255'],
+            'razon_social' => ['nullable', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:20'],
+            'ciudad' => ['nullable', 'string', 'max:100'],
+            'departamento' => ['nullable', 'string', 'max:100'],
+            'direccion' => ['nullable', 'string', 'max:255'],
+            'representante_legal' => ['nullable', 'string', 'max:255'],
+            'cedula_representante' => ['nullable', 'string', 'max:20'],
+            'observaciones' => ['nullable', 'string', 'max:1000'],
+            'especialidades' => ['nullable', 'array'],
+            'especialidades.*' => ['string', 'max:100'],
+        ], [
+            'nit.unique' => 'Ya existe una clínica registrada con este NIT.',
+        ]);
+
+        $clinica = Clinica::create([
+            'nit' => $validated['nit'],
+            'nombre' => $validated['nombre'],
+            'razon_social' => $validated['razon_social'] ?? null,
+            'email' => $validated['email'],
+            'telefono' => $validated['telefono'] ?? null,
+            'ciudad' => $validated['ciudad'] ?? null,
+            'departamento' => $validated['departamento'] ?? null,
+            'direccion' => $validated['direccion'] ?? null,
+            'representante_legal' => $validated['representante_legal'] ?? null,
+            'cedula_representante' => $validated['cedula_representante'] ?? null,
+            'observaciones' => $validated['observaciones'] ?? null,
+            'especialidades' => $validated['especialidades'] ?? null,
+            'is_active' => false,
+            'estado' => 'pendiente',
+        ]);
+
+        return response()->json([
+            'message' => 'Clínica creada correctamente.',
+            'data' => $clinica,
+        ], 201);
+    }
+
     public function aprobar(Clinica $clinica): JsonResponse
     {
         $clinica->update([
@@ -33,6 +76,32 @@ class ClinicaController extends Controller
         Mail::to($clinica->email)->send(new ClinicaAprobacion($clinica));
 
         return response()->json(['message' => 'Clínica aprobada correctamente.']);
+    }
+
+    public function update(Request $request, Clinica $clinica): JsonResponse
+    {
+        $validated = $request->validate([
+            'nit' => ['required', 'string', 'max:20', 'unique:clinicas,nit,'.$clinica->id],
+            'nombre' => ['required', 'string', 'max:255'],
+            'razon_social' => ['nullable', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:20'],
+            'ciudad' => ['nullable', 'string', 'max:100'],
+            'departamento' => ['nullable', 'string', 'max:100'],
+            'direccion' => ['nullable', 'string', 'max:255'],
+            'representante_legal' => ['nullable', 'string', 'max:255'],
+            'cedula_representante' => ['nullable', 'string', 'max:20'],
+            'observaciones' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'nit.unique' => 'Ya existe una clínica registrada con este NIT.',
+        ]);
+
+        $clinica->update($validated);
+
+        return response()->json([
+            'message' => 'Clínica actualizada correctamente.',
+            'data' => $clinica->fresh(),
+        ]);
     }
 
     public function rechazar(Request $request, Clinica $clinica): JsonResponse
@@ -62,5 +131,59 @@ class ClinicaController extends Controller
         ]);
 
         return response()->json(['message' => 'Clínica reactivada correctamente.']);
+    }
+
+    public function cargaMasiva(Request $request): JsonResponse
+    {
+        $request->validate([
+            'clinicas' => ['required', 'array', 'min:1'],
+            'clinicas.*.nit' => ['required', 'string', 'max:20'],
+            'clinicas.*.nombre' => ['required', 'string', 'max:255'],
+            'clinicas.*.email' => ['required', 'email'],
+            'clinicas.*.telefono' => ['nullable', 'string', 'max:20'],
+            'clinicas.*.direccion' => ['nullable', 'string'],
+            'clinicas.*.ciudad' => ['nullable', 'string', 'max:100'],
+            'clinicas.*.departamento' => ['nullable', 'string', 'max:100'],
+            'clinicas.*.representante_legal' => ['nullable', 'string'],
+            'clinicas.*.cedula_representante' => ['nullable', 'string', 'max:20'],
+            'clinicas.*.especialidades' => ['nullable', 'array'],
+        ]);
+
+        $creadas = 0;
+        $omitidas = 0;
+        $existentes = [];
+
+        foreach ($request->clinicas as $item) {
+            $existe = Clinica::where('nit', $item['nit'])->exists();
+            if ($existe) {
+                $omitidas++;
+                $existentes[] = $item['nit'];
+
+                continue;
+            }
+
+            Clinica::create([
+                'nit' => $item['nit'],
+                'nombre' => $item['nombre'],
+                'email' => $item['email'],
+                'telefono' => $item['telefono'] ?? null,
+                'direccion' => $item['direccion'] ?? null,
+                'ciudad' => $item['ciudad'] ?? null,
+                'departamento' => $item['departamento'] ?? null,
+                'representante_legal' => $item['representante_legal'] ?? null,
+                'cedula_representante' => $item['cedula_representante'] ?? null,
+                'especialidades' => $item['especialidades'] ?? null,
+                'is_active' => false,
+                'estado' => 'pendiente',
+            ]);
+            $creadas++;
+        }
+
+        return response()->json([
+            'message' => "Carga masiva completada: {$creadas} creadas, {$omitidas} omitidas.",
+            'creadas' => $creadas,
+            'omitidas' => $omitidas,
+            'existentes' => $existentes,
+        ]);
     }
 }

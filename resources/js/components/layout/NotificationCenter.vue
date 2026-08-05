@@ -139,7 +139,11 @@ function handleClick(notification: Notification) {
     notifications.markAsRead(notification.id);
   }
   if (notification.link) {
-    router.push(notification.link);
+    try {
+      void router.push(notification.link);
+    } catch {
+      // Invalid link, ignore
+    }
   }
 }
 

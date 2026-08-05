@@ -161,7 +161,7 @@
         </div>
       </section>
 
-      <section class="flow-card flow-card-hover">
+      <section class="flow-card flow-card-hover ref-flow-card">
         <div class="flow-orbit flow-orbit-one"></div>
         <div class="flow-orbit flow-orbit-two"></div>
         <div class="flow-content h-full flex flex-col">
@@ -178,22 +178,54 @@
             <span class="flow-live"><i></i> En línea</span>
           </div>
 
-          <div class="gauge-wrap flex-1">
-            <apexchart
-              v-if="ultimasRefSeries[0]?.data?.length"
-              type="bar"
-              height="100%"
-              :options="ultimasRefOptions"
-              :series="ultimasRefSeries"
-            />
+          <div class="gauge-wrap flex-1 ultimas-ref-list">
+            <template v-if="ultimas5Ref.length">
+              <button
+                v-for="(s, idx) in ultimas5Ref"
+                :key="s.id"
+                type="button"
+                class="ref-row"
+                :style="{ '--ref-color': estadoColorMap[s.estado] ?? '#94a3b8', animationDelay: `${idx * 60}ms` }"
+                @click="router.push('/solicitudes-referencia')"
+                @mouseenter="onRefRowEnter($event, s)"
+                @mouseleave="onRefRowLeave"
+              >
+                <span class="ref-avatar">{{ (s.paciente || '?').trim().charAt(0).toUpperCase() }}</span>
+                <span class="ref-info">
+                  <span class="ref-name">{{ s.paciente }}</span>
+                  <span class="ref-meta">
+                    <span>{{ s.tipo_documento || 'CC' }} {{ s.numero_documento || '—' }}</span>
+                    <span class="ref-dot">•</span>
+                    <span>{{ s.telefono_contacto || 'Sin teléfono' }}</span>
+                  </span>
+                </span>
+                <span class="ref-badge">{{ estadoLabel(s.estado) }}</span>
+              </button>
+            </template>
             <div v-else class="specialties-empty">
               <component :is="ClipboardListIcon" class="w-6 h-6" />
               <span>Sin solicitudes</span>
             </div>
           </div>
-          <p class="gauge-caption">Click en una barra para ver solicitudes de referencia</p>
         </div>
       </section>
+
+      <Teleport to="body">
+        <div
+          v-if="refTooltip"
+          class="ref-tooltip-float"
+          :style="{ top: refTooltip.top + 'px', left: refTooltip.left + 'px', '--ref-color': estadoColorMap[refTooltip.s.estado] ?? '#94a3b8', transform: refTooltip.placement === 'top' ? 'translate(-50%, -100%)' : 'translate(-50%, 0)' }"
+        >
+          <span class="ref-tooltip-arrow" :class="refTooltip.placement === 'top' ? 'arrow-down' : 'arrow-up'"></span>
+          <span class="ref-tooltip-head">
+            <span class="ref-tooltip-avatar">{{ (refTooltip.s.paciente || '?').trim().charAt(0).toUpperCase() }}</span>
+            <span class="ref-tooltip-name">{{ refTooltip.s.nombre_completo || refTooltip.s.paciente }}</span>
+          </span>
+          <span class="ref-tooltip-row"><strong>Doc:</strong> {{ refTooltip.s.tipo_documento || 'CC' }} {{ refTooltip.s.numero_documento || '—' }}</span>
+          <span class="ref-tooltip-row"><strong>Tel:</strong> {{ refTooltip.s.telefono_contacto || '—' }}</span>
+          <span class="ref-tooltip-row"><strong>Estado:</strong> <span class="ref-tooltip-estado">{{ estadoLabel(refTooltip.s.estado) }}</span></span>
+        </div>
+      </Teleport>
     </div>
 
   </div>
@@ -202,6 +234,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useLayoutStore } from '@/stores/layout';
 import {
   ArrowRight as ArrowRightIcon,
   CalendarDays as CalendarDaysIcon,
@@ -229,6 +262,31 @@ import {
 import http from '@/plugins/axios';
 
 const router = useRouter();
+const layout = useLayoutStore();
+const isDark = computed(() => layout.isDarkMode);
+
+type SolicitudReciente = {
+  id: number; paciente: string; nombre_completo: string; tipo_documento: string; numero_documento: string; telefono_contacto: string; estado: string; especialidad: string; clinica: string | null; created_at: string | null;
+};
+
+const refTooltip = ref<{ top: number; left: number; placement: 'top' | 'bottom'; s: SolicitudReciente } | null>(null);
+
+function onRefRowEnter(event: MouseEvent, s: SolicitudReciente) {
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  const spaceAbove = rect.top;
+  const placement: 'top' | 'bottom' = spaceAbove > 140 ? 'top' : 'bottom';
+  refTooltip.value = {
+    top: placement === 'top' ? rect.top - 10 : rect.bottom + 10,
+    left: rect.left + rect.width / 2,
+    placement,
+    s,
+  };
+}
+
+function onRefRowLeave() {
+  refTooltip.value = null;
+}
 
 const today = new Intl.DateTimeFormat('es-CO', {
   weekday: 'long',
@@ -452,6 +510,7 @@ const tendenciaChartOptions = computed(() => ({
   chart: {
     type: 'area' as const,
     fontFamily: 'inherit',
+    background: 'transparent',
     toolbar: { show: false },
     zoom: { enabled: false },
     animations: {
@@ -505,7 +564,7 @@ const tendenciaChartOptions = computed(() => ({
     labels: { style: { fontSize: '10px', colors: '#94a3b8' } },
   },
   grid: {
-    borderColor: '#f1f5f9',
+    borderColor: isDark.value ? '#1e293b' : '#f1f5f9',
     strokeDashArray: 4,
     xaxis: { lines: { show: false } },
     padding: { top: 0, right: 8, bottom: 0, left: 0 },
@@ -513,7 +572,8 @@ const tendenciaChartOptions = computed(() => ({
   dataLabels: { enabled: false },
   tooltip: {
     y: { formatter: (val: number) => `${val} solicitud${val === 1 ? '' : 'es'}` },
-    style: { fontSize: '12px', fontFamily: 'inherit' },
+    style: { fontSize: '12px', fontFamily: 'inherit', background: isDark.value ? '#1e293b' : '#fff' },
+    theme: isDark.value ? 'dark' : 'light',
     x: { show: true },
   },
 }));
@@ -539,6 +599,7 @@ const topEspecialidadesOptions = computed(() => ({
   chart: {
     type: 'bar' as const,
     fontFamily: 'inherit',
+    background: 'transparent',
     toolbar: { show: false },
     animations: {
       enabled: true,
@@ -573,19 +634,19 @@ const topEspecialidadesOptions = computed(() => ({
   },
   xaxis: {
     categories: stats.value.top_especialidades.map(e => e.especialidad),
-    labels: { style: { fontSize: '10px', colors: '#94a3b8' } },
+    labels: { style: { fontSize: '10px', colors: isDark.value ? '#94a3b8' : '#94a3b8' } },
     axisBorder: { show: false },
     axisTicks: { show: false },
   },
   yaxis: {
     labels: {
-      style: { fontSize: '9px', fontWeight: 600, colors: '#475569' },
+      style: { fontSize: '9px', fontWeight: 600, colors: isDark.value ? '#cbd5e1' : '#475569' },
       maxWidth: 280,
       trim: true,
     },
   },
   grid: {
-    borderColor: '#f1f5f9',
+    borderColor: isDark.value ? '#1e293b' : '#f1f5f9',
     strokeDashArray: 4,
     yaxis: { lines: { show: false } },
     padding: { top: -8, right: 20, bottom: -8, left: 16 },
@@ -601,7 +662,8 @@ const topEspecialidadesOptions = computed(() => ({
   },
   tooltip: {
     y: { formatter: (val: number) => `${val} solicitudes` },
-    style: { fontSize: '12px', fontFamily: 'inherit' },
+    style: { fontSize: '12px', fontFamily: 'inherit', background: isDark.value ? '#1e293b' : '#fff' },
+    theme: isDark.value ? 'dark' : 'light',
   },
   legend: { show: false },
 }));
@@ -642,6 +704,7 @@ const ultimasRefOptions = computed(() => ({
   chart: {
     type: 'bar' as const,
     fontFamily: 'inherit',
+    background: 'transparent',
     toolbar: { show: false },
     animations: {
       enabled: true,
@@ -707,7 +770,7 @@ const ultimasRefOptions = computed(() => ({
       style: {
         fontSize: '11px',
         fontWeight: 600,
-        colors: ['#334155'],
+        colors: isDark.value ? ['#cbd5e1'] : ['#334155'],
       },
       formatter: (_val: number, index: number) => {
         const s = ultimas5Ref.value[index];
@@ -734,7 +797,7 @@ const ultimasRefOptions = computed(() => ({
       const color = estadoColorMap[s.estado] ?? '#94a3b8';
       const grad = estadoGradientMap[s.estado] ?? ['#94a3b8', '#94a3b8'];
       return `
-        <div style="padding:0; border-radius:12px; font-family:inherit; min-width:230px; overflow:hidden; box-shadow:0 8px 28px rgba(0,0,0,0.16); border:1px solid #e2e8f0; background:#fff;">
+        <div style="padding:0; border-radius:12px; font-family:inherit; min-width:230px; overflow:hidden; box-shadow:0 8px 28px rgba(0,0,0,0.16); border:1px solid ${isDark.value ? '#334155' : '#e2e8f0'}; background:${isDark.value ? '#1e293b' : '#fff'};">
           <div style="background:linear-gradient(135deg, ${grad[0]}, ${grad[1]}); padding:10px 14px; display:flex; align-items:center; gap:8px;">
             <div style="width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,0.22); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -745,17 +808,17 @@ const ultimasRefOptions = computed(() => ({
             </div>
           </div>
           <div style="padding:10px 14px;">
-            <div style="display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #f1f5f9;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect width="18" height="14" x="3" y="5" rx="2"/><path d="M3 10h18"/></svg>
-              <span style="font-size:11px; color:#64748b;"><strong style="color:#475569;">Doc:</strong> ${doc}</span>
+            <div style="display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid ${isDark.value ? '#334155' : '#f1f5f9'};">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isDark.value ? '#94a3b8' : '#64748b'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect width="18" height="14" x="3" y="5" rx="2"/><path d="M3 10h18"/></svg>
+              <span style="font-size:11px; color:${isDark.value ? '#94a3b8' : '#64748b'};"><strong style="color:${isDark.value ? '#cbd5e1' : '#475569'};">Doc:</strong> ${doc}</span>
             </div>
-            <div style="display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #f1f5f9;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              <span style="font-size:11px; color:#64748b;"><strong style="color:#475569;">Tel:</strong> ${tel}</span>
+            <div style="display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid ${isDark.value ? '#334155' : '#f1f5f9'};">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isDark.value ? '#94a3b8' : '#64748b'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              <span style="font-size:11px; color:${isDark.value ? '#94a3b8' : '#64748b'};"><strong style="color:${isDark.value ? '#cbd5e1' : '#475569'};">Tel:</strong> ${tel}</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px; padding:5px 0;">
               <div style="width:13px; height:13px; border-radius:50%; background:${color}; flex-shrink:0; box-shadow:0 0 0 3px ${color}25;"></div>
-              <span style="font-size:11px; color:#64748b;"><strong style="color:#475569;">Estado:</strong> <span style="color:${color}; font-weight:700;">${estado}</span></span>
+              <span style="font-size:11px; color:${isDark.value ? '#94a3b8' : '#64748b'};"><strong style="color:${isDark.value ? '#cbd5e1' : '#475569'};">Estado:</strong> <span style="color:${color}; font-weight:700;">${estado}</span></span>
             </div>
           </div>
         </div>
@@ -1561,6 +1624,209 @@ onMounted(cargarStats);
   position: relative;
   z-index: 1;
   margin-top: -.25rem;
+}
+
+/* ── Últimas referencias (list) ── */
+.ref-flow-card {
+  overflow: visible;
+}
+.ref-flow-card .flow-orbit {
+  display: none;
+}
+.ultimas-ref-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #93c5fd #eef2ff;
+}
+.ultimas-ref-list::-webkit-scrollbar {
+  width: 6px;
+}
+.ultimas-ref-list::-webkit-scrollbar-track {
+  background: #eef2ff;
+  border-radius: 999px;
+}
+.ultimas-ref-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #60a5fa, #3b82f6);
+  border-radius: 999px;
+}
+.ultimas-ref-list::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+.ref-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #eef1f6;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  animation: refRowIn .5s ease forwards;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.ref-row::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--ref-color, #94a3b8);
+  border-radius: 0 4px 4px 0;
+}
+.ref-row:hover {
+  border-color: color-mix(in srgb, var(--ref-color, #94a3b8) 45%, #eef1f6);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  transform: translateX(2px);
+}
+@keyframes refRowIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.ref-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ref-color, #94a3b8) 85%, #fff), var(--ref-color, #94a3b8));
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--ref-color, #94a3b8) 40%, transparent);
+}
+.ref-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ref-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e2d55;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ref-meta {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.ref-dot {
+  color: #cbd5e1;
+  flex-shrink: 0;
+}
+.ref-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--ref-color, #94a3b8);
+  background: color-mix(in srgb, var(--ref-color, #94a3b8) 14%, #fff);
+  white-space: nowrap;
+}
+.ref-tooltip-float {
+  position: fixed;
+  min-width: 210px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 9999;
+  text-align: left;
+  pointer-events: none;
+  animation: refTooltipIn .15s ease;
+}
+@keyframes refTooltipIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.ref-tooltip-arrow {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border: 6px solid transparent;
+}
+.ref-tooltip-arrow.arrow-down {
+  top: 100%;
+  border-top-color: #fff;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.06));
+}
+.ref-tooltip-arrow.arrow-up {
+  bottom: 100%;
+  border-bottom-color: #fff;
+  filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.06));
+}
+.ref-tooltip-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.ref-tooltip-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--ref-color, #94a3b8);
+}
+.ref-tooltip-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e2d55;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ref-tooltip-row {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.5;
+}
+.ref-tooltip-row strong {
+  color: #475569;
+  font-weight: 700;
+}
+.ref-tooltip-estado {
+  color: var(--ref-color, #94a3b8);
+  font-weight: 700;
 }
 
 /* ── Legend tooltips ── */

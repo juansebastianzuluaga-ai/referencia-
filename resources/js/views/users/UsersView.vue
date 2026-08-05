@@ -2,16 +2,43 @@
   <div class="users-page h-full flex flex-col gap-2 p-3 sm:p-4 overflow-hidden">
 
     <!-- ── Header ── -->
-    <div class="flex items-center justify-between shrink-0 animate-fade-in-up"
+    <div class="users-header shrink-0 animate-fade-in-up"
       style="animation-duration: 0.4s; animation-fill-mode: both;">
-      <div>
-        <h1 class="text-lg font-bold text-gray-900">Gestión de Usuarios</h1>
-        <p class="text-xs text-gray-500">Administración de cuentas de acceso al sistema</p>
+      <div class="users-header-icon">
+        <component :is="UsersIcon" class="w-5 h-5" />
       </div>
+      <h1 class="users-header-title">Gestión de Usuarios</h1>
+      <div class="users-header-spacer"></div>
       <el-button v-permission="'users.create'" type="primary" size="small" @click="openDialog('create')">
         <component :is="PlusIcon" class="w-3.5 h-3.5 mr-1" />
         Nuevo Usuario
       </el-button>
+      <el-button size="small" @click="exportarExcel" :disabled="users.length === 0">
+        <component :is="DownloadIcon" class="w-3.5 h-3.5 mr-1" />
+        Exportar
+      </el-button>
+    </div>
+
+    <!-- ── Stat cards ── -->
+    <div class="users-stats-bar shrink-0">
+      <div
+        v-for="card in statCards"
+        :key="card.label"
+        class="users-stat-card"
+        :style="{ '--stat-color': card.color }"
+      >
+        <div class="users-stat-icon" :style="{ background: card.iconBg, color: card.color }">
+          <component :is="card.icon" class="w-4 h-4" />
+        </div>
+        <div class="users-stat-body">
+          <p class="users-stat-label">{{ card.label }}</p>
+          <p class="users-stat-value" :style="{ color: card.color }">{{ card.value }}</p>
+          <div class="users-stat-bar-track">
+            <div class="users-stat-bar-fill" :style="{ width: card.percent + '%', background: card.color }"></div>
+          </div>
+        </div>
+        <span class="users-stat-delta" :style="{ background: card.iconBg, color: card.color }">{{ card.delta }}</span>
+      </div>
     </div>
 
     <!-- ── Filtros ── -->
@@ -40,19 +67,38 @@
       </el-button>
     </div>
 
+    <!-- ── Bulk actions bar ── -->
+    <Transition name="bulk-slide">
+      <div v-if="seleccionadas.size > 0" class="users-bulk-bar shrink-0">
+        <span class="text-xs font-bold" style="color:#0D2D6B;">{{ seleccionadas.size }} seleccionado(s)</span>
+        <el-button type="success" size="small" @click="bulkActivar(true)">
+          <component :is="PowerIcon" class="w-3 h-3 mr-0.5" /> Activar
+        </el-button>
+        <el-button type="warning" size="small" @click="bulkActivar(false)">
+          <component :is="PowerOffIcon" class="w-3 h-3 mr-0.5" /> Inactivar
+        </el-button>
+        <el-button v-permission="'users.delete'" type="danger" size="small" @click="bulkEliminar">
+          <component :is="TrashIcon" class="w-3 h-3 mr-0.5" /> Eliminar
+        </el-button>
+        <el-button size="small" text @click="seleccionadas.clear()">Limpiar</el-button>
+      </div>
+    </Transition>
+
     <!-- ── Tabla ── -->
     <div class="flex-1 overflow-hidden users-table-panel">
       <!-- Loading -->
       <div v-if="usersStore.loading" class="users-table-loading">
-        <div v-for="i in 5" :key="i" class="users-table-row-skeleton">
-          <div class="shimmer-box" style="width:32px; height:32px; border-radius:8px; flex-shrink:0;"></div>
-          <div class="flex-1 space-y-1">
-            <div class="shimmer-bar" style="width:35%; height:12px;"></div>
-            <div class="shimmer-bar" style="width:25%; height:9px;"></div>
+        <div v-for="i in 6" :key="i" class="users-table-row-skeleton">
+          <div class="shimmer-box" style="width:18px; height:18px; border-radius:4px; flex-shrink:0;"></div>
+          <div class="shimmer-box" style="width:34px; height:34px; border-radius:10px; flex-shrink:0;"></div>
+          <div class="flex-1 space-y-1.5">
+            <div class="shimmer-bar" style="width:35%; height:13px;"></div>
+            <div class="shimmer-bar" style="width:22%; height:10px;"></div>
           </div>
-          <div class="shimmer-bar" style="width:15%; height:11px;"></div>
+          <div class="shimmer-bar" style="width:18%; height:11px;"></div>
           <div class="shimmer-box" style="width:60px; height:22px; border-radius:999px;"></div>
-          <div class="shimmer-box" style="width:80px; height:26px; border-radius:6px; flex-shrink:0;"></div>
+          <div class="shimmer-bar" style="width:12%; height:10px;"></div>
+          <div class="shimmer-box" style="width:90px; height:26px; border-radius:6px; flex-shrink:0;"></div>
         </div>
       </div>
 
@@ -71,20 +117,32 @@
           <table class="users-table">
             <thead class="users-table-thead">
               <tr>
-                <th class="users-th users-th-user">Usuario</th>
-                <th class="users-th users-th-email">Correo</th>
+                <th class="users-th users-th-check">
+                  <input type="checkbox" :checked="todasSeleccionadas" @change="toggleSeleccionTodas" class="users-checkbox" />
+                </th>
+                <th class="users-th users-th-user users-th-sortable" @click="toggleSort('full_name')">
+                  Usuario
+                  <component :is="sortIcon('full_name')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortBy === 'full_name', 'opacity-30': sortBy !== 'full_name' }" />
+                </th>
+                <th class="users-th users-th-email users-th-sortable" @click="toggleSort('email')">
+                  Correo
+                  <component :is="sortIcon('email')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortBy === 'email', 'opacity-30': sortBy !== 'email' }" />
+                </th>
                 <th class="users-th users-th-status">Estado</th>
                 <th class="users-th users-th-roles">Roles</th>
                 <th class="users-th users-th-actions">Acciones</th>
               </tr>
             </thead>
-            <tbody>
+            <TransitionGroup name="users-row" tag="tbody">
               <tr
                 v-for="(u, idx) in users"
                 :key="u.id"
-                class="users-table-row anim-row-in"
-                :style="{ animationDelay: (idx * 0.02) + 's' }"
+                class="users-table-row"
+                :class="{ 'users-table-row-selected': seleccionadas.has(u.id) }"
               >
+                <td class="users-td users-td-check">
+                  <input type="checkbox" :checked="seleccionadas.has(u.id)" @change="toggleSeleccion(u.id)" class="users-checkbox" />
+                </td>
                 <td class="users-td">
                   <div class="users-table-user">
                     <div class="users-table-avatar">
@@ -154,7 +212,7 @@
                   </div>
                 </td>
               </tr>
-            </tbody>
+            </TransitionGroup>
           </table>
         </div>
       </div>
@@ -195,7 +253,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useDebounceFn } from '@vueuse/core';
 import {
   Plus as PlusIcon,
   Search as SearchIcon,
@@ -206,6 +265,12 @@ import {
   PowerOff as PowerOffIcon,
   KeyRound as KeyRoundIcon,
   Users as UsersIcon,
+  Download as DownloadIcon,
+  UserCheck as UserCheckIcon,
+  UserX as UserXIcon,
+  ArrowUp as ArrowUpIcon,
+  ArrowDown as ArrowDownIcon,
+  ArrowUpDown as ArrowUpDownIcon,
 } from '@lucide/vue';
 import { ElMessageBox } from 'element-plus';
 import notify from '@/plugins/toast';
@@ -215,6 +280,9 @@ import { useUsersStore } from '@/stores/users';
 import { storeToRefs } from 'pinia';
 
 const search = ref('');
+const searchDebounced = ref('');
+const updateSearchDebounced = useDebounceFn((val: string) => { searchDebounced.value = val; }, 300);
+watch(search, (val) => updateSearchDebounced(val));
 const roleFilter = ref(null);
 const statusFilter = ref(null);
 
@@ -223,6 +291,8 @@ const pageSize = ref(10);
 const sortBy = ref('id');
 const sortOrder = ref('desc');
 
+const seleccionadas = ref<Set<number>>(new Set());
+
 const usersStore = useUsersStore();
 const { users, roles } = storeToRefs(usersStore);
 
@@ -230,6 +300,25 @@ const dialogVisible = ref(false);
 const dialogType = ref<'create' | 'edit'>('create');
 const selectedUser = ref<any>(null);
 const passwordDialogVisible = ref(false);
+
+const todasSeleccionadas = computed(() => {
+  if (users.value.length === 0) return false;
+  return users.value.every(u => seleccionadas.value.has(u.id));
+});
+
+const statCards = computed(() => {
+  const total = usersStore.pagination.total || users.value.length;
+  const activos = users.value.filter(u => u.is_active).length;
+  const inactivos = users.value.filter(u => !u.is_active).length;
+  const conRoles = users.value.filter(u => u.roles && u.roles.length > 0).length;
+  const pct = (n: number) => total > 0 ? Math.round((n / total) * 100) : 0;
+  return [
+    { label: 'Total', value: total, icon: UsersIcon, color: '#2563eb', iconBg: '#dbeafe', percent: 100, delta: 'Usuarios' },
+    { label: 'Activos', value: activos, icon: UserCheckIcon, color: '#16a34a', iconBg: '#dcfce7', percent: pct(activos), delta: 'En línea' },
+    { label: 'Inactivos', value: inactivos, icon: UserXIcon, color: '#dc2626', iconBg: '#fee2e2', percent: pct(inactivos), delta: 'Suspendidos' },
+    { label: 'Con roles', value: conRoles, icon: KeyRoundIcon, color: '#7c3aed', iconBg: '#ede9fe', percent: pct(conRoles), delta: 'Asignados' },
+  ];
+});
 
 function userInitials(u: any): string {
   const parts = [u.first_name, u.last_name].filter(Boolean);
@@ -245,6 +334,101 @@ function clearFilters() {
   search.value = '';
   roleFilter.value = null;
   statusFilter.value = null;
+}
+
+function toggleSort(key: string) {
+  if (sortBy.value === key) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortBy.value = key;
+    sortOrder.value = 'asc';
+  }
+  loadUsersData();
+}
+
+function sortIcon(key: string) {
+  if (sortBy.value !== key) return ArrowUpDownIcon;
+  return sortOrder.value === 'asc' ? ArrowUpIcon : ArrowDownIcon;
+}
+
+function toggleSeleccion(id: number) {
+  const s = new Set(seleccionadas.value);
+  if (s.has(id)) s.delete(id);
+  else s.add(id);
+  seleccionadas.value = s;
+}
+
+function toggleSeleccionTodas() {
+  const s = new Set(seleccionadas.value);
+  if (todasSeleccionadas.value) {
+    users.value.forEach(u => s.delete(u.id));
+  } else {
+    users.value.forEach(u => s.add(u.id));
+  }
+  seleccionadas.value = s;
+}
+
+async function bulkActivar(activar: boolean) {
+  const ids = [...seleccionadas.value];
+  const lote = users.value.filter(u => ids.includes(u.id) && u.user_name !== 'superadmin' && u.is_active !== activar);
+  if (lote.length === 0) {
+    notify.warning('No hay usuarios para cambiar estado');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(`¿${activar ? 'Activar' : 'Inactivar'} ${lote.length} usuario(s)?`, 'Confirmar', { confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar', type: 'warning' });
+    for (const u of lote) {
+      await usersStore.updateUser(u.id, { is_active: activar });
+    }
+    notify.success(`${lote.length} usuario(s) ${activar ? 'activado(s)' : 'inactivado(s)'}`);
+    seleccionadas.value = new Set();
+    await loadUsersData();
+  } catch (e: any) {
+    if (e !== 'cancel') notify.error('Error al cambiar estado en lote');
+  }
+}
+
+async function bulkEliminar() {
+  const ids = [...seleccionadas.value];
+  const lote = users.value.filter(u => ids.includes(u.id) && u.user_name !== 'superadmin');
+  if (lote.length === 0) {
+    notify.warning('No hay usuarios para eliminar');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(`¿Eliminar ${lote.length} usuario(s)? Esta acción no se puede deshacer.`, 'Confirmar', { confirmButtonText: 'Eliminar', cancelButtonText: 'Cancelar', type: 'error' });
+    for (const u of lote) {
+      await usersStore.deleteUser(u.id);
+    }
+    notify.success(`${lote.length} usuario(s) eliminado(s)`);
+    seleccionadas.value = new Set();
+    await loadUsersData();
+  } catch (e: any) {
+    if (e !== 'cancel') notify.error('Error al eliminar en lote');
+  }
+}
+
+function exportarExcel() {
+  const rows = users.value;
+  const headers = ['ID', 'Usuario', 'Nombre', 'Email', 'Documento', 'Estado', 'Roles', 'Fecha creación'];
+  const csv = [
+    headers.join('\t'),
+    ...rows.map(u => [
+      u.id, u.user_name ?? '', u.full_name ?? '', u.email ?? '',
+      `${u.identification_type?.name ?? ''} ${u.identification_number ?? ''}`,
+      u.is_active ? 'Activo' : 'Inactivo',
+      u.roles?.map((r: any) => r.display_name || r.name).join('; ') ?? '',
+      u.created_at ?? '',
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join('\t')),
+  ].join('\n');
+  const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `usuarios_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  notify.success(`Exportados ${rows.length} usuarios`);
 }
 
 function openDialog(type: 'create' | 'edit', user?: any) {
@@ -333,7 +517,7 @@ function handleSizeChange(size: number) {
 
 async function loadUsersData() {
   await usersStore.loadUsers({
-    general: search.value || undefined,
+    general: searchDebounced.value || undefined,
     roles: roleFilter.value ? [roleFilter.value] : undefined,
     is_active: statusFilter.value,
     sort_by: sortBy.value,
@@ -341,7 +525,7 @@ async function loadUsersData() {
   });
 }
 
-watch(search, () => {
+watch(searchDebounced, () => {
   currentPage.value = 1;
   loadUsersData();
 });
@@ -356,6 +540,17 @@ onMounted(async () => {
   await usersStore.loadIdentificationTypes();
   await loadUsersData();
 });
+
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+onMounted(() => {
+  pollTimer = setInterval(() => {
+    if (!usersStore.loading && !dialogVisible.value && !passwordDialogVisible.value) loadUsersData();
+  }, 30000);
+});
+
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer);
+});
 </script>
 
 <style scoped>
@@ -365,8 +560,167 @@ onMounted(async () => {
     radial-gradient(circle at 5% 100%, rgba(208, 242, 226, 0.25), transparent 28rem);
 }
 
+/* ── Header ── */
+.users-header {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .75rem 1rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0D2D6B 0%, #16468E 60%, #1e3a7a 100%);
+  box-shadow: 0 6px 24px rgba(13, 45, 107, .25), inset 0 1px 0 rgba(255,255,255,0.08);
+  position: relative; overflow: hidden;
+}
+.users-header::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #2563eb, #60a5fa, #2563eb);
+  background-size: 200% 100%;
+  animation: headerShine 3s linear infinite;
+}
+@keyframes headerShine {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.users-header-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
+  color: #fff; flex-shrink: 0;
+}
+.users-header-title {
+  font-size: 16px; font-weight: 800; color: #fff;
+  letter-spacing: 0.01em; white-space: nowrap;
+}
+.users-header-spacer { flex: 1; }
+
 .users-search { width: 280px; }
 .users-filter { width: 140px; }
+
+/* ── Stat cards ── */
+.users-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .5rem;
+}
+.users-stat-card {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: .65rem .8rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.users-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(13,45,107,.08);
+}
+.users-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--stat-color);
+  opacity: .8;
+}
+.users-stat-icon {
+  width: 2.2rem; height: 2.2rem;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.users-stat-body { flex: 1; min-width: 0; }
+.users-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  margin: 0;
+}
+.users-stat-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin: 0;
+}
+.users-stat-bar-track {
+  height: 3px;
+  border-radius: 2px;
+  background: #f1f5f9;
+  margin-top: .25rem;
+  overflow: hidden;
+}
+.users-stat-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .4s ease;
+}
+.users-stat-delta {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Bulk actions bar ── */
+.users-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  background: linear-gradient(135deg, #eef2f9, #e0e8f5);
+  border: 1px solid #c4d4e8;
+  border-radius: 10px;
+  padding: .4rem .8rem;
+}
+.bulk-slide-enter-active, .bulk-slide-leave-active {
+  transition: all .25s ease;
+}
+.bulk-slide-enter-from, .bulk-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* ── Checkbox ── */
+.users-checkbox {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid #cbd5e1;
+  cursor: pointer;
+  accent-color: #16468E;
+}
+.users-th-check { width: 36px; text-align: center; }
+.users-td-check { text-align: center; }
+
+/* ── Sortable headers ── */
+.users-th-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color .15s ease;
+}
+.users-th-sortable:hover { color: #16468E; }
+
+/* ── Selected row ── */
+.users-table-row-selected {
+  background: rgba(22,70,142,.04) !important;
+}
+
+/* ── Row transitions ── */
+.users-row-enter-active, .users-row-leave-active {
+  transition: all .3s ease;
+}
+.users-row-enter-from {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+.users-row-leave-to {
+  opacity: 0;
+  transform: translateX(12px);
+}
 
 /* ── Tabla ── */
 .users-table-panel {

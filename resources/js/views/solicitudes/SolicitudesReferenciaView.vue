@@ -13,6 +13,32 @@
         <component :is="RefreshIcon" class="w-3.5 h-3.5 mr-1" :class="{ 'animate-spin': cargando }" />
         Actualizar
       </el-button>
+      <el-button size="small" @click="exportarExcel" :disabled="solicitudesFiltradas.length === 0">
+        <component :is="DownloadIcon" class="w-3.5 h-3.5 mr-1" />
+        Exportar
+      </el-button>
+    </div>
+
+    <!-- ── Stat cards ── -->
+    <div class="sol-stats-bar shrink-0">
+      <div
+        v-for="(card, i) in statCards"
+        :key="card.label"
+        class="sol-stat-card"
+        :style="{ '--stat-color': card.color, '--stat-bg': card.iconBackground }"
+      >
+        <div class="sol-stat-icon" :style="{ background: card.iconBackground, color: card.color }">
+          <component :is="card.icon" class="w-4 h-4" />
+        </div>
+        <div class="sol-stat-body">
+          <p class="sol-stat-label">{{ card.label }}</p>
+          <p class="sol-stat-value" :style="{ color: card.color }">{{ displayStats[i] }}</p>
+          <div class="sol-stat-bar-track">
+            <div class="sol-stat-bar-fill" :style="{ width: statPercents[i] + '%', background: card.color }"></div>
+          </div>
+        </div>
+        <span class="sol-stat-delta" :style="{ background: card.iconBackground, color: card.color }">{{ card.sub(cardValue(i)) }}</span>
+      </div>
     </div>
 
     <!-- ── Tabs + Búsqueda ── -->
@@ -23,8 +49,9 @@
           :key="tab.value"
           class="sol-tab"
           :class="{ 'sol-tab-active': tabActiva === tab.value }"
-          @click="tabActiva = tab.value"
+          @click="cambiarTab(tab.value)"
         >
+          <span v-if="tab.value !== 'todas'" class="sol-tab-dot" :class="'sol-tab-dot--' + tab.value"></span>
           {{ tab.label }}
           <span class="sol-tab-count">{{ tab.count }}</span>
         </button>
@@ -47,24 +74,40 @@
       </el-button>
     </div>
 
+    <!-- ── Bulk actions bar ── -->
+    <Transition name="bulk-slide">
+      <div v-if="seleccionadas.size > 0" class="sol-bulk-bar shrink-0">
+        <span class="text-xs font-bold" style="color:#0D2D6B;">{{ seleccionadas.size }} seleccionada(s)</span>
+        <el-button type="success" size="small" @click="aceptarLote">
+          <component :is="CheckIcon" class="w-3 h-3 mr-0.5" /> Aceptar
+        </el-button>
+        <el-button type="danger" size="small" @click="negarLote">
+          <component :is="XIcon" class="w-3 h-3 mr-0.5" /> Negar
+        </el-button>
+        <el-button size="small" text @click="seleccionadas.clear()">Limpiar</el-button>
+      </div>
+    </Transition>
+
     <!-- ── Tabla ── -->
     <div class="flex-1 overflow-hidden sol-table-panel">
       <!-- Loading -->
       <div v-if="cargando" class="sol-table-loading">
-        <div v-for="i in 5" :key="i" class="sol-table-row-skeleton">
+        <div v-for="i in 6" :key="i" class="sol-table-row-skeleton">
+          <div class="shimmer-box" style="width:18px; height:18px; border-radius:4px; flex-shrink:0;"></div>
           <div class="shimmer-box" style="width:32px; height:32px; border-radius:8px; flex-shrink:0;"></div>
-          <div class="flex-1 space-y-1">
-            <div class="shimmer-bar" style="width:35%; height:12px;"></div>
-            <div class="shimmer-bar" style="width:25%; height:9px;"></div>
+          <div class="flex-1 space-y-1.5">
+            <div class="shimmer-bar" style="width:35%; height:13px;"></div>
+            <div class="shimmer-bar" style="width:22%; height:10px;"></div>
           </div>
-          <div class="shimmer-bar" style="width:15%; height:11px;"></div>
-          <div class="shimmer-box" style="width:60px; height:22px; border-radius:999px;"></div>
-          <div class="shimmer-box" style="width:80px; height:26px; border-radius:6px; flex-shrink:0;"></div>
+          <div class="shimmer-bar" style="width:12%; height:11px;"></div>
+          <div class="shimmer-bar" style="width:10%; height:11px;"></div>
+          <div class="shimmer-box" style="width:65px; height:22px; border-radius:999px;"></div>
+          <div class="shimmer-box" style="width:90px; height:26px; border-radius:6px; flex-shrink:0;"></div>
         </div>
       </div>
 
       <!-- Vacío -->
-      <div v-else-if="solicitudesFiltradas.length === 0" class="sol-empty-wrap">
+      <div v-else-if="solicitudesPaginadas.length === 0" class="sol-empty-wrap">
         <div class="sol-empty-icon w-14 h-14 rounded-2xl flex items-center justify-center mb-3">
           <component :is="FileTextIcon" class="w-7 h-7" />
         </div>
@@ -78,20 +121,36 @@
           <table class="sol-table">
             <thead class="sol-table-thead">
               <tr>
-                <th class="sol-th sol-th-paciente">Paciente</th>
-                <th class="sol-th">Clínica</th>
-                <th class="sol-th">Especialidad</th>
+                <th class="sol-th sol-th-check">
+                  <input type="checkbox" :checked="todasSeleccionadas" @change="toggleSeleccionTodas" class="sol-checkbox" />
+                </th>
+                <th class="sol-th sol-th-paciente sol-th-sortable" @click="toggleSort('paciente')">
+                  Paciente
+                  <component :is="sortIcon('paciente')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'paciente', 'opacity-30': sortKey !== 'paciente' }" />
+                </th>
+                <th class="sol-th sol-th-sortable" @click="toggleSort('clinica')">
+                  Clínica
+                  <component :is="sortIcon('clinica')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'clinica', 'opacity-30': sortKey !== 'clinica' }" />
+                </th>
+                <th class="sol-th sol-th-sortable" @click="toggleSort('especialidad')">
+                  Especialidad
+                  <component :is="sortIcon('especialidad')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'especialidad', 'opacity-30': sortKey !== 'especialidad' }" />
+                </th>
+                <th class="sol-th">Diagnóstico</th>
                 <th class="sol-th">Estado</th>
                 <th class="sol-th sol-th-actions">Acciones</th>
               </tr>
             </thead>
-            <tbody>
+            <TransitionGroup name="sol-row" tag="tbody">
               <tr
-                v-for="(s, idx) in solicitudesFiltradas"
+                v-for="(s, idx) in solicitudesPaginadas"
                 :key="s.id"
-                class="sol-table-row anim-row-in"
-                :style="{ animationDelay: (idx * 0.02) + 's' }"
+                class="sol-table-row"
+                :class="{ 'sol-table-row-selected': seleccionadas.has(s.id) }"
               >
+                <td class="sol-td sol-td-check">
+                  <input type="checkbox" :checked="seleccionadas.has(s.id)" @change="toggleSeleccion(s.id)" class="sol-checkbox" />
+                </td>
                 <td class="sol-td">
                   <div class="sol-table-paciente">
                     <div class="sol-table-avatar"
@@ -114,6 +173,21 @@
                   </p>
                 </td>
                 <td class="sol-td">{{ s.especialidad_requerida }}</td>
+                <td class="sol-td">
+                  <div v-if="s.diagnosticos?.length" class="sol-dx-cell">
+                    <span
+                      v-for="dx in s.diagnosticos.slice(0, 2)"
+                      :key="dx.id"
+                      class="sol-dx-tag"
+                    >
+                      <strong>{{ dx.codigo_cie10 }}</strong>
+                      <span class="sol-dx-desc">{{ dx.descripcion }}</span>
+                    </span>
+                    <span v-if="s.diagnosticos.length > 2" class="sol-dx-more">+{{ s.diagnosticos.length - 2 }}</span>
+                  </div>
+                  <p v-else-if="s.diagnostico" class="sol-dx-text">{{ s.diagnostico }}</p>
+                  <span v-else class="sol-dx-none">—</span>
+                </td>
                 <td class="sol-td">
                   <span class="sol-table-status" :class="{
                     'sol-status-pending': s.estado === 'pendiente',
@@ -156,8 +230,24 @@
                   </div>
                 </td>
               </tr>
-            </tbody>
+            </TransitionGroup>
           </table>
+        </div>
+        <!-- Pagination -->
+        <div class="sol-pagination">
+          <span class="sol-pagination-info">
+            {{ (paginaActual - 1) * itemsPorPagina + 1 }}–{{ Math.min(paginaActual * itemsPorPagina, solicitudesFiltradas.length) }}
+            de {{ solicitudesFiltradas.length }}
+          </span>
+          <div class="sol-pagination-controls">
+            <button class="sol-pagination-btn" :disabled="paginaActual === 1" @click="paginaActual--">
+              <component :is="ChevronLeftIcon" class="w-3.5 h-3.5" />
+            </button>
+            <span class="sol-pagination-page">{{ paginaActual }} / {{ totalPaginas }}</span>
+            <button class="sol-pagination-btn" :disabled="paginaActual === totalPaginas" @click="paginaActual++">
+              <component :is="ChevronRightIcon" class="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -241,18 +331,18 @@
                   <span>ARCHIVOS ADJUNTOS ({{ solicitudSeleccionada.adjuntos.length }})</span>
                 </div>
                 <div class="detalle-adjuntos-list">
-                  <a
+                  <button
                     v-for="adj in solicitudSeleccionada.adjuntos"
                     :key="adj.id"
-                    :href="`/api/solicitudes-referencia/${solicitudSeleccionada.id}/adjuntos/${adj.id}/descargar`"
-                    target="_blank"
+                    type="button"
                     class="detalle-adjunto-item"
+                    @click="abrirAdjunto(adj)"
                   >
                     <component :is="FileTextIcon" class="w-4 h-4 text-blue-500 flex-shrink-0" />
                     <span class="detalle-adjunto-name">{{ adj.nombre_original }}</span>
                     <span class="detalle-adjunto-size">{{ formatFileSize(adj.tamano) }}</span>
-                    <component :is="DownloadIcon" class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                  </a>
+                    <component :is="isPreviewable(adj) ? EyeIcon : DownloadIcon" class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -304,6 +394,68 @@
       </template>
     </el-dialog>
 
+    <!-- ── Modal: Visor de adjunto ── -->
+    <el-dialog v-model="modalPdf" width="720px" :class="['pdf-dialog', { 'pdf-fullscreen': pantallaCompleta }]" align-center :show-close="true">
+      <template #header>
+        <div class="pdf-dialog-header">
+          <component :is="isImageAdjunto ? ImageIcon : FileTextIcon" class="w-4 h-4 flex-shrink-0" />
+          <p class="pdf-dialog-title">{{ adjuntoActivo?.nombre_original ?? 'Documento' }}</p>
+          <a
+            v-if="adjuntoActivo"
+            :href="pdfBlobUrl || adjuntoUrl(adjuntoActivo)"
+            :download="adjuntoActivo.nombre_original"
+            class="pdf-dialog-download"
+          >
+            <component :is="DownloadIcon" class="w-3.5 h-3.5" />
+            Descargar
+          </a>
+        </div>
+      </template>
+      <div
+        class="pdf-viewer-wrap"
+        :class="{ 'pdf-viewer-fullscreen': pantallaCompleta }"
+        @wheel.prevent="onWheel"
+      >
+        <!-- Zoom toolbar -->
+        <div v-if="!cargandoPdf && adjuntoActivo && isPreviewable(adjuntoActivo)" class="pdf-zoom-toolbar">
+          <button class="pdf-zoom-btn" @click="zoomOut" :disabled="zoomLevel <= 0.25" title="Alejar">
+            <component :is="ZoomOutIcon" class="w-4 h-4" />
+          </button>
+          <span class="pdf-zoom-label">{{ Math.round(zoomLevel * 100) }}%</span>
+          <button class="pdf-zoom-btn" @click="zoomIn" :disabled="zoomLevel >= 4" title="Acercar">
+            <component :is="ZoomInIcon" class="w-4 h-4" />
+          </button>
+          <button class="pdf-zoom-btn" @click="zoomReset" title="Restablecer">
+            <component :is="MaximizeIcon" class="w-4 h-4" />
+          </button>
+          <button class="pdf-zoom-btn" @click="togglePantallaCompleta" :title="pantallaCompleta ? 'Salir pantalla completa' : 'Pantalla completa'">
+            <component :is="pantallaCompleta ? MinimizeIcon : ExpandIcon" class="w-4 h-4" />
+          </button>
+        </div>
+        <div v-if="cargandoPdf" class="pdf-viewer-loading">
+          <component :is="RefreshIcon" class="w-6 h-6 animate-spin text-blue-500" />
+          <p>Cargando documento...</p>
+        </div>
+        <iframe
+          v-else-if="adjuntoActivo && pdfBlobUrl && isPdf(adjuntoActivo)"
+          :src="pdfZoomUrl"
+          class="pdf-viewer-iframe"
+          frameborder="0"
+        ></iframe>
+        <div v-else-if="adjuntoActivo && pdfBlobUrl && isImage(adjuntoActivo)" class="pdf-viewer-image-wrap">
+          <img :src="pdfBlobUrl" :alt="adjuntoActivo.nombre_original" class="pdf-viewer-image" :style="{ transform: `scale(${zoomLevel})` }" />
+        </div>
+        <div v-else-if="adjuntoActivo && !isPreviewable(adjuntoActivo)" class="pdf-viewer-fallback">
+          <component :is="FileTextIcon" class="w-10 h-10 text-gray-300" />
+          <p>Este archivo no se puede previsualizar</p>
+          <a :href="adjuntoUrl(adjuntoActivo)" download class="pdf-viewer-download-btn">
+            <component :is="DownloadIcon" class="w-4 h-4" />
+            Descargar archivo
+          </a>
+        </div>
+      </div>
+    </el-dialog>
+
     <el-dialog v-model="modalHistoriaClinica" width="620px" class="historia-dialog" append-to-body align-center>
       <template #header>
         <div class="historia-dialog-header">
@@ -329,6 +481,7 @@
             <p class="accion-head-title">Aceptar solicitud</p>
             <p class="accion-head-sub">{{ solicitudSeleccionada ? nombreCompleto(solicitudSeleccionada) : '' }}</p>
           </div>
+          <div v-if="solicitudSeleccionada" class="detalle-head-id-badge">ID #{{ solicitudSeleccionada.id }}</div>
         </div>
       </template>
       <div class="space-y-3 px-4 py-4">
@@ -372,6 +525,7 @@
             <p class="accion-head-title">Negar solicitud</p>
             <p class="accion-head-sub">{{ solicitudSeleccionada ? nombreCompleto(solicitudSeleccionada) : '' }}</p>
           </div>
+          <div v-if="solicitudSeleccionada" class="detalle-head-id-badge">ID #{{ solicitudSeleccionada.id }}</div>
         </div>
       </template>
       <div class="space-y-3 px-4 py-4">
@@ -411,8 +565,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useStorage } from '@vueuse/core';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useStorage, useDebounceFn } from '@vueuse/core';
+import { ElMessageBox } from 'element-plus';
 import notify from '@/plugins/toast';
 import {
   Search as SearchIcon,
@@ -427,6 +582,17 @@ import {
   ClipboardList as ClipboardListIcon,
   Paperclip as PaperclipIcon,
   Download as DownloadIcon,
+  Image as ImageIcon,
+  ZoomIn as ZoomInIcon,
+  ZoomOut as ZoomOutIcon,
+  Maximize as MaximizeIcon,
+  Expand as ExpandIcon,
+  Minimize as MinimizeIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  ArrowUp as ArrowUpIcon,
+  ArrowDown as ArrowDownIcon,
+  ArrowUpDown as ArrowUpDownIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 import { useAuthStore } from '@/stores/auth';
@@ -482,13 +648,24 @@ const solicitudes = ref<Solicitud[]>([]);
 const cargando = ref(false);
 const procesando = ref(false);
 const filtro = useStorage('sol-filtro', { buscar: '' });
+const buscarDebounced = ref(filtro.value.buscar);
+const updateBuscarDebounced = useDebounceFn((val: string) => { buscarDebounced.value = val; }, 300);
+watch(() => filtro.value.buscar, (val) => updateBuscarDebounced(val));
 const tabActiva = useStorage<'todas' | 'pendiente' | 'aceptado' | 'en_espera' | 'completado' | 'negado'>('sol-tab', 'todas');
+
+const seleccionadas = ref<Set<number>>(new Set());
+const sortKey = ref<'paciente' | 'clinica' | 'especialidad'>('paciente');
+const sortDir = ref<'asc' | 'desc'>('asc');
+const paginaActual = ref(1);
+const itemsPorPagina = 15;
 
 const modalDetalle = ref(false);
 const modalHistoriaClinica = ref(false);
 const modalAceptar = ref(false);
 const modalNegar = ref(false);
+const modalPdf = ref(false);
 const solicitudSeleccionada = ref<Solicitud | null>(null);
+const adjuntoActivo = ref<{ id: number; nombre_original: string; mime_type: string; tamano: number } | null>(null);
 
 const formAceptar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', observaciones_respuesta: '' });
 const formNegar = ref({ fecha_respuesta: '', hora_respuesta: '', motivo_negacion: '', nombre_quien_responde: '', observaciones_respuesta: '' });
@@ -555,9 +732,9 @@ const statPercents = computed(() => {
 });
 
 const solicitudesFiltradas = computed(() => {
-  return solicitudes.value.filter(s => {
+  let result = solicitudes.value.filter(s => {
     if (tabActiva.value !== 'todas' && s.estado !== tabActiva.value) return false;
-    const texto = filtro.value.buscar.toLowerCase();
+    const texto = buscarDebounced.value.toLowerCase();
     const coincideTexto = !texto ||
       nombreCompleto(s).toLowerCase().includes(texto) ||
       s.eps.toLowerCase().includes(texto) ||
@@ -566,7 +743,137 @@ const solicitudesFiltradas = computed(() => {
       s.numero_documento.toLowerCase().includes(texto);
     return coincideTexto;
   });
+  const dir = sortDir.value === 'asc' ? 1 : -1;
+  result = [...result].sort((a, b) => {
+    let va = '', vb = '';
+    if (sortKey.value === 'paciente') { va = nombreCompleto(a).toLowerCase(); vb = nombreCompleto(b).toLowerCase(); }
+    else if (sortKey.value === 'clinica') { va = (a.clinica?.nombre ?? '').toLowerCase(); vb = (b.clinica?.nombre ?? '').toLowerCase(); }
+    else { va = (a.especialidad_requerida ?? '').toLowerCase(); vb = (b.especialidad_requerida ?? '').toLowerCase(); }
+    return va < vb ? -dir : va > vb ? dir : 0;
+  });
+  return result;
 });
+
+const totalPaginas = computed(() => Math.max(1, Math.ceil(solicitudesFiltradas.value.length / itemsPorPagina)));
+const solicitudesPaginadas = computed(() => {
+  const start = (paginaActual.value - 1) * itemsPorPagina;
+  return solicitudesFiltradas.value.slice(start, start + itemsPorPagina);
+});
+
+const todasSeleccionadas = computed(() => {
+  if (solicitudesPaginadas.value.length === 0) return false;
+  return solicitudesPaginadas.value.every(s => seleccionadas.value.has(s.id));
+});
+
+function toggleSort(key: 'paciente' | 'clinica' | 'especialidad') {
+  if (sortKey.value === key) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortKey.value = key;
+    sortDir.value = 'asc';
+  }
+}
+
+function sortIcon(key: string) {
+  if (sortKey.value !== key) return ArrowUpDownIcon;
+  return sortDir.value === 'asc' ? ArrowUpIcon : ArrowDownIcon;
+}
+
+function cambiarTab(tab: 'todas' | 'pendiente' | 'aceptado' | 'en_espera' | 'completado' | 'negado') {
+  tabActiva.value = tab;
+  paginaActual.value = 1;
+}
+
+function toggleSeleccion(id: number) {
+  const s = new Set(seleccionadas.value);
+  if (s.has(id)) s.delete(id);
+  else s.add(id);
+  seleccionadas.value = s;
+}
+
+function toggleSeleccionTodas() {
+  const s = new Set(seleccionadas.value);
+  if (todasSeleccionadas.value) {
+    solicitudesPaginadas.value.forEach(x => s.delete(x.id));
+  } else {
+    solicitudesPaginadas.value.forEach(x => s.add(x.id));
+  }
+  seleccionadas.value = s;
+}
+
+async function aceptarLote() {
+  const ids = [...seleccionadas.value];
+  const lote = solicitudes.value.filter(s => ids.includes(s.id) && s.estado === 'pendiente');
+  if (lote.length === 0) {
+    notify.warning('No hay solicitudes pendientes para aceptar');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(`¿Aceptar ${lote.length} solicitud(es)?`, 'Confirmar', { confirmButtonText: 'Aceptar', cancelButtonText: 'Cancelar', type: 'success' });
+    for (const s of lote) {
+      await http.post(`/api/solicitudes-referencia/${s.id}/aceptar`, {
+        fecha_respuesta: fechaActual(),
+        hora_respuesta: horaActual(),
+        nombre_quien_responde: authStore.user?.full_name ?? '',
+        observaciones_respuesta: 'Aceptación masiva',
+      });
+    }
+    notify.success(`${lote.length} solicitud(es) aceptada(s)`);
+    seleccionadas.value = new Set();
+    await cargar();
+  } catch (e: any) {
+    if (e !== 'cancel') notify.error('Error al aceptar en lote');
+  }
+}
+
+async function negarLote() {
+  const ids = [...seleccionadas.value];
+  const lote = solicitudes.value.filter(s => ids.includes(s.id) && s.estado !== 'negado' && s.estado !== 'completado');
+  if (lote.length === 0) {
+    notify.warning('No hay solicitudes para negar');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(`¿Negar ${lote.length} solicitud(es)?`, 'Confirmar', { confirmButtonText: 'Negar', cancelButtonText: 'Cancelar', type: 'warning' });
+    for (const s of lote) {
+      await http.post(`/api/solicitudes-referencia/${s.id}/negar`, {
+        fecha_respuesta: fechaActual(),
+        hora_respuesta: horaActual(),
+        motivo_negacion: 'Negación masiva',
+        nombre_quien_responde: authStore.user?.full_name ?? '',
+        observaciones_respuesta: '',
+      });
+    }
+    notify.success(`${lote.length} solicitud(es) negada(s)`);
+    seleccionadas.value = new Set();
+    await cargar();
+  } catch (e: any) {
+    if (e !== 'cancel') notify.error('Error al negar en lote');
+  }
+}
+
+function exportarExcel() {
+  const rows = solicitudesFiltradas.value;
+  const headers = ['ID', 'Paciente', 'Documento', 'EPS', 'Clínica', 'Especialidad', 'Diagnóstico', 'Estado', 'Fecha', 'Hora', 'Remitente', 'Teléfono'];
+  const csv = [
+    headers.join('\t'),
+    ...rows.map(s => [
+      s.id, nombreCompleto(s), `${s.tipo_documento} ${s.numero_documento}`, s.eps,
+      s.clinica?.nombre ?? '', s.especialidad_requerida,
+      s.diagnosticos?.length ? s.diagnosticos.map(d => d.codigo_cie10).join('; ') : (s.diagnostico ?? ''),
+      estadoLabel(s.estado), formatFecha(s.fecha), s.hora,
+      s.quien_remitente ?? '', s.telefono_contacto ?? '',
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join('\t')),
+  ].join('\n');
+  const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `solicitudes_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  notify.success(`Exportadas ${rows.length} solicitudes`);
+}
 
 function inicialesPaciente(s: Solicitud): string {
   const parts = [s.primer_nombre, s.primer_apellido].filter(Boolean);
@@ -599,6 +906,77 @@ function formatFileSize(bytes: number): string {
   return size.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
 }
 
+function isPdf(adj: { mime_type?: string; nombre_original?: string }): boolean {
+  const isMimePdf = adj.mime_type === 'application/pdf';
+  const isExtPdf = (adj.nombre_original ?? '').toLowerCase().endsWith('.pdf');
+  return isMimePdf || isExtPdf;
+}
+
+function isImage(adj: { mime_type?: string; nombre_original?: string }): boolean {
+  const isMimeImage = (adj.mime_type ?? '').startsWith('image/');
+  const isExtImage = /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(adj.nombre_original ?? '');
+  return isMimeImage || isExtImage;
+}
+
+function isPreviewable(adj: { mime_type?: string; nombre_original?: string }): boolean {
+  return isPdf(adj) || isImage(adj);
+}
+
+const isImageAdjunto = computed(() => adjuntoActivo.value ? isImage(adjuntoActivo.value) : false);
+
+function adjuntoUrl(adj: { id: number }): string {
+  return `/api/solicitudes-referencia/${solicitudSeleccionada.value?.id}/adjuntos/${adj.id}/descargar`;
+}
+
+const pdfBlobUrl = ref<string | null>(null);
+const cargandoPdf = ref(false);
+const zoomLevel = ref(1);
+const pantallaCompleta = ref(false);
+
+const pdfZoomUrl = computed(() => {
+  if (!pdfBlobUrl.value) return null;
+  return `${pdfBlobUrl.value}#zoom=${Math.round(zoomLevel.value * 100)}`;
+});
+
+function zoomIn() {
+  zoomLevel.value = Math.min(parseFloat((zoomLevel.value + 0.25).toFixed(2)), 4);
+}
+function zoomOut() {
+  zoomLevel.value = Math.max(parseFloat((zoomLevel.value - 0.25).toFixed(2)), 0.25);
+}
+function zoomReset() {
+  zoomLevel.value = 1;
+}
+function onWheel(e: WheelEvent) {
+  if (e.deltaY < 0) zoomIn();
+  else zoomOut();
+}
+function togglePantallaCompleta() {
+  pantallaCompleta.value = !pantallaCompleta.value;
+}
+
+async function abrirAdjunto(adj: { id: number; nombre_original: string; mime_type: string; tamano: number }) {
+  adjuntoActivo.value = adj;
+  modalPdf.value = true;
+  zoomReset();
+  pantallaCompleta.value = false;
+  if (pdfBlobUrl.value) {
+    URL.revokeObjectURL(pdfBlobUrl.value);
+    pdfBlobUrl.value = null;
+  }
+  if (!isPreviewable(adj)) return;
+  cargandoPdf.value = true;
+  try {
+    const response = await http.get(adjuntoUrl(adj), { responseType: 'blob' });
+    pdfBlobUrl.value = URL.createObjectURL(response.data);
+  } catch {
+    notify.error('Error al cargar el archivo');
+    adjuntoActivo.value = null;
+  } finally {
+    cargandoPdf.value = false;
+  }
+}
+
 function limpiarFiltros() {
   filtro.value.buscar = '';
   tabActiva.value = 'todas';
@@ -619,6 +997,11 @@ async function cargar() {
 
 function verDetalle(s: Solicitud) {
   solicitudSeleccionada.value = s;
+  adjuntoActivo.value = null;
+  if (pdfBlobUrl.value) {
+    URL.revokeObjectURL(pdfBlobUrl.value);
+    pdfBlobUrl.value = null;
+  }
   modalHistoriaClinica.value = false;
   modalDetalle.value = true;
 }
@@ -732,11 +1115,426 @@ async function marcarCompletado(s: Solicitud) {
 }
 
 onMounted(cargar);
+
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+onMounted(() => {
+  pollTimer = setInterval(() => {
+    if (!cargando.value && !modalDetalle.value && !modalAceptar.value && !modalNegar.value && !modalPdf.value && !modalHistoriaClinica.value) cargar();
+  }, 30000);
+});
+
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer);
+});
 </script>
 
 <style scoped>
 .ph-solicitudes {
   background: linear-gradient(160deg, #eef4fc 0%, #e3edf8 40%, #f0f5fa 100%);
+}
+
+/* ── Stat cards ── */
+.sol-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .5rem;
+}
+.sol-stat-card {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: .65rem .8rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.sol-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(13,45,107,.08);
+}
+.sol-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--stat-color);
+  opacity: .8;
+}
+.sol-stat-icon {
+  width: 2.2rem; height: 2.2rem;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.sol-stat-body { flex: 1; min-width: 0; }
+.sol-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  margin: 0;
+}
+.sol-stat-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin: 0;
+}
+.sol-stat-bar-track {
+  height: 3px;
+  border-radius: 2px;
+  background: #f1f5f9;
+  margin-top: .25rem;
+  overflow: hidden;
+}
+.sol-stat-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .4s ease;
+}
+.sol-stat-delta {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Tab dots ── */
+.sol-tab-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: .3rem;
+}
+.sol-tab-dot--pendiente { background: #f59e0b; }
+.sol-tab-dot--aceptado { background: #22c55e; }
+.sol-tab-dot--en_espera { background: #3b82f6; }
+.sol-tab-dot--completado { background: #6366f1; }
+.sol-tab-dot--negado { background: #ef4444; }
+
+/* ── Bulk actions bar ── */
+.sol-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  background: linear-gradient(135deg, #eef2f9, #e0e8f5);
+  border: 1px solid #c4d4e8;
+  border-radius: 10px;
+  padding: .4rem .8rem;
+}
+.bulk-slide-enter-active, .bulk-slide-leave-active {
+  transition: all .25s ease;
+}
+.bulk-slide-enter-from, .bulk-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* ── Checkbox ── */
+.sol-checkbox {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid #cbd5e1;
+  cursor: pointer;
+  accent-color: #16468E;
+}
+.sol-th-check { width: 36px; text-align: center; }
+.sol-td-check { text-align: center; }
+
+/* ── Sortable headers ── */
+.sol-th-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color .15s ease;
+}
+.sol-th-sortable:hover { color: #16468E; }
+
+/* ── Selected row ── */
+.sol-table-row-selected {
+  background: rgba(22,70,142,.04) !important;
+}
+
+/* ── Row transitions ── */
+.sol-row-enter-active, .sol-row-leave-active {
+  transition: all .3s ease;
+}
+.sol-row-enter-from {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+.sol-row-leave-to {
+  opacity: 0;
+  transform: translateX(12px);
+}
+
+/* ── Pagination ── */
+.sol-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .5rem .8rem;
+  border-top: 1px solid #f1f5f9;
+  background: #fafbfc;
+}
+.sol-pagination-info {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+.sol-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.sol-pagination-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.sol-pagination-btn:hover:not(:disabled) {
+  border-color: #16468E;
+  color: #16468E;
+  background: #f0f5ff;
+}
+.sol-pagination-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.sol-pagination-page {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334e70;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* ── Modal: Visor de adjunto ── */
+:deep(.pdf-dialog) { border-radius: 16px; overflow: hidden; box-shadow: 0 32px 80px rgba(11,35,73,.35); transition: width .3s ease, max-width .3s ease; }
+:deep(.pdf-dialog.pdf-fullscreen) { width: 100% !important; max-width: 100vw !important; margin: 0 !important; height: 100vh; border-radius: 0; }
+:deep(.pdf-dialog.pdf-fullscreen .el-dialog__body) { height: calc(100vh - 52px); }
+:deep(.pdf-dialog .el-dialog__header) { margin: 0; padding: .75rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+:deep(.pdf-dialog .el-dialog__body) {
+  padding: 0;
+}
+:deep(.pdf-dialog .el-dialog__headerbtn) { top: 10px; right: 12px; width: 28px; height: 28px; }
+.pdf-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pdf-dialog-header > svg {
+  color: #64748b;
+}
+.pdf-dialog-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pdf-dialog-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #dbeafe;
+  padding: 6px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background .2s ease;
+}
+.pdf-dialog-download:hover {
+  background: #bfdbfe;
+}
+.pdf-viewer-wrap {
+  height: 75vh;
+  min-height: 420px;
+  background: #f1f5f9;
+  position: relative;
+  overflow: auto;
+}
+.pdf-viewer-wrap.pdf-viewer-fullscreen {
+  height: calc(100vh - 52px);
+}
+.pdf-zoom-toolbar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(13, 45, 107, .9);
+  backdrop-filter: blur(8px);
+  padding: 6px 8px;
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
+}
+.pdf-zoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+.pdf-zoom-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, .2);
+}
+.pdf-zoom-btn:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+.pdf-zoom-label {
+  min-width: 48px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  user-select: none;
+}
+.pdf-viewer-loading {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #5b7aa8;
+  font-size: 13px;
+  font-weight: 500;
+}
+.pdf-viewer-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+.pdf-viewer-image-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 24px;
+}
+.pdf-viewer-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(13, 45, 107, .2);
+  border: 4px solid #fff;
+}
+.pdf-viewer-fallback {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: #7c93b8;
+  font-size: 13px;
+  font-weight: 500;
+}
+.pdf-viewer-fallback svg {
+  color: #b6c6e0;
+}
+.pdf-viewer-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #0D2D6B 0%, #16468E 100%);
+  padding: 9px 20px;
+  border-radius: 999px;
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(13,45,107,.25);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.pdf-viewer-download-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(13,45,107,.32);
+}
+
+/* ── Diagnóstico column ── */
+.sol-dx-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 220px;
+}
+.sol-dx-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sol-dx-tag strong {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  color: #6d28d9;
+  background: #ede9fe;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: .02em;
+}
+.sol-dx-desc {
+  color: #64748b;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sol-dx-more {
+  font-size: 10px;
+  font-weight: 700;
+  color: #7c3aed;
+  padding-left: 2px;
+}
+.sol-dx-text {
+  font-size: 11px;
+  color: #64748b;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sol-dx-none {
+  color: #cbd5e1;
+  font-size: 12px;
 }
 
 /* ── Header ── */

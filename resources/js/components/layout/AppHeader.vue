@@ -41,6 +41,14 @@
     <div class="flex items-center gap-1.5">
       <NotificationCenter />
 
+      <button
+        class="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all border-none cursor-pointer hover:scale-110"
+        :title="layout.isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+        @click="layout.toggleDarkMode"
+      >
+        <component :is="layout.isDarkMode ? SunIcon : MoonIcon" class="w-5 h-5" />
+      </button>
+
       <button class="w-8 h-8 rounded bg-transparent hover:bg-white/10 text-[var(--blue-300)] hover:text-white flex items-center justify-center transition-colors border-none cursor-pointer">
         <HelpCircleIcon class="w-4.5 h-4.5" />
       </button>
@@ -92,6 +100,8 @@ import {
   Key as KeyIcon,
   LogOut as LogOutIcon,
   Menu as MenuIcon,
+  Moon as MoonIcon,
+  Sun as SunIcon,
   User as UserIcon,
 } from '@lucide/vue';
 

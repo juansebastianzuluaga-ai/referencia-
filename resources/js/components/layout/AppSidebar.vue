@@ -13,18 +13,7 @@
     <div class="sidebar-glow-3"></div>
     <div class="sidebar-pattern"></div>
 
-    <!-- Logo / Brand -->
-    <div class="relative z-10 flex items-center gap-2.5 px-4 pt-4 pb-3 shrink-0" :class="{ 'justify-center': layout.isSidebarCollapsed }">
-      <div class="w-9 h-9 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0">
-        <img :src="logoAvatar" alt="Santa Bárbara" class="w-7 h-7 object-contain" />
-      </div>
-      <div v-if="!layout.isSidebarCollapsed" class="min-w-0 overflow-hidden">
-        <strong class="block text-sm font-semibold text-white leading-tight truncate">Santa Bárbara</strong>
-        <span class="text-[10px] leading-none mt-0.5 block truncate" style="color:rgba(255,255,255,0.45);">Clínica de Alta Complejidad</span>
-      </div>
-    </div>
-
-    <div class="sidebar-divider mb-2"></div>
+    <div class="sidebar-divider mt-2 mb-2"></div>
 
     <div class="py-1 flex-1 relative z-10 overflow-y-auto">
 
@@ -172,6 +161,7 @@ aside::-webkit-scrollbar-thumb { background: rgba(255,255,255,.07); border-radiu
   white-space: nowrap;
   overflow: hidden;
   transition: opacity 0.2s ease;
+  max-height: 14px;
 }
 
 .sidebar-divider {

@@ -48,7 +48,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
         params,
         headers: { 'X-Skip-Auth-Redirect': '1' },
       });
-      notifications.value = data.data || [];
+      const raw = data.data;
+      notifications.value = Array.isArray(raw) ? raw : (raw?.data ?? []);
       loaded.value = true;
     } catch {
       notifications.value = [];

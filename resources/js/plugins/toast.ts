@@ -1,17 +1,48 @@
-import { toast } from 'vue3-toastify';
+import { reactive } from 'vue';
+
+export type NotifyType = 'success' | 'error' | 'warning' | 'info';
+
+export interface NotifyItem {
+  id: number;
+  type: NotifyType;
+  message: string;
+  duration: number;
+}
+
+let idCounter = 0;
+
+export const notifyState = reactive<{ queue: NotifyItem[]; current: NotifyItem | null }>({
+  queue: [],
+  current: null,
+});
+
+function processQueue() {
+  if (notifyState.current || notifyState.queue.length === 0) return;
+  notifyState.current = notifyState.queue.shift() ?? null;
+}
+
+function push(type: NotifyType, message: string, duration: number) {
+  notifyState.queue.push({ id: ++idCounter, type, message, duration });
+  processQueue();
+}
+
+export function dismissCurrent() {
+  notifyState.current = null;
+  processQueue();
+}
 
 export const notify = {
   success(msg: string) {
-    toast.success(msg, { autoClose: 3000, theme: 'colored', position: 'top-right' });
+    push('success', msg, 3000);
   },
   error(msg: string) {
-    toast.error(msg, { autoClose: 4000, theme: 'colored', position: 'top-right' });
+    push('error', msg, 4000);
   },
   info(msg: string) {
-    toast.info(msg, { autoClose: 3000, theme: 'colored', position: 'top-right' });
+    push('info', msg, 3000);
   },
   warning(msg: string) {
-    toast.warning(msg, { autoClose: 3500, theme: 'colored', position: 'top-right' });
+    push('warning', msg, 3500);
   },
 };
 

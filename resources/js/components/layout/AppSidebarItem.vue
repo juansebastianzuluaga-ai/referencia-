@@ -3,6 +3,7 @@
     <router-link
       :to="to"
       class="menu-item no-underline"
+      :class="{ 'menu-item-collapsed': layout.isSidebarCollapsed }"
       active-class="menu-item-active"
       @click="layout.closeMobileMenu()"
     >
@@ -133,5 +134,20 @@ const resolvedIcon = computed(() => {
 .menu-item-active .menu-label {
   color: #ffffff;
   font-weight: 700;
+}
+
+/* Collapsed state */
+.menu-item-collapsed {
+  margin: 0 8px 8px;
+  padding: 10px 0;
+  justify-content: center;
+  gap: 0;
+}
+.menu-item-collapsed .menu-icon-wrap {
+  width: 36px;
+  height: 36px;
+}
+.menu-item-collapsed .menu-accent-bar {
+  left: -8px;
 }
 </style>

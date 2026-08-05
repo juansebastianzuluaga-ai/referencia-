@@ -40,36 +40,36 @@
             <div class="rf-section-glow"></div>
           </div>
           <div class="rf-grid">
-            <el-form-item label="Tipo de documento" prop="tipo_documento" required class="rf-field rf-stagger-1">
+            <el-form-item label="Tipo de documento" prop="tipo_documento" required class="rf-field rf-col-quarter rf-stagger-1">
               <el-select v-model="form.tipo_documento" class="w-full" placeholder="Tipo" popper-class="rf-select-popper">
                 <el-option v-for="t in TIPOS_DOCUMENTO" :key="t" :label="t" :value="t" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Número de documento" prop="numero_documento" required class="rf-field rf-stagger-2">
+            <el-form-item label="Número de documento" prop="numero_documento" required class="rf-field rf-col-third rf-stagger-2">
               <el-input v-model="form.numero_documento" autocomplete="off" />
             </el-form-item>
-            <el-form-item label="Primer nombre" prop="primer_nombre" required class="rf-field rf-stagger-3">
-              <el-input v-model="form.primer_nombre" autocomplete="off" @input="capitalizar('primer_nombre')" />
-            </el-form-item>
-            <el-form-item label="Segundo nombre" class="rf-field rf-stagger-4">
-              <el-input v-model="form.segundo_nombre" autocomplete="off" @input="capitalizar('segundo_nombre')" />
-            </el-form-item>
-            <el-form-item label="Primer apellido" prop="primer_apellido" required class="rf-field rf-stagger-5">
-              <el-input v-model="form.primer_apellido" autocomplete="off" @input="capitalizar('primer_apellido')" />
-            </el-form-item>
-            <el-form-item label="Segundo apellido" class="rf-field rf-stagger-6">
-              <el-input v-model="form.segundo_apellido" autocomplete="off" @input="capitalizar('segundo_apellido')" />
-            </el-form-item>
-            <el-form-item label="Edad" prop="edad" required class="rf-field rf-stagger-7">
+            <el-form-item label="Edad" prop="edad" required class="rf-field rf-col-quarter rf-stagger-3">
               <el-input-number v-model="form.edad" :min="0" :max="120" class="w-full" controls-position="right" />
             </el-form-item>
-            <el-form-item label="Género" prop="genero" required class="rf-field rf-stagger-8">
+            <el-form-item label="Género" prop="genero" required class="rf-field rf-col-quarter rf-stagger-4">
               <el-select v-model="form.genero" class="w-full" placeholder="Seleccione" popper-class="rf-select-popper">
                 <el-option label="Masculino" value="M" />
                 <el-option label="Femenino" value="F" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Municipio" prop="municipio_capita" required class="rf-field rf-stagger-1">
+            <el-form-item label="Primer nombre" prop="primer_nombre" required class="rf-field rf-col-half rf-stagger-5">
+              <el-input v-model="form.primer_nombre" autocomplete="off" @input="capitalizar('primer_nombre')" />
+            </el-form-item>
+            <el-form-item label="Segundo nombre" class="rf-field rf-col-half rf-stagger-6">
+              <el-input v-model="form.segundo_nombre" autocomplete="off" @input="capitalizar('segundo_nombre')" />
+            </el-form-item>
+            <el-form-item label="Primer apellido" prop="primer_apellido" required class="rf-field rf-col-half rf-stagger-7">
+              <el-input v-model="form.primer_apellido" autocomplete="off" @input="capitalizar('primer_apellido')" />
+            </el-form-item>
+            <el-form-item label="Segundo apellido" class="rf-field rf-col-half rf-stagger-8">
+              <el-input v-model="form.segundo_apellido" autocomplete="off" @input="capitalizar('segundo_apellido')" />
+            </el-form-item>
+            <el-form-item label="Municipio" prop="municipio_capita" required class="rf-field rf-col-third rf-stagger-1">
               <el-input v-model="form.municipio_capita" autocomplete="off" @input="capitalizar('municipio_capita')" />
             </el-form-item>
             <el-form-item label="EPS / Aseguradora" prop="eps" required class="rf-field rf-col-2 rf-stagger-2">
@@ -96,87 +96,122 @@
             <div class="rf-section-glow" style="background: radial-gradient(circle, rgba(21,150,106,.08), transparent 70%);"></div>
           </div>
 
-          <!-- Diagnósticos -->
-          <div class="rf-dx-block">
-            <div class="rf-dx-header">
-              <label class="rf-dx-title">Diagnósticos (CIE-10) <span class="rf-req">*</span></label>
-              <el-button size="small" plain @click="agregarDiagnostico" class="rf-dx-add">
-                <component :is="PlusIcon" class="w-3 h-3 mr-1" /> Agregar
-              </el-button>
-            </div>
-            <div v-for="(dx, i) in diagnosticos" :key="i" class="rf-dx-row">
-              <div class="rf-dx-code">
-                <el-select
-                  v-model="dx.codigo_cie10"
-                  filterable
-                  class="w-full"
-                  placeholder="Código CIE-10"
-                  popper-class="rf-select-popper"
-                  :filter-method="filtrarCIE10"
-                  @change="(val: string) => onDxSelect(i, val)"
-                >
-                  <el-option key="__otro_dx" label="➕ Otro..." value="__otro_dx" />
-                  <el-option v-for="item in cie10Filtrados" :key="item.codigo" :label="item.codigo" :value="item.codigo" />
-                </el-select>
+          <!-- Sub-sección 1: Diagnósticos -->
+          <div class="rf-subsection">
+            <div class="rf-subsection-header">
+              <div class="rf-subsection-icon rf-sub-icon-green">
+                <component :is="FileTextIcon" class="w-3.5 h-3.5" />
               </div>
-              <div class="rf-dx-desc">
-                <el-input v-model="dx.descripcion" placeholder="Descripción del diagnóstico" />
-              </div>
-              <button v-if="diagnosticos.length > 1" type="button" class="rf-dx-remove" @click="quitarDiagnostico(i)">
-                <component :is="XIcon" class="w-3.5 h-3.5" />
-              </button>
+              <h4>Diagnósticos CIE-10</h4>
+              <span class="rf-subsection-badge">Obligatorio</span>
             </div>
-            <p v-if="diagnosticos.length === 0" class="rf-dx-empty">Agregue al menos un diagnóstico.</p>
+            <div class="rf-dx-block">
+              <div class="rf-dx-header">
+                <el-button size="small" plain @click="agregarDiagnostico" class="rf-dx-add">
+                  <component :is="PlusIcon" class="w-3 h-3 mr-1" /> Agregar diagnóstico
+                </el-button>
+              </div>
+              <div v-for="(dx, i) in diagnosticos" :key="i" class="rf-dx-row">
+                <div class="rf-dx-code">
+                  <el-select
+                    v-model="dx.codigo_cie10"
+                    filterable
+                    class="w-full"
+                    placeholder="Código CIE-10"
+                    popper-class="rf-select-popper"
+                    :filter-method="filtrarCIE10"
+                    @change="(val: string) => onDxSelect(i, val)"
+                  >
+                    <el-option key="__otro_dx" label="➕ Otro..." value="__otro_dx" />
+                    <el-option v-for="item in cie10Filtrados" :key="item.codigo" :label="item.codigo" :value="item.codigo" />
+                  </el-select>
+                </div>
+                <div class="rf-dx-desc">
+                  <el-input v-model="dx.descripcion" placeholder="Descripción del diagnóstico" />
+                </div>
+                <button v-if="diagnosticos.length > 1" type="button" class="rf-dx-remove" @click="quitarDiagnostico(i)">
+                  <component :is="XIcon" class="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <p v-if="diagnosticos.length === 0" class="rf-dx-empty">Agregue al menos un diagnóstico.</p>
+            </div>
           </div>
 
-          <div class="rf-grid rf-mt">
-            <el-form-item label="Especialidad requerida" prop="especialidad_requerida" required class="rf-field rf-stagger-1">
-              <el-select v-model="form.especialidad_requerida" filterable class="w-full" placeholder="Seleccione" popper-class="rf-select-popper" @change="onEspecialidadSelect">
-                <el-option key="__otra_esp" label="➕ Otra especialidad..." value="__otra_esp" />
-                <el-option v-for="e in ESPECIALIDADES" :key="e" :label="e" :value="e" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="Servicio / Ubicación actual" prop="servicio_ubicacion_actual" required class="rf-field rf-stagger-2">
-              <el-select v-model="form.servicio_ubicacion_actual" class="w-full" placeholder="Seleccione" popper-class="rf-select-popper">
-                <el-option v-for="s in SERVICIOS" :key="s" :label="s" :value="s" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="Servicio al que se remite" class="rf-field rf-stagger-3">
-              <el-select v-model="form.servicio_remision" class="w-full" placeholder="Seleccione" clearable popper-class="rf-select-popper">
-                <el-option v-for="s in SERVICIOS" :key="s" :label="s" :value="s" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="Vía de contacto" class="rf-field rf-stagger-4">
-              <el-select v-model="form.via_contacto" class="w-full" placeholder="Seleccione" clearable popper-class="rf-select-popper">
-                <el-option label="Email" value="EMAIL" />
-                <el-option label="Telefónica" value="TELEFONICA" />
-                <el-option label="N/A" value="N/A" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="¿Paciente gestante?" class="rf-field rf-stagger-5">
-              <el-select v-model="form.gestante" class="w-full" placeholder="Seleccione" clearable popper-class="rf-select-popper">
-                <el-option label="Sí" :value="true" />
-                <el-option label="No" :value="false" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="Condición especial" class="rf-field rf-col-3 rf-stagger-6">
-              <el-input v-model="form.condicion_especial" placeholder="Ej: discapacidad, obesidad mórbida..." autocomplete="off" @input="capitalizar('condicion_especial')" />
-            </el-form-item>
-            <el-form-item label="Historia clínica" prop="resumen_historia_clinica" required class="rf-field rf-col-3 rf-stagger-7">
-              <el-input v-model="form.resumen_historia_clinica" type="textarea" :rows="2"
-                placeholder="Motivo de remisión, antecedentes, estado actual..." @input="capitalizar('resumen_historia_clinica')" />
-            </el-form-item>
-            <div class="rf-attach rf-col-1"
+          <!-- Sub-sección 2: Destino de la remisión -->
+          <div class="rf-subsection">
+            <div class="rf-subsection-header">
+              <div class="rf-subsection-icon rf-sub-icon-blue">
+                <component :is="StethoscopeIcon" class="w-3.5 h-3.5" />
+              </div>
+              <h4>Destino de la remisión</h4>
+            </div>
+            <div class="rf-grid">
+              <el-form-item label="Especialidad requerida" prop="especialidad_requerida" required class="rf-field rf-col-half rf-stagger-1">
+                <el-select v-model="form.especialidad_requerida" filterable class="w-full" placeholder="Seleccione" popper-class="rf-select-popper" @change="onEspecialidadSelect">
+                  <el-option key="__otra_esp" label="➕ Otra especialidad..." value="__otra_esp" />
+                  <el-option v-for="e in ESPECIALIDADES" :key="e" :label="e" :value="e" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="Servicio / Ubicación actual" prop="servicio_ubicacion_actual" required class="rf-field rf-col-half rf-stagger-2">
+                <el-select v-model="form.servicio_ubicacion_actual" class="w-full" placeholder="Seleccione" popper-class="rf-select-popper">
+                  <el-option v-for="s in SERVICIOS" :key="s" :label="s" :value="s" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="Servicio al que se remite" class="rf-field rf-col-third rf-stagger-3">
+                <el-select v-model="form.servicio_remision" class="w-full" placeholder="Seleccione" clearable popper-class="rf-select-popper">
+                  <el-option v-for="s in SERVICIOS" :key="s" :label="s" :value="s" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="Vía de contacto" class="rf-field rf-col-quarter rf-stagger-4">
+                <el-select v-model="form.via_contacto" class="w-full" placeholder="Seleccione" clearable popper-class="rf-select-popper">
+                  <el-option label="Email" value="EMAIL" />
+                  <el-option label="Telefónica" value="TELEFONICA" />
+                  <el-option label="N/A" value="N/A" />
+                </el-select>
+              </el-form-item>
+            </div>
+          </div>
+
+          <!-- Sub-sección 3: Información clínica -->
+          <div class="rf-subsection">
+            <div class="rf-subsection-header">
+              <div class="rf-subsection-icon rf-sub-icon-amber">
+                <component :is="UserIcon" class="w-3.5 h-3.5" />
+              </div>
+              <h4>Información clínica</h4>
+            </div>
+            <div class="rf-grid">
+              <el-form-item label="¿Paciente gestante?" class="rf-field rf-col-quarter rf-stagger-1">
+                <el-select v-model="form.gestante" class="w-full" placeholder="Seleccione" clearable popper-class="rf-select-popper">
+                  <el-option label="Sí" :value="true" />
+                  <el-option label="No" :value="false" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="Condición especial" class="rf-field rf-col-2 rf-stagger-2">
+                <el-input v-model="form.condicion_especial" placeholder="Ej: discapacidad, obesidad mórbida..." autocomplete="off" @input="capitalizar('condicion_especial')" />
+              </el-form-item>
+              <el-form-item label="Historia clínica" prop="resumen_historia_clinica" required class="rf-field rf-col-3 rf-stagger-3">
+                <el-input v-model="form.resumen_historia_clinica" type="textarea" :rows="2"
+                  placeholder="Motivo de remisión, antecedentes, estado actual..." @input="capitalizar('resumen_historia_clinica')" />
+              </el-form-item>
+            </div>
+          </div>
+
+          <!-- Sub-sección 4: Adjuntos -->
+          <div class="rf-subsection">
+            <div class="rf-subsection-header">
+              <div class="rf-subsection-icon rf-sub-icon-purple">
+                <component :is="PaperclipIcon" class="w-3.5 h-3.5" />
+              </div>
+              <h4>Soportes y adjuntos</h4>
+              <span v-if="adjuntos.length" class="rf-subsection-badge rf-badge-blue">{{ adjuntos.length }}/10</span>
+            </div>
+            <div class="rf-attach"
               :class="{ 'rf-attach-active': dragOver }"
               @dragover.prevent="dragOver = true"
               @dragleave.prevent="dragOver = false"
               @drop.prevent="onDrop"
             >
-              <div class="rf-attach-header">
-                <component :is="PaperclipIcon" class="w-3.5 h-3.5" />
-                <span>Adjuntar soportes</span>
-                <span v-if="adjuntos.length" class="rf-attach-count">{{ adjuntos.length }}/10</span>
-              </div>
               <div class="rf-dropzone" @click="fileInput?.click()">
                 <component :is="UploadCloudIcon" class="w-5 h-5" />
                 <p>Clic o arrastre aquí</p>
@@ -195,22 +230,22 @@
             </div>
           </div>
 
-          <!-- Quien remite -->
+          <!-- Sub-sección 5: Quien remite -->
           <div class="rf-subsection">
             <div class="rf-subsection-header">
-              <div class="rf-subsection-icon">
+              <div class="rf-subsection-icon rf-sub-icon-cyan">
                 <component :is="UserCheckIcon" class="w-3.5 h-3.5" />
               </div>
               <h4>Datos de quien remite</h4>
             </div>
             <div class="rf-grid">
-              <el-form-item label="Quien remite" prop="quien_remitente" class="rf-col-2">
+              <el-form-item label="Quien remite" prop="quien_remitente" class="rf-field rf-col-2 rf-stagger-1">
                 <el-input v-model="form.quien_remitente" placeholder="Nombre de quien remite" @input="capitalizar('quien_remitente')" />
               </el-form-item>
-              <el-form-item label="Teléfono de contacto" prop="telefono_contacto">
+              <el-form-item label="Teléfono de contacto" prop="telefono_contacto" class="rf-field rf-col-third rf-stagger-2">
                 <el-input v-model="form.telefono_contacto" placeholder="Teléfono de contacto" />
               </el-form-item>
-              <el-form-item label="Correo de contacto" prop="correo_contacto">
+              <el-form-item label="Correo de contacto" prop="correo_contacto" class="rf-field rf-col-third rf-stagger-3">
                 <el-input v-model="form.correo_contacto" placeholder="correo@ejemplo.com" />
               </el-form-item>
             </div>
@@ -778,8 +813,8 @@ onMounted(() => {
 <style scoped>
 /* ── Page ── */
 .solicitud-page {
-  padding: 1rem 1.25rem;
-  gap: .75rem;
+  padding: .6rem .9rem;
+  gap: .5rem;
   background: linear-gradient(160deg, #F0F5FF 0%, #E0EAF7 40%, #F0F5FF 100%);
 }
 
@@ -787,13 +822,13 @@ onMounted(() => {
 .rf-stepper {
   display: flex;
   align-items: center;
-  gap: .75rem;
+  gap: .6rem;
   flex-shrink: 0;
   background: linear-gradient(180deg, #FAFBFF 0%, #F5F8FE 100%);
   border: 1px solid #DBE4F0;
-  border-radius: 14px;
-  padding: .5rem .8rem;
-  box-shadow: 0 4px 16px rgba(13, 45, 107, .08);
+  border-radius: 12px;
+  padding: .35rem .6rem;
+  box-shadow: 0 2px 10px rgba(13, 45, 107, .06);
 }
 .rf-stepper-back {
   display: grid;
@@ -858,12 +893,12 @@ onMounted(() => {
 .rf-step-num {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: #F1F5F9;
   color: #94A3B8;
-  font-size: .78rem;
+  font-size: .72rem;
   font-weight: 700;
   flex-shrink: 0;
   transition: all .3s ease;
@@ -883,7 +918,7 @@ onMounted(() => {
   outline-offset: 2px;
 }
 .rf-step-label {
-  font-size: .8rem;
+  font-size: .74rem;
   font-weight: 600;
   color: #94A3B8;
   white-space: nowrap;
@@ -896,7 +931,7 @@ onMounted(() => {
   min-height: 0;
   overflow: hidden;
   display: flex;
-  gap: .75rem;
+  gap: .5rem;
 }
 .rf-form-col {
   flex: 1;
@@ -906,7 +941,7 @@ onMounted(() => {
   overflow-x: hidden;
 }
 .rf-sidebar {
-  width: 300px;
+  width: 270px;
   flex-shrink: 0;
   height: 100%;
   overflow-y: auto;
@@ -916,15 +951,15 @@ onMounted(() => {
 :deep(.rf-form-col .el-form) { display: flex; flex-direction: column; gap: .5rem; }
 :deep(.rf-form-col .el-form-item) { margin-bottom: 0; display: flex; flex-direction: column; }
 :deep(.rf-form-col .el-form-item__label) {
-  color: #475569; font-size: .72rem; font-weight: 600;
-  padding-bottom: .15rem; line-height: 1.2;
+  color: #475569; font-size: .68rem; font-weight: 600;
+  padding-bottom: .1rem; line-height: 1.2;
 }
 :deep(.rf-form-col .el-form-item__error) { padding-top: 2px; font-size: .62rem; }
 :deep(.rf-form-col .el-input__wrapper),
 :deep(.rf-form-col .el-select__wrapper),
 :deep(.rf-form-col .el-textarea__inner) {
   box-shadow: 0 0 0 1px #CBD5E1 inset;
-  border-radius: 9px;
+  border-radius: 8px;
   background: #fff;
   transition: box-shadow .2s ease;
 }
@@ -933,19 +968,19 @@ onMounted(() => {
 :deep(.rf-form-col .el-input__wrapper:hover),
 :deep(.rf-form-col .el-select__wrapper:hover) { box-shadow: 0 0 0 1px #3B82F6 inset; }
 :deep(.rf-form-col .el-input__wrapper),
-:deep(.rf-form-col .el-select__wrapper) { min-height: 36px; }
+:deep(.rf-form-col .el-select__wrapper) { min-height: 32px; }
 :deep(.rf-form-col .el-input-number) { width: 100%; }
-:deep(.rf-form-col .el-input-number .el-input__wrapper) { min-height: 36px; }
-:deep(.rf-form-col .el-textarea__inner) { min-height: 36px !important; border-radius: 9px; }
+:deep(.rf-form-col .el-input-number .el-input__wrapper) { min-height: 32px; }
+:deep(.rf-form-col .el-textarea__inner) { min-height: 32px !important; border-radius: 8px; }
 
 /* ── Sections ── */
 .rf-section {
   position: relative;
   background: linear-gradient(180deg, #FAFBFF 0%, #F5F8FE 100%);
   border: 1px solid #DBE4F0;
-  border-radius: 16px;
-  padding: 1rem 1.1rem 1.1rem;
-  box-shadow: 0 6px 24px rgba(13, 45, 107, .1);
+  border-radius: 14px;
+  padding: .7rem .85rem .85rem;
+  box-shadow: 0 4px 18px rgba(13, 45, 107, .08);
   overflow: hidden;
 }
 .rf-section-accent {
@@ -956,27 +991,27 @@ onMounted(() => {
 .rf-section-header {
   display: flex;
   align-items: center;
-  gap: .6rem;
-  margin-bottom: .8rem;
-  padding-bottom: .6rem;
+  gap: .5rem;
+  margin-bottom: .55rem;
+  padding-bottom: .45rem;
   border-bottom: 1px solid #F1F5F9;
 }
 .rf-section-icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   flex-shrink: 0;
 }
 .rf-section-heading h3 {
-  font-size: .85rem;
+  font-size: .78rem;
   font-weight: 800;
   color: #0D2D6B;
   margin: 0;
 }
 .rf-section-heading p {
-  font-size: .68rem;
+  font-size: .62rem;
   font-weight: 500;
   color: #8A9AB5;
   margin: 1px 0 0;
@@ -985,41 +1020,68 @@ onMounted(() => {
 /* ── Grid ── */
 .rf-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: .55rem .8rem;
+  grid-template-columns: repeat(6, 1fr);
+  gap: .4rem .6rem;
 }
-.rf-col-1 { grid-column: span 1; }
-.rf-col-2 { grid-column: span 2; }
-.rf-col-3 { grid-column: span 3; }
+.rf-col-1 { grid-column: span 2; }
+.rf-col-2 { grid-column: span 3; }
+.rf-col-3 { grid-column: span 6; }
+.rf-col-half { grid-column: span 3; }
+.rf-col-third { grid-column: span 2; }
+.rf-col-quarter { grid-column: span 1; }
+.rf-col-fifth { grid-column: span 1; }
 .rf-mt { margin-top: .7rem; }
 
 /* ── Subsection ── */
 .rf-subsection {
-  margin-top: .75rem;
-  padding-top: .65rem;
+  margin-top: .6rem;
+  padding-top: .5rem;
   border-top: 1px dashed #E2E8F0;
+}
+.rf-subsection:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 .rf-subsection-header {
   display: flex;
   align-items: center;
   gap: .4rem;
-  margin-bottom: .5rem;
+  margin-bottom: .45rem;
 }
 .rf-subsection-icon {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: #EFF6FF;
-  color: #0D2D6B;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   flex-shrink: 0;
 }
+.rf-sub-icon-green { background: #DCFCE7; color: #15803D; }
+.rf-sub-icon-blue { background: #DBEAFE; color: #2563EB; }
+.rf-sub-icon-amber { background: #FEF3C7; color: #D97706; }
+.rf-sub-icon-purple { background: #F3E8FF; color: #7C3AED; }
+.rf-sub-icon-cyan { background: #CFFAFE; color: #0891B2; }
 .rf-subsection-header h4 {
-  font-size: .78rem;
+  font-size: .72rem;
   font-weight: 800;
   color: #0D2D6B;
   margin: 0;
+}
+.rf-subsection-badge {
+  margin-left: auto;
+  font-size: .58rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}
+.rf-badge-blue {
+  background: #EFF6FF;
+  color: #2563EB;
+  border-color: #BFDBFE;
 }
 
 /* ── Diagnósticos ── */
@@ -1168,9 +1230,9 @@ onMounted(() => {
 .rf-summary-card {
   background: linear-gradient(180deg, #FAFBFF 0%, #F5F8FE 100%);
   border: 1px solid #DBE4F0;
-  border-radius: 16px;
-  padding: 1rem;
-  box-shadow: 0 6px 24px rgba(13, 45, 107, .1);
+  border-radius: 14px;
+  padding: .75rem .85rem;
+  box-shadow: 0 4px 18px rgba(13, 45, 107, .08);
   position: sticky;
   top: 0;
 }
@@ -1288,9 +1350,9 @@ onMounted(() => {
 /* ── Footer ── */
 .rf-footer {
   display: flex;
-  gap: .6rem;
+  gap: .5rem;
   flex-shrink: 0;
-  padding-top: .6rem;
+  padding-top: .4rem;
   border-top: 1px solid #E2E8F0;
   background: linear-gradient(180deg, rgba(255,255,255,0), #fff 45%);
 }
@@ -1299,9 +1361,9 @@ onMounted(() => {
   border-color: #CBD5E1 !important;
   color: #475569 !important;
   font-weight: 600;
-  border-radius: 10px;
-  height: 42px !important;
-  padding: 0 22px !important;
+  border-radius: 9px;
+  height: 38px !important;
+  padding: 0 18px !important;
 }
 .rf-btn-back:hover {
   color: #0D2D6B !important;
@@ -1313,11 +1375,11 @@ onMounted(() => {
   border: none !important;
   color: #fff !important;
   font-weight: 700;
-  border-radius: 10px;
-  height: 42px !important;
-  padding: 0 26px !important;
+  border-radius: 9px;
+  height: 38px !important;
+  padding: 0 22px !important;
   margin-left: auto;
-  box-shadow: 0 4px 14px rgba(13, 45, 107, .25);
+  box-shadow: 0 3px 12px rgba(13, 45, 107, .2);
 }
 .rf-btn-next:hover, .rf-btn-submit:hover {
   background: linear-gradient(135deg, #16468E, #1E5BBF) !important;
@@ -1728,6 +1790,9 @@ onMounted(() => {
 @media (max-width: 768px) {
   .rf-grid { grid-template-columns: repeat(2, 1fr); }
   .rf-col-3 { grid-column: span 2; }
+  .rf-col-half { grid-column: span 2; }
+  .rf-col-third { grid-column: span 1; }
+  .rf-col-quarter { grid-column: span 1; }
   .sp-hero-badge, .rf-stepper-badge { display: none; }
   .rf-stepper { padding: .5rem .6rem; }
   .rf-step-label { display: none; }

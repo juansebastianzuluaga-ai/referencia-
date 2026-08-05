@@ -2,10 +2,10 @@
   <div class="ph-dashboard h-full flex overflow-hidden">
 
     <!-- ══ Columna principal ═══════════════════════════════════════════════ -->
-    <div class="flex-1 flex flex-col gap-3 p-4 sm:p-5 min-w-0 overflow-hidden">
+    <div class="flex-1 flex flex-col gap-2 p-3 sm:p-4 min-w-0 overflow-hidden">
 
       <!-- ── Hero ── -->
-      <div class="hero-card rounded-2xl p-5 sm:p-6 flex items-center gap-4 relative overflow-hidden shrink-0 animate-fade-in-down"
+      <div class="hero-card rounded-2xl p-3 sm:p-4 flex items-center gap-4 relative overflow-hidden shrink-0 animate-fade-in-down"
         style="animation-duration: 0.4s; animation-fill-mode: both;">
         <div class="hero-glow"></div>
         <div class="hero-glow-2"></div>
@@ -52,10 +52,10 @@
       </div>
 
       <!-- ── Stat cards ── -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 animate-fade-in-up"
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 shrink-0 animate-fade-in-up"
         style="animation-duration: 0.4s; animation-delay: 0.1s; animation-fill-mode: both;">
         <template v-if="cargando">
-          <Card v-for="i in 4" :key="i" class="stat-card rounded-2xl p-4 flex items-center gap-4">
+          <Card v-for="i in 4" :key="i" class="stat-card rounded-2xl p-3 flex items-center gap-3">
             <div class="shimmer-box" style="width:52px; height:52px; border-radius:14px;"></div>
             <div class="flex-1 space-y-2">
               <div class="shimmer-bar" style="width:70%; height:20px;"></div>
@@ -67,13 +67,13 @@
         <template v-else>
           <div
             v-for="(card, i) in statCards" :key="i"
-            class="stat-card rounded-2xl p-4 sm:p-5 flex items-center gap-4 anim-slide-up group"
+            class="stat-card rounded-2xl p-3 flex items-center gap-3 anim-slide-up group"
             :style="{ animationDelay: (i * 0.06) + 's', '--accent': card.color, '--accent-2': card.color2, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
           >
             <div class="stat-card-glow" :style="{ background: 'radial-gradient(circle, ' + card.color2 + '45, transparent 70%)' }"></div>
 
             <div class="stat-icon-chip shrink-0">
-              <component :is="card.icon" class="w-[22px] h-[22px]" />
+              <component :is="card.icon" class="w-[18px] h-[18px]" />
             </div>
 
             <div class="flex-1 min-w-0 relative z-10">
@@ -85,16 +85,16 @@
         </template>
       </div>
 
-      <!-- ── Gráficos: Tendencia + Tasa ── -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 shrink-0 animate-fade-in-up"
+      <!-- ── Gráficos: Tendencia + Distribución ── -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 shrink-0 animate-fade-in-up"
         style="animation-duration: 0.4s; animation-delay: 0.18s; animation-fill-mode: both;">
 
         <!-- Tendencia area chart -->
-        <Card v-if="cargando" class="distrib-card rounded-2xl p-5 lg:col-span-2">
+        <Card v-if="cargando" class="distrib-card rounded-2xl p-4 lg:col-span-2">
           <div class="shimmer-bar" style="width:160px; height:14px; margin-bottom:12px;"></div>
           <div class="shimmer-bar w-full" style="height:120px; border-radius:8px;"></div>
         </Card>
-        <Card v-else class="distrib-card rounded-2xl p-5 flex flex-col anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
+        <Card v-else class="distrib-card rounded-2xl p-3 sm:p-4 flex flex-col anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
           <div class="distrib-card-glow"></div>
           <div class="flex items-center justify-between mb-3 relative z-10">
             <div class="flex items-center gap-3">
@@ -103,136 +103,138 @@
               </div>
               <div>
                 <p class="text-sm font-bold" style="color:#1e2d55;">Tendencia de solicitudes</p>
-                <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Volumen de remisiones por día</p>
+                <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Volumen de remisiones · últimos 14 días</p>
               </div>
             </div>
-            <span class="estado-total-badge">Últimos 14 días</span>
+            <div class="flex items-center gap-2">
+              <span class="trend-stat-pill">
+                <component :is="TrendingUpIcon" class="w-3 h-3" />
+                {{ tendenciaTotal }}
+              </span>
+              <span class="estado-total-badge">14 días</span>
+            </div>
           </div>
           <div v-if="chartsReady" class="flex-1 w-full min-h-[120px] relative z-10">
             <component :is="apexchart" type="area" :series="tendenciaSeries" :options="tendenciaOptions" height="140" />
           </div>
         </Card>
 
-        <!-- Tasa de aceptación radial bar -->
-        <Card v-if="cargando" class="distrib-card rounded-2xl p-5 flex flex-col">
+        <!-- Distribución de estados (barras horizontales) -->
+        <Card v-if="cargando" class="distrib-card rounded-2xl p-4 flex flex-col">
           <div class="shimmer-bar" style="width:120px; height:14px; margin-bottom:12px;"></div>
-          <div class="shimmer-bar w-full" style="height:120px; border-radius:50%;"></div>
+          <div class="shimmer-bar w-full" style="height:120px; border-radius:8px;"></div>
         </Card>
-        <Card v-else class="distrib-card rounded-2xl p-5 flex flex-col anim-slide-up" style="animation-delay:0.2s">
+        <Card v-else class="distrib-card rounded-2xl p-3 sm:p-4 flex flex-col anim-slide-up" style="animation-delay:0.2s">
           <div class="flex items-center gap-3 mb-2">
-            <div class="chart-header-icon" style="background: linear-gradient(135deg,#dcfce7,#bbf7d0); color:#15966a;">
-              <component :is="TargetIcon" class="w-4 h-4" />
+            <div class="chart-header-icon" style="background: linear-gradient(135deg,#fef3c7,#fde68a); color:#d97706;">
+              <component :is="ActivityIcon" class="w-4 h-4" />
             </div>
             <div>
-              <p class="text-sm font-bold" style="color:#1e2d55;">Tasa de aceptación</p>
-              <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Resoluciones positivas</p>
+              <p class="text-sm font-bold" style="color:#1e2d55;">Distribución de estados</p>
+              <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Resumen general</p>
             </div>
           </div>
-          <div v-if="chartsReady" class="flex-1 w-full flex items-center justify-center min-h-[120px] gauge-wrap">
-            <component :is="apexchart" type="radialBar" :series="tasaSeries" :options="tasaOptions" height="150" />
+          <div v-if="chartsReady && stats.total > 0" class="flex-1 w-full flex flex-col justify-center gap-2.5 min-h-[120px] py-1">
+            <div v-for="bar in distribucionBarras" :key="bar.label" class="dist-bar-item">
+              <div class="flex items-center justify-between mb-1">
+                <span class="dist-bar-label" :style="{ color: bar.color }">{{ bar.label }}</span>
+                <span class="dist-bar-count">{{ bar.count }} <span class="dist-bar-pct">({{ bar.pct }}%)</span></span>
+              </div>
+              <div class="dist-bar-track">
+                <div class="dist-bar-fill" :style="{ width: bar.pct + '%', background: bar.gradient, boxShadow: '0 2px 8px ' + bar.color + '40' }"></div>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="chartsReady" class="flex-1 flex flex-col items-center justify-center min-h-[120px]">
+            <component :is="ActivityIcon" class="w-8 h-8 mb-2" style="color:#cbd5e1;" />
+            <p class="text-xs font-medium" style="color:#94a3b8;">Sin datos para mostrar</p>
           </div>
         </Card>
       </div>
 
-      <!-- ── Acciones + Solicitudes recientes ── -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 flex-1 min-h-0 animate-fade-in-up"
-        style="animation-duration: 0.4s; animation-delay: 0.24s; animation-fill-mode: both;">
+      <!-- ── Especialidades + Últimas referencias ── -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 flex-1 min-h-0 animate-fade-in-up"
+        style="animation-duration: 0.4s; animation-delay: 0.2s; animation-fill-mode: both;">
 
-        <!-- Botones de acción -->
-        <div class="flex flex-col gap-3 shrink-0">
-          <button @click="abrirFormulario" class="action-btn action-btn-blue anim-slide-up" style="animation-delay:0.26s">
-            <div class="action-btn-icon"><component :is="PlusIcon" class="w-5 h-5" /></div>
-            <div class="action-btn-text"><strong>Nueva solicitud</strong><span>Registrar remisión</span></div>
-            <component :is="ArrowRightIcon" class="w-4 h-4 action-btn-arrow" />
-          </button>
-          <button @click="irHistorial" class="action-btn action-btn-green anim-slide-up" style="animation-delay:0.28s">
-            <div class="action-btn-icon"><component :is="ClipboardListIcon" class="w-5 h-5" /></div>
-            <div class="action-btn-text"><strong>Historial</strong><span>{{ stats.total }} registradas</span></div>
-            <component :is="ArrowRightIcon" class="w-4 h-4 action-btn-arrow" />
-          </button>
-          <button @click="cargar" class="action-btn action-btn-purple anim-slide-up" style="animation-delay:0.3s">
-            <div class="action-btn-icon"><component :is="RefreshCwIcon" :class="{ 'animate-spin': cargando }" class="w-5 h-5" /></div>
-            <div class="action-btn-text"><strong>Actualizar</strong><span>Sincronizar datos</span></div>
-            <component :is="ArrowRightIcon" class="w-4 h-4 action-btn-arrow" />
-          </button>
-        </div>
-
-        <!-- Solicitudes recientes -->
-        <Card class="recent-card lg:col-span-2 flex flex-col rounded-2xl p-5 min-h-0">
-          <div class="flex items-center justify-between mb-3 shrink-0">
-            <div class="flex items-center gap-3">
-              <div class="recent-header-icon">
-                <component :is="ClipboardListIcon" class="w-4 h-4" />
-              </div>
-              <div>
-                <CardTitle class="font-bold text-base" style="color:#1e2d55;">Solicitudes recientes</CardTitle>
-                <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Últimas remisiones registradas</p>
-              </div>
-              <Badge v-if="!cargando && solicitudes.length > 0" variant="secondary">{{ solicitudes.length }}</Badge>
+        <!-- Polar area especialidades -->
+        <Card class="distrib-card rounded-2xl p-3 sm:p-4 flex flex-col anim-slide-up" style="animation-delay:0.22s">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="chart-header-icon" style="background: linear-gradient(135deg,#ede9fe,#ddd6fe); color:#7c3aed;">
+              <component :is="PieChartIcon" class="w-4 h-4" />
             </div>
-            <button @click="cargar" class="recent-refresh-btn">
-              <component :is="RefreshCwIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': cargando }" />
-              <span>Actualizar</span>
-            </button>
-          </div>
-
-          <div v-if="cargando" class="space-y-2.5 flex-1">
-            <div v-for="i in 3" :key="i" class="skeleton-row rounded-xl px-4 py-3 flex items-center gap-3">
-              <div class="shimmer-box" style="width:36px; height:36px; border-radius:10px;"></div>
-              <div class="flex-1 space-y-1.5">
-                <div class="shimmer-bar" style="width:45%; height:12px;"></div>
-                <div class="shimmer-bar" style="width:70%; height:9px;"></div>
-              </div>
-              <div class="shimmer-box" style="width:56px; height:20px; border-radius:999px;"></div>
+            <div class="flex-1">
+              <p class="text-sm font-bold" style="color:#1e2d55;">Especialidades</p>
+              <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Distribución por área</p>
             </div>
           </div>
-
-          <div v-else-if="solicitudes.length === 0" class="flex-1 flex flex-col items-center justify-center py-8 text-center">
-            <div class="empty-state-icon w-14 h-14 rounded-2xl flex items-center justify-center mb-4">
-              <component :is="ClipboardListIcon" class="w-7 h-7" />
-            </div>
-            <p class="font-semibold text-base mb-1" style="color:#0d2d5e;">Aún no hay solicitudes</p>
-            <p class="text-sm max-w-[280px]" style="color:#64748b;">Cree la primera remisión para iniciar el seguimiento.</p>
-            <button class="empty-state-action mt-4" @click="abrirFormulario"><component :is="PlusIcon" class="w-4 h-4" /> Crear primera solicitud</button>
+          <div v-if="chartsReady && especialidadPolarData.length > 0" class="flex-1 w-full flex items-center justify-center min-h-[120px]">
+            <component :is="apexchart" type="polarArea" :series="especialidadPolarSeries" :options="especialidadPolarOptions" height="160" />
           </div>
+          <div v-else class="flex-1 flex flex-col items-center justify-center min-h-[120px]">
+            <component :is="PieChartIcon" class="w-8 h-8 mb-2" style="color:#cbd5e1;" />
+            <p class="text-xs font-medium" style="color:#94a3b8;">Sin especialidades registradas</p>
+          </div>
+        </Card>
 
-          <div v-else class="flex-1 overflow-y-auto space-y-2 pr-1">
-            <div
-              v-for="(sol, idx) in solicitudes.slice(0, 4)"
+        <!-- Últimas referencias -->
+        <Card class="distrib-card rounded-2xl p-3 sm:p-4 flex flex-col lg:col-span-2 anim-slide-up" style="animation-delay:0.24s">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="chart-header-icon" style="background: linear-gradient(135deg,#dcfce7,#bbf7d0); color:#15966a;">
+              <component :is="ClipboardListIcon" class="w-4 h-4" />
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-bold" style="color:#1e2d55;">Últimas referencias</p>
+              <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Solicitudes más recientes · hover para detalle</p>
+            </div>
+            <button @click="irHistorial" class="text-[10px] font-bold px-2.5 py-1 rounded-full transition-all" style="background:#e0ecff; color:#16468e;">Ver todas</button>
+          </div>
+          <div class="flex-1 overflow-y-auto space-y-1 pr-1 mini-ref-list">
+            <button
+              v-for="(sol, idx) in solicitudes.slice(0, 5)"
               :key="sol.id"
-              class="med-row rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer transition-all anim-row-in"
-              :style="[
-                { borderLeftColor: sol.estado === 'pendiente' ? '#fbbf24' : sol.estado === 'aceptado' ? '#22c55e' : sol.estado === 'en_espera' ? '#3b82f6' : sol.estado === 'completado' ? '#6366f1' : '#f87171' },
-                { animationDelay: (idx * 0.06) + 's' }
-              ]"
+              type="button"
+              class="mini-ref-row"
+              :style="{ '--ref-color': estadoColorMap[sol.estado] ?? '#94a3b8', borderLeftColor: estadoColorMap[sol.estado] ?? '#94a3b8', animationDelay: (idx * 0.05) + 's' }"
               @click="verDetalle(sol)"
+              @mouseenter="onRefRowEnter($event, sol)"
+              @mouseleave="onRefRowLeave"
             >
-              <div class="med-icon w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold"
-                :style="{ background: sol.estado === 'pendiente' ? '#fef3c7' : sol.estado === 'aceptado' ? '#dcfce7' : sol.estado === 'en_espera' ? '#dbeafe' : sol.estado === 'completado' ? '#e0e7ff' : '#fee2e2', color: sol.estado === 'pendiente' ? '#d97706' : sol.estado === 'aceptado' ? '#16a34a' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#dc2626' }">
-                {{ initialesPaciente(sol) }}
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-bold truncate" style="color:#1e2d55;">
-                  {{ sol.primer_nombre }} {{ sol.primer_apellido }}
-                </p>
-                <p class="text-xs truncate mt-1" style="color:#8a9ab5;">
-                  {{ sol.especialidad_requerida }} · {{ sol.eps }}
-                </p>
-              </div>
-              <div class="flex flex-col items-end gap-1 shrink-0">
-                <span class="text-xs font-bold px-2.5 py-1 rounded-full shrink-0"
-                  :style="{
-                    background: sol.estado === 'pendiente' ? '#fff3cd' : sol.estado === 'aceptado' ? '#d3f9d8' : sol.estado === 'en_espera' ? '#d0e3ff' : sol.estado === 'completado' ? '#e0e0ff' : '#ffe0e0',
-                    color: sol.estado === 'pendiente' ? '#b96800' : sol.estado === 'aceptado' ? '#2f9e44' : sol.estado === 'en_espera' ? '#2563eb' : sol.estado === 'completado' ? '#4f46e5' : '#c92a2a',
-                  }"
-                >
-                  {{ estadoLabel(sol.estado) }}
+              <span class="mini-ref-avatar">{{ initialesPaciente(sol) }}</span>
+              <span class="mini-ref-info">
+                <span class="mini-ref-name">{{ sol.primer_nombre }} {{ sol.primer_apellido }}</span>
+                <span class="mini-ref-meta">
+                  <span>{{ sol.especialidad_requerida || 'Sin especialidad' }}</span>
+                  <span class="mini-ref-dot">•</span>
+                  <span>{{ sol.eps || 'Sin EPS' }}</span>
                 </span>
-                <span class="text-[10px] font-medium" style="color:#94a3b8;">{{ tiempoRelativo(sol.created_at) }}</span>
-              </div>
+              </span>
+              <span class="mini-ref-badge">{{ estadoLabel(sol.estado) }}</span>
+            </button>
+            <div v-if="solicitudes.length === 0" class="flex-1 flex flex-col items-center justify-center py-6 text-center">
+              <component :is="ClipboardListIcon" class="w-7 h-7 mb-2" style="color:#cbd5e1;" />
+              <p class="text-xs font-medium" style="color:#94a3b8;">Sin solicitudes recientes</p>
             </div>
           </div>
         </Card>
+
+        <!-- Tooltip flotante -->
+        <Teleport to="body">
+          <div
+            v-if="refTooltip"
+            class="ref-tooltip-float"
+            :style="{ top: refTooltip.top + 'px', left: refTooltip.left + 'px', '--ref-color': estadoColorMap[refTooltip.sol.estado] ?? '#94a3b8', transform: refTooltip.placement === 'top' ? 'translate(-50%, -100%)' : 'translate(-50%, 0)' }"
+          >
+            <span class="ref-tooltip-arrow" :class="refTooltip.placement === 'top' ? 'arrow-down' : 'arrow-up'"></span>
+            <span class="ref-tooltip-head">
+              <span class="ref-tooltip-avatar">{{ initialesPaciente(refTooltip.sol) }}</span>
+              <span class="ref-tooltip-name">{{ refTooltip.sol.primer_nombre }} {{ refTooltip.sol.primer_apellido }}</span>
+            </span>
+            <span class="ref-tooltip-row"><strong>Especialidad:</strong> {{ refTooltip.sol.especialidad_requerida || '—' }}</span>
+            <span class="ref-tooltip-row"><strong>EPS:</strong> {{ refTooltip.sol.eps || '—' }}</span>
+            <span class="ref-tooltip-row"><strong>Documento:</strong> {{ refTooltip.sol.tipo_documento || 'CC' }} {{ refTooltip.sol.numero_documento || '—' }}</span>
+            <span class="ref-tooltip-row"><strong>Estado:</strong> <span class="ref-tooltip-estado">{{ estadoLabel(refTooltip.sol.estado) }}</span></span>
+          </div>
+        </Teleport>
       </div>
 
     </div>
@@ -432,12 +434,15 @@ import CardDescription from '@/components/ui/card/CardDescription.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
 import Badge from '@/components/ui/badge/Badge.vue';
 import { useClinicaAuthStore } from '@/stores/clinicaAuth';
+import { useLayoutStore } from '@/stores/layout';
 import { TIPOS_DOCUMENTO, EPS_LIST, ESPECIALIDADES, SERVICIOS } from '@/data/referencia';
 import { CIE10 } from '@/data/cie10';
 
 const apexchart = VueApexCharts;
 
 const clinicaAuth = useClinicaAuthStore();
+const layout = useLayoutStore();
+const isDark = computed(() => layout.isDarkMode);
 const router = useRouter();
 const solicitudes = ref<any[]>([]);
 const cargando = ref(false);
@@ -606,10 +611,13 @@ const tendenciaSeries = computed(() => {
   return [{ name: 'Solicitudes', data: datos }];
 });
 
+const tendenciaTotal = computed(() => tendenciaSeries.value[0].data.reduce((a: number, b: number) => a + b, 0));
+
 const tendenciaOptions = computed(() => ({
   chart: {
     type: 'area' as const,
     fontFamily: 'inherit',
+    background: 'transparent',
     toolbar: { show: false },
     sparkline: { enabled: false },
     animations: {
@@ -620,101 +628,195 @@ const tendenciaOptions = computed(() => ({
       dynamicAnimation: { enabled: true, speed: 350 },
     },
   },
-  colors: ['#2563c4'],
-  stroke: { curve: 'smooth' as const, width: 2.5 },
+  colors: ['#2563c4', '#60a5fa'],
+  stroke: { curve: 'smooth' as const, width: 3, lineCap: 'round' as const },
   fill: {
     type: 'gradient',
     gradient: {
       shadeIntensity: 1,
-      opacityFrom: 0.35,
+      type: 'vertical' as const,
+      opacityFrom: 0.45,
       opacityTo: 0.05,
-      stops: [0, 100],
+      stops: [0, 50, 100],
+      colorStops: [
+        { offset: 0, color: '#2563c4', opacity: 0.45 },
+        { offset: 50, color: '#60a5fa', opacity: 0.2 },
+        { offset: 100, color: '#93c5fd', opacity: 0.05 },
+      ],
     },
   },
   dataLabels: { enabled: false },
   grid: {
-    borderColor: '#f1f5f9',
-    strokeDashArray: 4,
-    padding: { top: 0, right: 8, bottom: 0, left: 8 },
-    yaxis: { lines: { show: false } },
+    borderColor: isDark.value ? '#1e293b' : '#f1f5f9',
+    strokeDashArray: 5,
+    padding: { top: 5, right: 10, bottom: 5, left: 10 },
+    yaxis: { lines: { show: true } },
+    xaxis: { lines: { show: false } },
   },
   xaxis: {
     categories: Array.from({ length: 14 }, (_, i) => {
       const d = new Date(Date.now() - (13 - i) * 86400000);
       return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
     }),
-    labels: { style: { fontSize: '9px', colors: '#94a3b8' }, rotate: 0 },
+    labels: { style: { fontSize: '10px', colors: isDark.value ? '#64748b' : '#94a3b8' }, rotate: 0 },
     axisBorder: { show: false },
     axisTicks: { show: false },
+    crosshairs: {
+      stroke: { color: isDark.value ? '#334155' : '#cbd5e1', dashArray: 3 },
+      fill: { type: 'solid', color: isDark.value ? '#1e293b' : '#f1f5f9' },
+    },
   },
-  yaxis: { show: false },
+  yaxis: {
+    show: true,
+    labels: {
+      style: { fontSize: '9px', colors: isDark.value ? '#475569' : '#cbd5e1' },
+      formatter: (val: number) => val === 0 ? '' : String(Math.round(val)),
+    },
+    tickAmount: 3,
+  },
   tooltip: {
-    y: { formatter: (val: number) => `${val} solicitudes` },
-    style: { fontSize: '11px', fontFamily: 'inherit' },
-    theme: 'light' as const,
+    y: { formatter: (val: number) => `${val} solicitud${val !== 1 ? 'es' : ''}` },
+    style: { fontSize: '12px', fontFamily: 'inherit' },
+    theme: isDark.value ? 'dark' as const : 'light' as const,
+    marker: { show: true, fillColors: ['#2563c4'] },
   },
   markers: {
     size: 0,
-    hover: { size: 5, sizeOffset: 3 },
+    hover: { size: 6, sizeOffset: 4 },
+    strokeColors: isDark.value ? '#0f172a' : '#fff',
+    strokeWidth: 2,
+    fillColors: ['#2563c4'],
+  },
+  annotations: {
+    points: tendenciaTotal.value > 0 ? [{
+      x: new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }),
+      seriesIndex: 0,
+      label: {
+        text: 'Hoy',
+        style: {
+          color: '#fff',
+          background: '#2563c4',
+          fontSize: '9px',
+          fontWeight: 700,
+          padding: { left: 5, right: 5, top: 2, bottom: 2 },
+        },
+      },
+    }] : [],
   },
 }));
 
-// ── Tasa de aceptación (radial bar) ─────────────────────────────────────────
-const tasaSeries = computed(() => [tasaAceptacion.value]);
+// ── Distribución de estados (barras horizontales) ───────────────────────────
+const distribucionBarras = computed(() => {
+  const total = Math.max(1, stats.value.total);
+  return [
+    { label: 'Pendientes', count: stats.value.pendientes, pct: Math.round((stats.value.pendientes / total) * 100), color: '#f59e0b', gradient: 'linear-gradient(90deg, #fbbf24, #f59e0b)' },
+    { label: 'Aceptadas', count: stats.value.aceptadas, pct: Math.round((stats.value.aceptadas / total) * 100), color: '#22c55e', gradient: 'linear-gradient(90deg, #4ade80, #22c55e)' },
+    { label: 'En espera', count: stats.value.enEspera, pct: Math.round((stats.value.enEspera / total) * 100), color: '#3b82f6', gradient: 'linear-gradient(90deg, #60a5fa, #3b82f6)' },
+    { label: 'Negadas', count: stats.value.negadas, pct: Math.round((stats.value.negadas / total) * 100), color: '#ef4444', gradient: 'linear-gradient(90deg, #f87171, #ef4444)' },
+  ];
+});
 
-const tasaOptions = computed(() => ({
+// ── Estado color map ────────────────────────────────────────────────────────
+const estadoColorMap: Record<string, string> = {
+  pendiente: '#f59e0b',
+  aceptado: '#22c55e',
+  en_espera: '#3b82f6',
+  completado: '#6366f1',
+  negado: '#ef4444',
+};
+
+// ── Polar area especialidades ───────────────────────────────────────────────
+const POLAR_COLORS = ['#2563c4', '#7c3aed', '#15966a', '#d97706', '#dc2626', '#0891b2', '#c026d3', '#65a30d', '#ea580c', '#4f46e5'];
+
+const especialidadPolarData = computed(() => {
+  const conteo: Record<string, number> = {};
+  solicitudes.value.forEach(s => {
+    const esp = s.especialidad_requerida || 'Sin especificar';
+    conteo[esp] = (conteo[esp] ?? 0) + 1;
+  });
+  return Object.entries(conteo)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+});
+
+const especialidadPolarSeries = computed(() => {
+  return especialidadPolarData.value.map(e => e[1]);
+});
+
+const especialidadPolarOptions = computed(() => ({
   chart: {
-    type: 'radialBar' as const,
+    type: 'polarArea' as const,
     fontFamily: 'inherit',
+    background: 'transparent',
     toolbar: { show: false },
     animations: {
       enabled: true,
       easing: 'easeinout' as const,
-      speed: 900,
-      animateGradually: { enabled: true, delay: 200 },
+      speed: 800,
+      animateGradually: { enabled: true, delay: 80 },
       dynamicAnimation: { enabled: true, speed: 400 },
     },
   },
-  plotOptions: {
-    radialBar: {
-      startAngle: -135,
-      endAngle: 135,
-      radius: '62%' as const,
-      hollow: { size: '65%' as const },
-      track: {
-        background: '#eef2f7',
-        strokeWidth: '100%' as const,
-        margin: 2,
-      },
-      dataLabels: {
-        name: { show: false },
-        value: {
-          show: true,
-          fontSize: '22px',
-          fontWeight: 800,
-          color: '#1e2d55',
-          formatter: (val: number) => `${Math.round(val)}%`,
-          offsetY: 5,
-        },
-      },
-    },
+  labels: especialidadPolarData.value.map(e => e[0].length > 18 ? e[0].slice(0, 18) + '…' : e[0]),
+  colors: POLAR_COLORS.slice(0, especialidadPolarData.value.length),
+  stroke: {
+    width: 2,
+    colors: [isDark.value ? '#1e293b' : '#fff'],
   },
   fill: {
-    type: 'gradient',
-    gradient: {
-      shade: 'light' as const,
-      type: 'horizontal' as const,
-      shadeIntensity: 0.4,
-      gradientToColors: ['#60a5fa'],
-      inverseColors: false,
-      opacityFrom: 1,
-      opacityTo: 1,
-      stops: [0, 100],
-    },
+    opacity: 0.85,
   },
-  stroke: { lineCap: 'round' as const },
-  labels: ['Tasa de aceptación'],
+  dataLabels: {
+    enabled: false,
+  },
+  legend: {
+    position: 'bottom' as const,
+    fontSize: '9px',
+    fontWeight: 600,
+    labels: { colors: isDark.value ? '#94a3b8' : '#475569' },
+    markers: { size: 4, strokeWidth: 0 },
+    itemMargin: { horizontal: 4, vertical: 2 },
+  },
+  tooltip: {
+    y: {
+      formatter: (val: number) => `${val} solicitud${val !== 1 ? 'es' : ''}`,
+    },
+    style: { fontSize: '12px', fontFamily: 'inherit' },
+    theme: isDark.value ? 'dark' as const : 'light' as const,
+  },
+  responsive: [{
+    breakpoint: 480,
+    options: {
+      legend: { position: 'bottom' as const, fontSize: '8px' },
+    },
+  }],
 }));
+
+// ── Tooltip flotante (como dashboard interno) ───────────────────────────────
+const refTooltip = ref<{ top: number; left: number; placement: 'top' | 'bottom'; sol: any } | null>(null);
+
+function onRefRowEnter(event: MouseEvent, sol: any) {
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  const spaceAbove = rect.top;
+  const placement: 'top' | 'bottom' = spaceAbove > 160 ? 'top' : 'bottom';
+  refTooltip.value = {
+    top: placement === 'top' ? rect.top - 10 : rect.bottom + 10,
+    left: rect.left + rect.width / 2,
+    placement,
+    sol,
+  };
+}
+
+function onRefRowLeave() {
+  refTooltip.value = null;
+}
+
+// ── Tasa de rechazo ─────────────────────────────────────────────────────────
+const tasaRechazo = computed(() => {
+  if (!stats.value.total) return 0;
+  return Math.round((stats.value.negadas / stats.value.total) * 100);
+});
 
 // Contador animado
 const displayStats = ref([0, 0, 0, 0]);
@@ -2305,7 +2407,7 @@ onUnmounted(() => {
 .stat-icon-chip {
   position: relative;
   z-index: 10;
-  width: 52px; height: 52px;
+  width: 42px; height: 42px;
   border-radius: 14px;
   display: flex;
   align-items: center;
@@ -2322,19 +2424,19 @@ onUnmounted(() => {
 
 .stat-delta-badge {
   display: inline-block;
-  font-size: 9.5px;
+  font-size: 8.5px;
   font-weight: 800;
-  padding: 3px 9px;
+  padding: 2px 7px;
   border-radius: 999px;
   white-space: nowrap;
   background: var(--delta-bg);
   color: var(--delta-color);
-  margin-top: 4px;
+  margin-top: 3px;
   position: relative;
   z-index: 10;
 }
 .stat-value {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 900;
   line-height: 1.1;
   letter-spacing: -.03em;
@@ -2343,7 +2445,7 @@ onUnmounted(() => {
   z-index: 10;
 }
 .stat-label {
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 700;
   color: #64748b;
   margin-top: 1px;
@@ -2405,6 +2507,289 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* ── Trend stat pill ── */
+.trend-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+  color: #2563c4;
+  border: 1px solid #bfdbfe;
+}
+.trend-stat-pill svg { color: #2563c4; }
+
+/* ── Quick strip buttons ── */
+
+/* ── Distribution bars ── */
+.dist-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dist-bar-label {
+  font-size: 11px;
+  font-weight: 800;
+}
+.dist-bar-count {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1e2d55;
+  font-variant-numeric: tabular-nums;
+}
+.dist-bar-pct {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+.dist-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+.dist-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.8s cubic-bezier(.22,1,.36,1);
+  animation: barFillIn 0.8s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes barFillIn {
+  from { width: 0 !important; }
+}
+
+.quick-strip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: 7px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.quick-strip-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+.quick-strip-btn:active { transform: translateY(0); }
+.quick-strip-blue {
+  background: linear-gradient(135deg, #0D2D6B, #16468E);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(13,45,107,.25);
+}
+.quick-strip-green {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #15966a;
+  box-shadow: 0 4px 14px rgba(21,150,106,.12);
+}
+.quick-strip-purple {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #7c3aed;
+  box-shadow: 0 4px 14px rgba(124,58,237,.1);
+}
+
+/* ── KPI rows ── */
+.kpi-row {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .55rem .7rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border: 1px solid #e2e8f0;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.kpi-row:hover {
+  transform: translateX(3px);
+  box-shadow: 0 4px 14px rgba(22,70,142,.08);
+  border-color: #cbd5e1;
+}
+.kpi-icon {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  margin: 0;
+}
+.kpi-value {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Mini ref rows (últimas referencias ampliado) ── */
+.mini-ref-row {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .5rem .65rem;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #e8eef6;
+  border-left: 3px solid var(--ref-color, #94a3b8);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
+  animation: rowIn 0.4s cubic-bezier(.22,1,.36,1) both;
+}
+.mini-ref-row:hover {
+  transform: translateX(3px);
+  box-shadow: 0 6px 16px rgba(22,70,142,.1);
+  border-color: #b9c8e0;
+  background: #f8fbff;
+}
+.mini-ref-avatar {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ref-color, #94a3b8) 85%, #fff), var(--ref-color, #94a3b8));
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--ref-color, #94a3b8) 35%, transparent);
+  transition: transform .2s ease;
+}
+.mini-ref-row:hover .mini-ref-avatar { transform: scale(1.08); }
+.mini-ref-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mini-ref-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e2d55;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mini-ref-meta {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.mini-ref-dot {
+  color: #cbd5e1;
+  flex-shrink: 0;
+}
+.mini-ref-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--ref-color, #94a3b8);
+  background: color-mix(in srgb, var(--ref-color, #94a3b8) 14%, #fff);
+  white-space: nowrap;
+}
+
+/* ── Tooltip flotante (igual al dashboard interno) ── */
+.ref-tooltip-float {
+  position: fixed;
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 9999;
+  text-align: left;
+  pointer-events: none;
+  animation: refTooltipIn .15s ease;
+}
+@keyframes refTooltipIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.ref-tooltip-arrow {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border: 6px solid transparent;
+}
+.ref-tooltip-arrow.arrow-down {
+  top: 100%;
+  border-top-color: #fff;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.06));
+}
+.ref-tooltip-arrow.arrow-up {
+  bottom: 100%;
+  border-bottom-color: #fff;
+  filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.06));
+}
+.ref-tooltip-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.ref-tooltip-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--ref-color, #94a3b8);
+}
+.ref-tooltip-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e2d55;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ref-tooltip-row {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.5;
+}
+.ref-tooltip-row strong {
+  color: #475569;
+  font-weight: 700;
+}
+.ref-tooltip-estado {
+  color: var(--ref-color, #94a3b8);
+  font-weight: 700;
 }
 
 /* ── Estado total badge ── */
