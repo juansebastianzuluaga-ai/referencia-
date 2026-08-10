@@ -157,7 +157,7 @@
         style="animation-duration: 0.4s; animation-delay: 0.2s; animation-fill-mode: both;">
 
         <!-- Polar area especialidades -->
-        <Card class="distrib-card rounded-2xl p-3 sm:p-4 flex flex-col anim-slide-up" style="animation-delay:0.22s">
+        <Card class="distrib-card distrib-card-donut rounded-2xl p-3 sm:p-4 flex flex-col anim-slide-up" style="animation-delay:0.22s">
           <div class="flex items-center gap-3 mb-3">
             <div class="chart-header-icon" style="background: linear-gradient(135deg,#ede9fe,#ddd6fe); color:#7c3aed;">
               <component :is="PieChartIcon" class="w-4 h-4" />
@@ -167,10 +167,10 @@
               <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Distribución por área</p>
             </div>
           </div>
-          <div v-if="chartsReady && especialidadPolarData.length > 0" class="flex-1 w-full flex items-center justify-center min-h-[120px]">
-            <component :is="apexchart" type="polarArea" :series="especialidadPolarSeries" :options="especialidadPolarOptions" height="160" />
+          <div v-if="chartsReady && especialidadPolarData.length > 0" class="flex-1 w-full flex items-center justify-center min-h-[160px]">
+            <component :is="apexchart" type="donut" :series="especialidadPolarSeries" :options="especialidadPolarOptions" height="170" />
           </div>
-          <div v-else class="flex-1 flex flex-col items-center justify-center min-h-[120px]">
+          <div v-else class="flex-1 flex flex-col items-center justify-center min-h-[160px]">
             <component :is="PieChartIcon" class="w-8 h-8 mb-2" style="color:#cbd5e1;" />
             <p class="text-xs font-medium" style="color:#94a3b8;">Sin especialidades registradas</p>
           </div>
@@ -736,16 +736,18 @@ const especialidadPolarData = computed(() => {
   });
   return Object.entries(conteo)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
+    .slice(0, 6);
 });
 
 const especialidadPolarSeries = computed(() => {
   return especialidadPolarData.value.map(e => e[1]);
 });
 
+const especialidadPolarTotal = computed(() => especialidadPolarSeries.value.reduce((a, b) => a + b, 0));
+
 const especialidadPolarOptions = computed(() => ({
   chart: {
-    type: 'polarArea' as const,
+    type: 'donut' as const,
     fontFamily: 'inherit',
     background: 'transparent',
     toolbar: { show: false },
@@ -757,25 +759,62 @@ const especialidadPolarOptions = computed(() => ({
       dynamicAnimation: { enabled: true, speed: 400 },
     },
   },
-  labels: especialidadPolarData.value.map(e => e[0].length > 18 ? e[0].slice(0, 18) + '…' : e[0]),
+  labels: especialidadPolarData.value.map(e => e[0].length > 14 ? e[0].slice(0, 14) + '…' : e[0]),
   colors: POLAR_COLORS.slice(0, especialidadPolarData.value.length),
   stroke: {
-    width: 2,
+    width: 3,
     colors: [isDark.value ? '#1e293b' : '#fff'],
   },
   fill: {
-    opacity: 0.85,
+    opacity: 1,
   },
   dataLabels: {
-    enabled: false,
+    enabled: true,
+    formatter: (val: number) => `${val.toFixed(0)}%`,
+    style: { fontSize: '10px', fontWeight: 700, colors: ['#fff'] },
+    dropShadow: { enabled: true, top: 0, left: 0, blur: 2, opacity: 0.4 },
+  },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: '58%',
+        labels: {
+          show: true,
+          name: {
+            show: true,
+            fontSize: '9px',
+            fontWeight: 700,
+            color: isDark.value ? '#e2e8f0' : '#1e2d55',
+            offsetY: -2,
+          },
+          value: {
+            show: true,
+            fontSize: '15px',
+            fontWeight: 800,
+            color: isDark.value ? '#f1f5f9' : '#0d2d6b',
+            offsetY: 2,
+            formatter: (val: string) => val,
+          },
+          total: {
+            show: true,
+            label: 'Total',
+            fontSize: '9px',
+            fontWeight: 600,
+            color: isDark.value ? '#94a3b8' : '#8a9ab5',
+            formatter: () => `${especialidadPolarTotal.value}`,
+          },
+        },
+      },
+    },
   },
   legend: {
     position: 'bottom' as const,
-    fontSize: '9px',
+    fontSize: '8px',
     fontWeight: 600,
     labels: { colors: isDark.value ? '#94a3b8' : '#475569' },
-    markers: { size: 4, strokeWidth: 0 },
-    itemMargin: { horizontal: 4, vertical: 2 },
+    markers: { size: 3, strokeWidth: 0 },
+    itemMargin: { horizontal: 3, vertical: 0 },
+    offsetY: -4,
   },
   tooltip: {
     y: {
@@ -787,7 +826,7 @@ const especialidadPolarOptions = computed(() => ({
   responsive: [{
     breakpoint: 480,
     options: {
-      legend: { position: 'bottom' as const, fontSize: '8px' },
+      legend: { position: 'bottom' as const, fontSize: '7px' },
     },
   }],
 }));
@@ -2473,6 +2512,8 @@ onUnmounted(() => {
   background: radial-gradient(circle, rgba(126,179,255,0.20), transparent 70%);
 }
 .distrib-card:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(22,70,142,.16) !important; }
+.distrib-card-donut { overflow: visible !important; }
+.distrib-card-donut :deep(.apexcharts-canvas) { overflow: visible !important; }
 .distrib-segment { position: relative; cursor: pointer; transition: opacity .2s ease; }
 .distrib-segment:hover { opacity: .85; }
 .distrib-segment::after {

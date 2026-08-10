@@ -1,23 +1,18 @@
 <template>
   <div class="solicitud-page h-full flex flex-col overflow-hidden">
 
-    <!-- Stepper compacto -->
+    <!-- Header compacto -->
     <div class="rf-stepper">
       <button class="rf-stepper-back" @click="router.push('/clinica/dashboard')">
         <component :is="ArrowLeftIcon" class="w-3.5 h-3.5" />
       </button>
-      <div class="rf-stepper-steps">
-        <div v-for="step in formSteps" :key="step.number" class="rf-step" :class="{ active: pasoFormulario >= step.number, current: pasoFormulario === step.number }">
-          <span class="rf-step-num" :class="{ done: pasoFormulario > step.number }">
-            <component :is="CheckIcon" v-if="pasoFormulario > step.number" class="w-3.5 h-3.5" />
-            <template v-else>{{ step.number }}</template>
-          </span>
-          <span class="rf-step-label">{{ step.label }}</span>
-        </div>
+      <div class="rf-stepper-title">
+        <h2>Nueva solicitud de referencia</h2>
+        <p>Complete los datos del paciente y la remisión</p>
       </div>
       <div class="rf-stepper-badge">
         <span class="rf-stepper-badge-dot"></span>
-        Paso {{ pasoFormulario }} de 2
+        {{ progresoFormulario }}% completado
       </div>
     </div>
 
@@ -25,9 +20,8 @@
     <div class="rf-body">
       <el-form :model="form" :rules="rules" ref="formRef" label-position="top" size="default" class="rf-form-col">
 
-        <!-- PASO 1: Datos del paciente -->
-        <Transition name="step-slide" mode="out-in">
-        <div v-if="pasoFormulario === 1" key="paso1" class="rf-section">
+        <!-- Datos del paciente -->
+        <div class="rf-section">
           <div class="rf-section-accent" style="background: linear-gradient(135deg,#2563c4,#3b82f6);"></div>
           <div class="rf-section-header">
             <div class="rf-section-icon" style="background: linear-gradient(135deg,#dbeafe,#bfdbfe); color:#2563c4;">
@@ -45,8 +39,10 @@
                 <el-option v-for="t in TIPOS_DOCUMENTO" :key="t" :label="t" :value="t" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Número de documento" prop="numero_documento" required class="rf-field rf-col-third rf-stagger-2">
-              <el-input v-model="form.numero_documento" autocomplete="off" />
+            <el-form-item label="Número de documento" prop="numero_documento" required class="rf-field rf-col-quarter rf-stagger-2">
+              <el-input v-model="form.numero_documento" autocomplete="off">
+                <template #prefix><component :is="IdCardIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
+              </el-input>
             </el-form-item>
             <el-form-item label="Edad" prop="edad" required class="rf-field rf-col-quarter rf-stagger-3">
               <el-input-number v-model="form.edad" :min="0" :max="120" class="w-full" controls-position="right" />
@@ -57,33 +53,33 @@
                 <el-option label="Femenino" value="F" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Primer nombre" prop="primer_nombre" required class="rf-field rf-col-half rf-stagger-5">
-              <el-input v-model="form.primer_nombre" autocomplete="off" @input="capitalizar('primer_nombre')" />
-            </el-form-item>
-            <el-form-item label="Segundo nombre" class="rf-field rf-col-half rf-stagger-6">
-              <el-input v-model="form.segundo_nombre" autocomplete="off" @input="capitalizar('segundo_nombre')" />
-            </el-form-item>
-            <el-form-item label="Primer apellido" prop="primer_apellido" required class="rf-field rf-col-half rf-stagger-7">
-              <el-input v-model="form.primer_apellido" autocomplete="off" @input="capitalizar('primer_apellido')" />
-            </el-form-item>
-            <el-form-item label="Segundo apellido" class="rf-field rf-col-half rf-stagger-8">
-              <el-input v-model="form.segundo_apellido" autocomplete="off" @input="capitalizar('segundo_apellido')" />
-            </el-form-item>
-            <el-form-item label="Municipio" prop="municipio_capita" required class="rf-field rf-col-third rf-stagger-1">
-              <el-input v-model="form.municipio_capita" autocomplete="off" @input="capitalizar('municipio_capita')" />
-            </el-form-item>
-            <el-form-item label="EPS / Aseguradora" prop="eps" required class="rf-field rf-col-2 rf-stagger-2">
+            <el-form-item label="EPS / Aseguradora" prop="eps" required class="rf-field rf-col-quarter rf-stagger-5">
               <el-select v-model="form.eps" filterable class="w-full" placeholder="Seleccione o escriba" popper-class="rf-select-popper">
                 <el-option v-for="e in EPS_LIST" :key="e" :label="e" :value="e" />
               </el-select>
             </el-form-item>
+            <el-form-item label="Primer nombre" prop="primer_nombre" required class="rf-field rf-col-quarter rf-stagger-6">
+              <el-input v-model="form.primer_nombre" autocomplete="off" @input="capitalizar('primer_nombre')" />
+            </el-form-item>
+            <el-form-item label="Segundo nombre" class="rf-field rf-col-quarter rf-stagger-7">
+              <el-input v-model="form.segundo_nombre" autocomplete="off" @input="capitalizar('segundo_nombre')" />
+            </el-form-item>
+            <el-form-item label="Primer apellido" prop="primer_apellido" required class="rf-field rf-col-quarter rf-stagger-8">
+              <el-input v-model="form.primer_apellido" autocomplete="off" @input="capitalizar('primer_apellido')" />
+            </el-form-item>
+            <el-form-item label="Segundo apellido" class="rf-field rf-col-quarter rf-stagger-1">
+              <el-input v-model="form.segundo_apellido" autocomplete="off" @input="capitalizar('segundo_apellido')" />
+            </el-form-item>
+            <el-form-item label="Municipio" prop="municipio_capita" required class="rf-field rf-col-quarter rf-stagger-2">
+              <el-input v-model="form.municipio_capita" autocomplete="off" @input="capitalizar('municipio_capita')">
+                <template #prefix><component :is="MapPinIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
+              </el-input>
+            </el-form-item>
           </div>
         </div>
-        </Transition>
 
-        <!-- PASO 2: Datos de la remisión -->
-        <Transition name="step-slide" mode="out-in">
-        <div v-if="pasoFormulario === 2" key="paso2" class="rf-section">
+        <!-- Datos de la remisión -->
+        <div class="rf-section">
           <div class="rf-section-accent" style="background: linear-gradient(135deg,#15966a,#22c55e);"></div>
           <div class="rf-section-header">
             <div class="rf-section-icon" style="background: linear-gradient(135deg,#dcfce7,#bbf7d0); color:#15966a;">
@@ -96,48 +92,82 @@
             <div class="rf-section-glow" style="background: radial-gradient(circle, rgba(21,150,106,.08), transparent 70%);"></div>
           </div>
 
-          <!-- Sub-sección 1: Diagnósticos -->
-          <div class="rf-subsection">
-            <div class="rf-subsection-header">
-              <div class="rf-subsection-icon rf-sub-icon-green">
-                <component :is="FileTextIcon" class="w-3.5 h-3.5" />
+          <!-- Sub-secciones 1 y 4: Diagnósticos + Adjuntos (lado a lado) -->
+          <div class="rf-subsection-row rf-subsection-first">
+            <div class="rf-subsection rf-subsection-half">
+              <div class="rf-subsection-header">
+                <div class="rf-subsection-icon rf-sub-icon-green">
+                  <component :is="FileTextIcon" class="w-3.5 h-3.5" />
+                </div>
+                <h4>Diagnósticos CIE-10</h4>
+                <span class="rf-subsection-badge">Obligatorio</span>
               </div>
-              <h4>Diagnósticos CIE-10</h4>
-              <span class="rf-subsection-badge">Obligatorio</span>
+              <div class="rf-dx-block">
+                <div class="rf-dx-header">
+                  <el-button size="small" plain @click="agregarDiagnostico" class="rf-dx-add">
+                    <component :is="PlusIcon" class="w-3 h-3 mr-1" /> Agregar diagnóstico
+                  </el-button>
+                </div>
+                <div v-for="(dx, i) in diagnosticos" :key="i" class="rf-dx-row">
+                  <div class="rf-dx-code">
+                    <el-select
+                      v-model="dx.codigo_cie10"
+                      filterable
+                      class="w-full"
+                      placeholder="Código CIE-10"
+                      popper-class="rf-select-popper"
+                      :filter-method="filtrarCIE10"
+                      @change="(val: string) => onDxSelect(i, val)"
+                    >
+                      <el-option key="__otro_dx" label="➕ Otro..." value="__otro_dx" />
+                      <el-option v-for="item in cie10Filtrados" :key="item.codigo" :label="item.codigo" :value="item.codigo" />
+                    </el-select>
+                  </div>
+                  <div class="rf-dx-desc">
+                    <el-input v-model="dx.descripcion" placeholder="Descripción del diagnóstico" />
+                  </div>
+                  <button v-if="diagnosticos.length > 1" type="button" class="rf-dx-remove" @click="quitarDiagnostico(i)">
+                    <component :is="XIcon" class="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <p v-if="diagnosticos.length === 0" class="rf-dx-empty">Agregue al menos un diagnóstico.</p>
+              </div>
             </div>
-            <div class="rf-dx-block">
-              <div class="rf-dx-header">
-                <el-button size="small" plain @click="agregarDiagnostico" class="rf-dx-add">
-                  <component :is="PlusIcon" class="w-3 h-3 mr-1" /> Agregar diagnóstico
-                </el-button>
-              </div>
-              <div v-for="(dx, i) in diagnosticos" :key="i" class="rf-dx-row">
-                <div class="rf-dx-code">
-                  <el-select
-                    v-model="dx.codigo_cie10"
-                    filterable
-                    class="w-full"
-                    placeholder="Código CIE-10"
-                    popper-class="rf-select-popper"
-                    :filter-method="filtrarCIE10"
-                    @change="(val: string) => onDxSelect(i, val)"
-                  >
-                    <el-option key="__otro_dx" label="➕ Otro..." value="__otro_dx" />
-                    <el-option v-for="item in cie10Filtrados" :key="item.codigo" :label="item.codigo" :value="item.codigo" />
-                  </el-select>
+
+            <div class="rf-subsection rf-subsection-half">
+              <div class="rf-subsection-header">
+                <div class="rf-subsection-icon rf-sub-icon-purple">
+                  <component :is="PaperclipIcon" class="w-3.5 h-3.5" />
                 </div>
-                <div class="rf-dx-desc">
-                  <el-input v-model="dx.descripcion" placeholder="Descripción del diagnóstico" />
-                </div>
-                <button v-if="diagnosticos.length > 1" type="button" class="rf-dx-remove" @click="quitarDiagnostico(i)">
-                  <component :is="XIcon" class="w-3.5 h-3.5" />
-                </button>
+                <h4>Soportes y adjuntos</h4>
+                <span v-if="adjuntos.length" class="rf-subsection-badge rf-badge-blue">{{ adjuntos.length }}/10</span>
               </div>
-              <p v-if="diagnosticos.length === 0" class="rf-dx-empty">Agregue al menos un diagnóstico.</p>
+              <div class="rf-attach"
+                :class="{ 'rf-attach-active': dragOver }"
+                @dragover.prevent="dragOver = true"
+                @dragleave.prevent="dragOver = false"
+                @drop.prevent="onDrop"
+              >
+                <div class="rf-dropzone" @click="fileInput?.click()">
+                  <component :is="UploadCloudIcon" class="w-4 h-4" />
+                  <p>Clic o arrastre aquí</p>
+                  <small>PDF/img/Word · 10MB c/u</small>
+                  <input ref="fileInput" class="hidden" type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.svg,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" multiple @change="seleccionarAdjuntos" />
+                </div>
+                <transition-group v-if="adjuntos.length" name="file-list" tag="div" class="rf-file-list">
+                  <div v-for="(archivo, i) in adjuntos" :key="archivo.name + i" class="rf-file-chip">
+                    <span class="rf-file-badge" :class="getFileTypeClass(archivo)">{{ getFileTypeLabel(archivo) }}</span>
+                    <span class="rf-file-name">{{ archivo.name }}</span>
+                    <button type="button" class="rf-file-remove" @click.stop="removerAdjunto(i)">
+                      <component :is="XCircleIcon" class="w-3 h-3" />
+                    </button>
+                  </div>
+                </transition-group>
+              </div>
             </div>
           </div>
 
-          <!-- Sub-sección 2: Destino de la remisión -->
+          <!-- Sub-sección: Destino de la remisión -->
           <div class="rf-subsection">
             <div class="rf-subsection-header">
               <div class="rf-subsection-icon rf-sub-icon-blue">
@@ -157,12 +187,12 @@
                   <el-option v-for="s in SERVICIOS" :key="s" :label="s" :value="s" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="Servicio al que se remite" class="rf-field rf-col-third rf-stagger-3">
+              <el-form-item label="Servicio al que se remite" class="rf-field rf-col-half rf-stagger-3">
                 <el-select v-model="form.servicio_remision" class="w-full" placeholder="Seleccione" clearable popper-class="rf-select-popper">
                   <el-option v-for="s in SERVICIOS" :key="s" :label="s" :value="s" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="Vía de contacto" class="rf-field rf-col-quarter rf-stagger-4">
+              <el-form-item label="Vía de contacto" class="rf-field rf-col-half rf-stagger-4">
                 <el-select v-model="form.via_contacto" class="w-full" placeholder="Seleccione" clearable popper-class="rf-select-popper">
                   <el-option label="Email" value="EMAIL" />
                   <el-option label="Telefónica" value="TELEFONICA" />
@@ -181,7 +211,7 @@
               <h4>Información clínica</h4>
             </div>
             <div class="rf-grid">
-              <el-form-item label="¿Paciente gestante?" class="rf-field rf-col-quarter rf-stagger-1">
+              <el-form-item label="¿Paciente gestante?" class="rf-field rf-col-third rf-stagger-1">
                 <el-select v-model="form.gestante" class="w-full" placeholder="Seleccione" clearable popper-class="rf-select-popper">
                   <el-option label="Sí" :value="true" />
                   <el-option label="No" :value="false" />
@@ -191,46 +221,13 @@
                 <el-input v-model="form.condicion_especial" placeholder="Ej: discapacidad, obesidad mórbida..." autocomplete="off" @input="capitalizar('condicion_especial')" />
               </el-form-item>
               <el-form-item label="Historia clínica" prop="resumen_historia_clinica" required class="rf-field rf-col-3 rf-stagger-3">
-                <el-input v-model="form.resumen_historia_clinica" type="textarea" :rows="2"
+                <el-input v-model="form.resumen_historia_clinica" type="textarea" :rows="3"
                   placeholder="Motivo de remisión, antecedentes, estado actual..." @input="capitalizar('resumen_historia_clinica')" />
               </el-form-item>
             </div>
           </div>
 
-          <!-- Sub-sección 4: Adjuntos -->
-          <div class="rf-subsection">
-            <div class="rf-subsection-header">
-              <div class="rf-subsection-icon rf-sub-icon-purple">
-                <component :is="PaperclipIcon" class="w-3.5 h-3.5" />
-              </div>
-              <h4>Soportes y adjuntos</h4>
-              <span v-if="adjuntos.length" class="rf-subsection-badge rf-badge-blue">{{ adjuntos.length }}/10</span>
-            </div>
-            <div class="rf-attach"
-              :class="{ 'rf-attach-active': dragOver }"
-              @dragover.prevent="dragOver = true"
-              @dragleave.prevent="dragOver = false"
-              @drop.prevent="onDrop"
-            >
-              <div class="rf-dropzone" @click="fileInput?.click()">
-                <component :is="UploadCloudIcon" class="w-5 h-5" />
-                <p>Clic o arrastre aquí</p>
-                <small>PDF/img/Word · 10MB c/u</small>
-                <input ref="fileInput" class="hidden" type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.svg,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" multiple @change="seleccionarAdjuntos" />
-              </div>
-              <transition-group v-if="adjuntos.length" name="file-list" tag="div" class="rf-file-list">
-                <div v-for="(archivo, i) in adjuntos" :key="archivo.name + i" class="rf-file-chip">
-                  <span class="rf-file-badge" :class="getFileTypeClass(archivo)">{{ getFileTypeLabel(archivo) }}</span>
-                  <span class="rf-file-name">{{ archivo.name }}</span>
-                  <button type="button" class="rf-file-remove" @click.stop="removerAdjunto(i)">
-                    <component :is="XCircleIcon" class="w-3 h-3" />
-                  </button>
-                </div>
-              </transition-group>
-            </div>
-          </div>
-
-          <!-- Sub-sección 5: Quien remite -->
+          <!-- Sub-sección: Quien remite -->
           <div class="rf-subsection">
             <div class="rf-subsection-header">
               <div class="rf-subsection-icon rf-sub-icon-cyan">
@@ -239,117 +236,32 @@
               <h4>Datos de quien remite</h4>
             </div>
             <div class="rf-grid">
-              <el-form-item label="Quien remite" prop="quien_remitente" class="rf-field rf-col-2 rf-stagger-1">
-                <el-input v-model="form.quien_remitente" placeholder="Nombre de quien remite" @input="capitalizar('quien_remitente')" />
+              <el-form-item label="Quien remite" prop="quien_remitente" class="rf-field rf-col-third rf-stagger-1">
+                <el-input v-model="form.quien_remitente" placeholder="Nombre de quien remite" @input="capitalizar('quien_remitente')">
+                  <template #prefix><component :is="UserIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
+                </el-input>
               </el-form-item>
-              <el-form-item label="Teléfono de contacto" prop="telefono_contacto" class="rf-field rf-col-third rf-stagger-2">
-                <el-input v-model="form.telefono_contacto" placeholder="Teléfono de contacto" />
+              <el-form-item label="Teléfono de contacto" prop="telefono_contacto" class="rf-field rf-col-quarter rf-stagger-2">
+                <el-input v-model="form.telefono_contacto" placeholder="Teléfono">
+                  <template #prefix><component :is="PhoneIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
+                </el-input>
               </el-form-item>
-              <el-form-item label="Correo de contacto" prop="correo_contacto" class="rf-field rf-col-third rf-stagger-3">
-                <el-input v-model="form.correo_contacto" placeholder="correo@ejemplo.com" />
+              <el-form-item label="Correo de contacto" prop="correo_contacto" class="rf-field rf-col-half rf-stagger-3">
+                <el-input v-model="form.correo_contacto" placeholder="correo@ejemplo.com">
+                  <template #prefix><component :is="MailIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
+                </el-input>
               </el-form-item>
             </div>
           </div>
         </div>
-        </Transition>
 
       </el-form>
-
-      <!-- Sidebar: Resumen en vivo -->
-      <aside class="rf-sidebar">
-        <div class="rf-summary-card">
-          <div class="rf-summary-header">
-            <div class="rf-summary-icon">
-              <component :is="FileTextIcon" class="w-4 h-4" />
-            </div>
-            <h3>Resumen de la solicitud</h3>
-          </div>
-
-          <div class="rf-summary-progress">
-            <div class="rf-summary-progress-bar">
-              <div class="rf-summary-progress-fill" :class="{ 'rf-progress-complete': progresoFormulario === 100 }" :style="{ width: progresoFormulario + '%' }"></div>
-            </div>
-            <div class="rf-summary-progress-info">
-              <span class="rf-summary-progress-text">{{ progresoFormulario }}% completado</span>
-              <Transition name="fade-scale">
-                <span v-if="progresoFormulario === 100" class="rf-summary-progress-done">
-                  <component :is="CheckCircleIcon" class="w-3 h-3" /> Listo
-                </span>
-              </Transition>
-            </div>
-          </div>
-
-          <div class="rf-summary-section">
-            <div class="rf-summary-section-header">
-              <p class="rf-summary-section-title">Paciente</p>
-              <span class="rf-summary-section-dot" :class="seccionPacienteCompleta ? 'dot-green' : 'dot-amber'"></span>
-            </div>
-            <div class="rf-summary-field">
-              <span>Nombre</span>
-              <strong>{{ nombreCompleto || '—' }}</strong>
-            </div>
-            <div class="rf-summary-field">
-              <span>Documento</span>
-              <strong>{{ form.tipo_documento || form.numero_documento ? `${form.tipo_documento} ${form.numero_documento}` : '—' }}</strong>
-            </div>
-            <div class="rf-summary-field">
-              <span>Edad / Género</span>
-              <strong>{{ form.edad || form.genero ? `${form.edad || '—'} años · ${form.genero === 'M' ? 'Masc.' : form.genero === 'F' ? 'Fem.' : '—'}` : '—' }}</strong>
-            </div>
-            <div class="rf-summary-field">
-              <span>EPS</span>
-              <strong>{{ form.eps || '—' }}</strong>
-            </div>
-          </div>
-
-          <div class="rf-summary-section">
-            <div class="rf-summary-section-header">
-              <p class="rf-summary-section-title">Remisión</p>
-              <span class="rf-summary-section-dot" :class="seccionRemisionCompleta ? 'dot-green' : 'dot-amber'"></span>
-            </div>
-            <div class="rf-summary-field">
-              <span>Especialidad</span>
-              <strong>{{ form.especialidad_requerida || '—' }}</strong>
-            </div>
-            <div class="rf-summary-field">
-              <span>Servicio actual</span>
-              <strong>{{ form.servicio_ubicacion_actual || '—' }}</strong>
-            </div>
-            <div class="rf-summary-field">
-              <span>Diagnósticos</span>
-              <strong>{{ diagnosticos.filter(d => d.codigo_cie10 || d.descripcion).length }} registro(s)</strong>
-            </div>
-            <div class="rf-summary-field">
-              <span>Adjuntos</span>
-              <strong>{{ adjuntos.length }} archivo(s)</strong>
-            </div>
-          </div>
-
-          <div class="rf-summary-section">
-            <div class="rf-summary-section-header">
-              <p class="rf-summary-section-title">Quien remite</p>
-              <span class="rf-summary-section-dot" :class="seccionRemitenteCompleta ? 'dot-green' : 'dot-amber'"></span>
-            </div>
-            <div class="rf-summary-field">
-              <span>Nombre</span>
-              <strong>{{ form.quien_remitente || '—' }}</strong>
-            </div>
-            <div class="rf-summary-field">
-              <span>Teléfono</span>
-              <strong>{{ form.telefono_contacto || '—' }}</strong>
-            </div>
-          </div>
-        </div>
-      </aside>
     </div>
 
     <!-- Footer -->
     <div class="rf-footer">
-      <el-button class="rf-btn-back" @click="pasoFormulario === 1 ? router.push('/clinica/dashboard') : pasoFormulario--">
-        {{ pasoFormulario === 1 ? 'Cancelar' : 'Anterior' }}
-      </el-button>
-      <el-button v-if="pasoFormulario < 2" type="primary" class="rf-btn-next" @click="avanzarPaso">Continuar</el-button>
-      <el-button v-else type="primary" class="rf-btn-submit" @click="abrirConfirmacion">Enviar solicitud</el-button>
+      <el-button class="rf-btn-back" @click="router.push('/clinica/dashboard')">Cancelar</el-button>
+      <el-button type="primary" class="rf-btn-submit" @click="abrirConfirmacion">Enviar solicitud</el-button>
     </div>
 
     <!-- Dialog de confirmación -->
@@ -471,7 +383,7 @@
           <div class="exito-detail-row" v-if="ultimoEnviado.adjuntos"><span>Adjuntos</span><strong>{{ ultimoEnviado.adjuntos }}</strong></div>
         </div>
         <div class="exito-actions">
-          <el-button class="exito-btn-secondary" @click="modalExito = false; pasoFormulario = 1">
+          <el-button class="exito-btn-secondary" @click="modalExito = false">
             <component :is="PlusIcon" class="w-4 h-4 mr-1" /> Nueva solicitud
           </el-button>
           <el-button type="primary" class="exito-btn !bg-[#0D2D6B] flex-1" @click="router.push('/clinica/historial')">
@@ -502,7 +414,10 @@ import {
   FileCheck as FileCheckIcon,
   FileText as FileTextIcon,
   ArrowLeft as ArrowLeftIcon,
-  Check as CheckIcon,
+  IdCard as IdCardIcon,
+  Phone as PhoneIcon,
+  Mail as MailIcon,
+  MapPin as MapPinIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 import { TIPOS_DOCUMENTO, EPS_LIST, ESPECIALIDADES, SERVICIOS } from '@/data/referencia';
@@ -515,7 +430,6 @@ const formRef = ref();
 const adjuntos = ref<File[]>([]);
 const dragOver = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
-const pasoFormulario = ref(1);
 const cie10Filtrados = ref(CIE10.slice(0, 20));
 
 interface DiagnosticoItem {
@@ -588,11 +502,6 @@ async function onEspecialidadSelect(val: string) {
   }
 }
 
-const formSteps = [
-  { number: 1, label: 'Paciente' },
-  { number: 2, label: 'Remisión' },
-];
-
 function emptyForm() {
   return {
     primer_nombre: '', segundo_nombre: '', primer_apellido: '', segundo_apellido: '',
@@ -634,22 +543,6 @@ const progresoFormulario = computed(() => {
   const dxCount = diagnosticos.value.filter(d => d.codigo_cie10.trim() && d.descripcion.trim()).length;
   const dxBonus = dxCount > 0 ? 1 : 0;
   return Math.min(100, Math.round(((llenos + dxBonus) / (campos.length + 1)) * 100));
-});
-
-const seccionPacienteCompleta = computed(() => {
-  return !!(form.value.tipo_documento && form.value.numero_documento &&
-    form.value.primer_nombre && form.value.primer_apellido &&
-    form.value.genero && form.value.edad && form.value.municipio_capita && form.value.eps);
-});
-
-const seccionRemisionCompleta = computed(() => {
-  const dxValid = diagnosticos.value.filter(d => d.codigo_cie10.trim() && d.descripcion.trim()).length > 0;
-  return !!(form.value.especialidad_requerida && form.value.servicio_ubicacion_actual &&
-    form.value.resumen_historia_clinica && dxValid);
-});
-
-const seccionRemitenteCompleta = computed(() => {
-  return !!(form.value.quien_remitente && form.value.telefono_contacto);
 });
 
 const rules = {
@@ -719,28 +612,6 @@ function getFileTypeClass(file: File): string {
   return 'ft-default';
 }
 
-async function avanzarPaso(): Promise<void> {
-  const camposPorPaso = [
-    ['primer_nombre', 'primer_apellido', 'genero', 'edad', 'tipo_documento', 'numero_documento', 'municipio_capita', 'eps'],
-    ['resumen_historia_clinica', 'especialidad_requerida', 'servicio_ubicacion_actual'],
-  ];
-
-  if (pasoFormulario.value === 2) {
-    const validDx = diagnosticos.value.filter(d => d.codigo_cie10.trim() && d.descripcion.trim());
-    if (validDx.length === 0) {
-      notify.warning('Agregue al menos un diagnóstico con código y descripción');
-      return;
-    }
-  }
-
-  try {
-    await formRef.value?.validateField(camposPorPaso[pasoFormulario.value - 1]);
-    pasoFormulario.value++;
-  } catch {
-    notify.warning('Complete los campos requeridos para continuar');
-  }
-}
-
 async function abrirConfirmacion(): Promise<void> {
   const validDx = diagnosticos.value.filter(d => d.codigo_cie10.trim() && d.descripcion.trim());
   if (validDx.length === 0) {
@@ -797,7 +668,6 @@ async function guardar() {
     modalExito.value = true;
     form.value = emptyForm();
     adjuntos.value = [];
-    pasoFormulario.value = 1;
     diagnosticos.value = [{ codigo_cie10: '', descripcion: '' }];
   } catch (e: any) {
     const errors = e.response?.data?.data?.errors || e.response?.data?.errors;
@@ -813,8 +683,8 @@ onMounted(() => {
 <style scoped>
 /* ── Page ── */
 .solicitud-page {
-  padding: .6rem .9rem;
-  gap: .5rem;
+  padding: .85rem 1.4rem;
+  gap: .6rem;
   background: linear-gradient(160deg, #F0F5FF 0%, #E0EAF7 40%, #F0F5FF 100%);
 }
 
@@ -826,14 +696,14 @@ onMounted(() => {
   flex-shrink: 0;
   background: linear-gradient(180deg, #FAFBFF 0%, #F5F8FE 100%);
   border: 1px solid #DBE4F0;
-  border-radius: 12px;
-  padding: .35rem .6rem;
-  box-shadow: 0 2px 10px rgba(13, 45, 107, .06);
+  border-radius: 14px;
+  padding: .55rem .9rem;
+  box-shadow: 0 4px 16px rgba(13, 45, 107, .08);
 }
 .rf-stepper-back {
   display: grid;
   place-items: center;
-  width: 32px; height: 32px;
+  width: 36px; height: 36px;
   border-radius: 9px;
   border: 1px solid #E2E8F0;
   background: #fff;
@@ -846,22 +716,33 @@ onMounted(() => {
   background: #EFF6FF;
   border-color: #BFDBFE;
 }
-.rf-stepper-steps {
-  display: flex;
-  align-items: center;
-  gap: 0;
+.rf-stepper-title {
   flex: 1;
+  min-width: 0;
+}
+.rf-stepper-title h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0D2D6B;
+  margin: 0;
+  line-height: 1.25;
+}
+.rf-stepper-title p {
+  font-size: .74rem;
+  font-weight: 500;
+  color: #8A9AB5;
+  margin: 2px 0 0;
 }
 .rf-stepper-badge {
   display: flex;
   align-items: center;
-  gap: .4rem;
-  padding: .3rem .65rem;
+  gap: .45rem;
+  padding: .4rem .85rem;
   border-radius: 999px;
   background: #EFF6FF;
   border: 1px solid #BFDBFE;
   color: #1E40AF;
-  font-size: .68rem;
+  font-size: .74rem;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -871,59 +752,6 @@ onMounted(() => {
   background: #3B82F6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, .18);
 }
-.rf-step {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  flex: 1;
-  position: relative;
-}
-.rf-step:not(:last-child)::after {
-  content: '';
-  flex: 1;
-  height: 3px;
-  margin: 0 .5rem;
-  border-radius: 2px;
-  background: #E2E8F0;
-  transition: background .3s ease;
-}
-.rf-step.active:not(:last-child)::after {
-  background: linear-gradient(90deg, #0D2D6B, #3B82F6);
-}
-.rf-step-num {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #F1F5F9;
-  color: #94A3B8;
-  font-size: .72rem;
-  font-weight: 700;
-  flex-shrink: 0;
-  transition: all .3s ease;
-}
-.rf-step.active .rf-step-num {
-  background: linear-gradient(135deg, #0D2D6B, #16468E);
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(13, 45, 107, .3);
-}
-.rf-step-num.done {
-  background: linear-gradient(135deg, #10B981, #059669);
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, .3);
-}
-.rf-step.current .rf-step-num {
-  outline: 2px solid #BFDBFE;
-  outline-offset: 2px;
-}
-.rf-step-label {
-  font-size: .74rem;
-  font-weight: 600;
-  color: #94A3B8;
-  white-space: nowrap;
-}
-.rf-step.active .rf-step-label { color: #0D2D6B; }
 
 /* ── Layout: 2 columnas ── */
 .rf-body {
@@ -931,7 +759,7 @@ onMounted(() => {
   min-height: 0;
   overflow: hidden;
   display: flex;
-  gap: .5rem;
+  gap: .6rem;
 }
 .rf-form-col {
   flex: 1;
@@ -939,22 +767,21 @@ onMounted(() => {
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  padding-right: 4px;
 }
-.rf-sidebar {
-  width: 270px;
-  flex-shrink: 0;
-  height: 100%;
-  overflow-y: auto;
-}
+.rf-form-col::-webkit-scrollbar { width: 6px; }
+.rf-form-col::-webkit-scrollbar-thumb { background: #C7D5EA; border-radius: 999px; }
+.rf-form-col::-webkit-scrollbar-thumb:hover { background: #9FB4D8; }
+.rf-form-col::-webkit-scrollbar-track { background: transparent; }
 
 /* ── Form overrides ── */
-:deep(.rf-form-col .el-form) { display: flex; flex-direction: column; gap: .5rem; }
+:deep(.rf-form-col .el-form) { display: flex; flex-direction: column; gap: .75rem; }
 :deep(.rf-form-col .el-form-item) { margin-bottom: 0; display: flex; flex-direction: column; }
 :deep(.rf-form-col .el-form-item__label) {
-  color: #475569; font-size: .68rem; font-weight: 600;
-  padding-bottom: .1rem; line-height: 1.2;
+  color: #475569; font-size: .74rem; font-weight: 600;
+  padding-bottom: .2rem; line-height: 1.2;
 }
-:deep(.rf-form-col .el-form-item__error) { padding-top: 2px; font-size: .62rem; }
+:deep(.rf-form-col .el-form-item__error) { padding-top: 3px; font-size: .66rem; }
 :deep(.rf-form-col .el-input__wrapper),
 :deep(.rf-form-col .el-select__wrapper),
 :deep(.rf-form-col .el-textarea__inner) {
@@ -968,74 +795,84 @@ onMounted(() => {
 :deep(.rf-form-col .el-input__wrapper:hover),
 :deep(.rf-form-col .el-select__wrapper:hover) { box-shadow: 0 0 0 1px #3B82F6 inset; }
 :deep(.rf-form-col .el-input__wrapper),
-:deep(.rf-form-col .el-select__wrapper) { min-height: 32px; }
+:deep(.rf-form-col .el-select__wrapper) { min-height: 36px; }
+:deep(.rf-dx-block .el-input__wrapper),
+:deep(.rf-dx-block .el-select__wrapper) { min-height: 30px; }
+:deep(.rf-attach .el-input__wrapper) { min-height: 30px; }
 :deep(.rf-form-col .el-input-number) { width: 100%; }
-:deep(.rf-form-col .el-input-number .el-input__wrapper) { min-height: 32px; }
-:deep(.rf-form-col .el-textarea__inner) { min-height: 32px !important; border-radius: 8px; }
+:deep(.rf-form-col .el-input-number .el-input__wrapper) { min-height: 36px; }
+:deep(.rf-form-col .el-textarea__inner) { min-height: 36px !important; border-radius: 9px; }
 
 /* ── Sections ── */
 .rf-section {
   position: relative;
   background: linear-gradient(180deg, #FAFBFF 0%, #F5F8FE 100%);
   border: 1px solid #DBE4F0;
-  border-radius: 14px;
-  padding: .7rem .85rem .85rem;
-  box-shadow: 0 4px 18px rgba(13, 45, 107, .08);
+  border-radius: 18px;
+  padding: 1.1rem 1.3rem 1.3rem;
+  box-shadow: 0 8px 28px rgba(13, 45, 107, .09);
   overflow: hidden;
 }
 .rf-section-accent {
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 3px;
+  height: 4px;
 }
 .rf-section-header {
   display: flex;
   align-items: center;
-  gap: .5rem;
-  margin-bottom: .55rem;
-  padding-bottom: .45rem;
-  border-bottom: 1px solid #F1F5F9;
+  gap: .65rem;
+  margin-bottom: .85rem;
+  padding-bottom: .7rem;
+  border-bottom: 1px solid #EEF2F9;
 }
 .rf-section-icon {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
   flex-shrink: 0;
 }
 .rf-section-heading h3 {
-  font-size: .78rem;
+  font-size: 1rem;
   font-weight: 800;
   color: #0D2D6B;
   margin: 0;
 }
 .rf-section-heading p {
-  font-size: .62rem;
+  font-size: .74rem;
   font-weight: 500;
   color: #8A9AB5;
-  margin: 1px 0 0;
+  margin: 2px 0 0;
 }
 
 /* ── Grid ── */
 .rf-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: .4rem .6rem;
+  grid-template-columns: repeat(5, 1fr);
+  gap: .9rem 1rem;
 }
-.rf-col-1 { grid-column: span 2; }
-.rf-col-2 { grid-column: span 3; }
-.rf-col-3 { grid-column: span 6; }
-.rf-col-half { grid-column: span 3; }
+.rf-col-1 { grid-column: span 1; }
+.rf-col-2 { grid-column: span 2; }
+.rf-col-3 { grid-column: span 5; }
+.rf-col-half { grid-column: span 2; }
 .rf-col-third { grid-column: span 2; }
 .rf-col-quarter { grid-column: span 1; }
 .rf-col-fifth { grid-column: span 1; }
+.rf-col-sixth { grid-column: span 1; }
+.rf-col-4 { grid-column: span 4; }
+.rf-col-5 { grid-column: span 5; }
 .rf-mt { margin-top: .7rem; }
+
+/* ── Input prefix icons ── */
+.rf-input-icon { color: #94A3B8; margin-right: 2px; }
+:deep(.rf-form-col .el-input__prefix) { color: #94A3B8; }
 
 /* ── Subsection ── */
 .rf-subsection {
   margin-top: .6rem;
-  padding-top: .5rem;
+  padding-top: .55rem;
   border-top: 1px dashed #E2E8F0;
 }
 .rf-subsection:first-of-type {
@@ -1043,18 +880,39 @@ onMounted(() => {
   padding-top: 0;
   border-top: none;
 }
+.rf-subsection-row {
+  display: flex;
+  gap: .5rem;
+  align-items: stretch;
+}
+.rf-subsection-row.rf-subsection-first {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.rf-subsection-row .rf-subsection-half {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.rf-subsection-row .rf-dx-block,
+.rf-subsection-row .rf-attach {
+  height: 100%;
+}
 .rf-subsection-header {
   display: flex;
   align-items: center;
   gap: .4rem;
-  margin-bottom: .45rem;
+  margin-bottom: .35rem;
 }
 .rf-subsection-icon {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
   flex-shrink: 0;
 }
 .rf-sub-icon-green { background: #DCFCE7; color: #15803D; }
@@ -1063,7 +921,7 @@ onMounted(() => {
 .rf-sub-icon-purple { background: #F3E8FF; color: #7C3AED; }
 .rf-sub-icon-cyan { background: #CFFAFE; color: #0891B2; }
 .rf-subsection-header h4 {
-  font-size: .72rem;
+  font-size: .76rem;
   font-weight: 800;
   color: #0D2D6B;
   margin: 0;
@@ -1088,14 +946,14 @@ onMounted(() => {
 .rf-dx-block {
   background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
   border: 1px solid #BFDBFE;
-  border-radius: 12px;
-  padding: .65rem .75rem;
+  border-radius: 10px;
+  padding: .4rem .5rem;
 }
 .rf-dx-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: .4rem;
+  margin-bottom: .3rem;
 }
 .rf-dx-title {
   font-size: .72rem;
@@ -1107,24 +965,25 @@ onMounted(() => {
   border-color: #0D2D6B !important;
   background: #DBEAFE !important;
   color: #0D2D6B !important;
-  font-size: .68rem;
+  font-size: .66rem;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: 7px;
+  height: 28px !important;
 }
 .rf-dx-row {
   display: flex;
   align-items: center;
-  gap: .4rem;
+  gap: .35rem;
   margin-bottom: .3rem;
 }
-.rf-dx-code { width: 140px; flex-shrink: 0; }
+.rf-dx-code { width: 110px; flex-shrink: 0; }
 .rf-dx-desc { flex: 1; }
 .rf-dx-remove {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   border: 1px solid #FCA5A5;
   background: #FEF2F2;
   color: #DC2626;
@@ -1139,8 +998,8 @@ onMounted(() => {
 .rf-attach {
   border: 1px solid #BFDBFE;
   background: linear-gradient(135deg, #EFF6FF, #F0F9FF);
-  border-radius: 12px;
-  padding: .65rem;
+  border-radius: 10px;
+  padding: .4rem;
 }
 .rf-attach-active {
   border-color: #3B82F6;
@@ -1150,8 +1009,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: .35rem;
-  margin-bottom: .35rem;
-  font-size: .72rem;
+  margin-bottom: .5rem;
+  font-size: .78rem;
   font-weight: 800;
   color: #0D2D6B;
 }
@@ -1166,8 +1025,8 @@ onMounted(() => {
 .rf-dropzone {
   border: 2px dashed #60A5FA;
   background: rgba(219, 234, 254, .3);
-  border-radius: 10px;
-  padding: .8rem;
+  border-radius: 8px;
+  padding: .4rem .4rem;
   text-align: center;
   cursor: pointer;
   transition: all .2s ease;
@@ -1177,17 +1036,17 @@ onMounted(() => {
   border-color: #2563EB;
   background: rgba(219, 234, 254, .5);
 }
-.rf-dropzone p { font-size: .72rem; font-weight: 600; margin: .2rem 0 0; color: #1E40AF; }
-.rf-dropzone small { font-size: .62rem; color: #3B82F6; }
-.rf-file-list { margin-top: .4rem; display: flex; flex-direction: column; gap: .2rem; }
+.rf-dropzone p { font-size: .66rem; font-weight: 600; margin: .1rem 0 0; color: #1E40AF; }
+.rf-dropzone small { font-size: .58rem; color: #3B82F6; }
+.rf-file-list { margin-top: .25rem; display: flex; flex-direction: column; gap: .15rem; }
 .rf-file-chip {
   display: flex;
   align-items: center;
-  gap: .4rem;
-  padding: .3rem .5rem;
+  gap: .3rem;
+  padding: .2rem .35rem;
   background: #fff;
   border: 1px solid #E2E8F0;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 .rf-file-badge {
   font-size: .58rem;
@@ -1207,7 +1066,7 @@ onMounted(() => {
 .ft-default { background: #F1F5F9; color: #475569; }
 .rf-file-name {
   flex: 1;
-  font-size: .68rem;
+  font-size: .64rem;
   font-weight: 600;
   color: #475569;
   overflow: hidden;
@@ -1217,6 +1076,8 @@ onMounted(() => {
 .rf-file-remove {
   display: grid;
   place-items: center;
+  width: 20px;
+  height: 20px;
   color: #94A3B8;
   cursor: pointer;
   border: none;
@@ -1350,9 +1211,9 @@ onMounted(() => {
 /* ── Footer ── */
 .rf-footer {
   display: flex;
-  gap: .5rem;
+  gap: .6rem;
   flex-shrink: 0;
-  padding-top: .4rem;
+  padding-top: .6rem;
   border-top: 1px solid #E2E8F0;
   background: linear-gradient(180deg, rgba(255,255,255,0), #fff 45%);
 }
@@ -1361,9 +1222,9 @@ onMounted(() => {
   border-color: #CBD5E1 !important;
   color: #475569 !important;
   font-weight: 600;
-  border-radius: 9px;
-  height: 38px !important;
-  padding: 0 18px !important;
+  border-radius: 10px;
+  height: 40px !important;
+  padding: 0 20px !important;
 }
 .rf-btn-back:hover {
   color: #0D2D6B !important;
@@ -1375,9 +1236,9 @@ onMounted(() => {
   border: none !important;
   color: #fff !important;
   font-weight: 700;
-  border-radius: 9px;
-  height: 38px !important;
-  padding: 0 22px !important;
+  border-radius: 10px;
+  height: 40px !important;
+  padding: 0 26px !important;
   margin-left: auto;
   box-shadow: 0 3px 12px rgba(13, 45, 107, .2);
 }
@@ -1784,9 +1645,6 @@ onMounted(() => {
 }
 
 /* ── Responsive ── */
-@media (max-width: 1024px) {
-  .rf-sidebar { display: none; }
-}
 @media (max-width: 768px) {
   .rf-grid { grid-template-columns: repeat(2, 1fr); }
   .rf-col-3 { grid-column: span 2; }

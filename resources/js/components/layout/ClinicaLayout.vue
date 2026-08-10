@@ -244,7 +244,7 @@ import {
 import { ElMessageBox } from 'element-plus';
 
 const logoW = '/images/logo-w.png';
-const logoColor = '/images/logo.png';
+const logoColor = '/images/logo-avatar.png';
 const clinicaAuth = useClinicaAuthStore();
 const layout = useLayoutStore();
 const route = useRoute();
