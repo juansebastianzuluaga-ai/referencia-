@@ -153,32 +153,41 @@
       </div>
 
       <!-- ── Especialidades + Últimas referencias ── -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 flex-1 min-h-0 animate-fade-in-up"
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 flex-1 min-h-0 animate-fade-in-up"
         style="animation-duration: 0.4s; animation-delay: 0.2s; animation-fill-mode: both;">
 
-        <!-- Polar area especialidades -->
-        <Card class="distrib-card distrib-card-donut rounded-2xl p-3 sm:p-4 flex flex-col anim-slide-up" style="animation-delay:0.22s">
-          <div class="flex items-center gap-3 mb-3">
-            <div class="chart-header-icon" style="background: linear-gradient(135deg,#ede9fe,#ddd6fe); color:#7c3aed;">
-              <component :is="PieChartIcon" class="w-4 h-4" />
+        <!-- Especialidades (barras CSS) -->
+        <Card class="distrib-card rounded-2xl p-3 sm:p-4 flex flex-col anim-slide-up" style="animation-delay:0.22s">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="chart-header-icon" style="background: linear-gradient(135deg,#dbeafe,#bfdbfe); color:#0d2d6b;">
+              <component :is="BarChart3Icon" class="w-4 h-4" />
             </div>
             <div class="flex-1">
               <p class="text-sm font-bold" style="color:#1e2d55;">Especialidades</p>
               <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Distribución por área</p>
             </div>
+            <span v-if="chartsReady && especialidadPolarData.length > 0" class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:#e0ecff; color:#0d2d6b;">{{ especialidadPolarTotal }} total</span>
           </div>
-          <div v-if="chartsReady && especialidadPolarData.length > 0" class="flex-1 w-full flex items-center justify-center min-h-[160px]">
-            <component :is="apexchart" type="donut" :series="especialidadPolarSeries" :options="especialidadPolarOptions" height="170" />
+          <div v-if="chartsReady && especialidadPolarData.length > 0" class="flex-1 w-full flex flex-col justify-center gap-2.5 min-h-[180px] py-1">
+            <div v-for="(esp, idx) in especialidadPolarData" :key="esp[0]" class="dist-bar-item">
+              <div class="flex items-center justify-between mb-1">
+                <span class="dist-bar-label" :style="{ color: POLAR_COLORS[idx % POLAR_COLORS.length] }">{{ esp[0].length > 18 ? esp[0].slice(0, 18) + '…' : esp[0] }}</span>
+                <span class="dist-bar-count">{{ esp[1] }} <span class="dist-bar-pct">({{ Math.round((esp[1] / especialidadPolarTotal) * 100) }}%)</span></span>
+              </div>
+              <div class="dist-bar-track">
+                <div class="dist-bar-fill" :style="{ width: Math.round((esp[1] / especialidadPolarTotal) * 100) + '%', background: 'linear-gradient(90deg, ' + POLAR_COLORS[idx % POLAR_COLORS.length] + ', ' + POLAR_COLORS[(idx + 3) % POLAR_COLORS.length] + ')', boxShadow: '0 2px 8px ' + POLAR_COLORS[idx % POLAR_COLORS.length] + '40' }"></div>
+              </div>
+            </div>
           </div>
-          <div v-else class="flex-1 flex flex-col items-center justify-center min-h-[160px]">
-            <component :is="PieChartIcon" class="w-8 h-8 mb-2" style="color:#cbd5e1;" />
+          <div v-else class="flex-1 flex flex-col items-center justify-center min-h-[180px]">
+            <component :is="BarChart3Icon" class="w-8 h-8 mb-2" style="color:#cbd5e1;" />
             <p class="text-xs font-medium" style="color:#94a3b8;">Sin especialidades registradas</p>
           </div>
         </Card>
 
         <!-- Últimas referencias -->
-        <Card class="distrib-card rounded-2xl p-3 sm:p-4 flex flex-col lg:col-span-2 anim-slide-up" style="animation-delay:0.24s">
-          <div class="flex items-center gap-3 mb-3">
+        <Card class="distrib-card rounded-2xl p-3 sm:p-4 flex flex-col anim-slide-up" style="animation-delay:0.24s">
+          <div class="flex items-center gap-3 mb-2">
             <div class="chart-header-icon" style="background: linear-gradient(135deg,#dcfce7,#bbf7d0); color:#15966a;">
               <component :is="ClipboardListIcon" class="w-4 h-4" />
             </div>
@@ -188,20 +197,20 @@
             </div>
             <button @click="irHistorial" class="text-[10px] font-bold px-2.5 py-1 rounded-full transition-all" style="background:#e0ecff; color:#16468e;">Ver todas</button>
           </div>
-          <div class="flex-1 overflow-y-auto space-y-1 pr-1 mini-ref-list">
+          <div class="flex-1 overflow-y-auto space-y-0.5 pr-1 mini-ref-list">
             <button
-              v-for="(sol, idx) in solicitudes.slice(0, 5)"
+              v-for="(sol, idx) in solicitudes.slice(0, 4)"
               :key="sol.id"
               type="button"
-              class="mini-ref-row"
+              class="mini-ref-row mini-ref-row-sm"
               :style="{ '--ref-color': estadoColorMap[sol.estado] ?? '#94a3b8', borderLeftColor: estadoColorMap[sol.estado] ?? '#94a3b8', animationDelay: (idx * 0.05) + 's' }"
               @click="verDetalle(sol)"
               @mouseenter="onRefRowEnter($event, sol)"
               @mouseleave="onRefRowLeave"
             >
-              <span class="mini-ref-avatar">{{ initialesPaciente(sol) }}</span>
+              <span class="mini-ref-avatar mini-ref-avatar-sm">{{ initialesPaciente(sol) }}</span>
               <span class="mini-ref-info">
-                <span class="mini-ref-name">{{ sol.primer_nombre }} {{ sol.primer_apellido }}</span>
+                <span class="mini-ref-name mini-ref-name-sm">{{ sol.primer_nombre }} {{ sol.primer_apellido }}</span>
                 <span class="mini-ref-meta">
                   <span>{{ sol.especialidad_requerida || 'Sin especialidad' }}</span>
                   <span class="mini-ref-dot">•</span>
@@ -426,6 +435,7 @@ import {
   BarChart3 as BarChart3Icon,
 } from '@lucide/vue';
 import VueApexCharts from 'vue3-apexcharts';
+
 import http from '@/plugins/axios';
 import Card from '@/components/ui/card/Card.vue';
 import CardHeader from '@/components/ui/card/CardHeader.vue';
@@ -726,7 +736,7 @@ const estadoColorMap: Record<string, string> = {
 };
 
 // ── Polar area especialidades ───────────────────────────────────────────────
-const POLAR_COLORS = ['#2563c4', '#7c3aed', '#15966a', '#d97706', '#dc2626', '#0891b2', '#c026d3', '#65a30d', '#ea580c', '#4f46e5'];
+const POLAR_COLORS = ['#0d2d6b', '#16468e', '#1e5a96', '#2b6cb0', '#3a82c4', '#4a98d8', '#5aaee8', '#6ac0f0', '#7ad0f5', '#8ae0fa'];
 
 const especialidadPolarData = computed(() => {
   const conteo: Record<string, number> = {};
@@ -2711,6 +2721,9 @@ onUnmounted(() => {
   transition: transform .2s ease;
 }
 .mini-ref-row:hover .mini-ref-avatar { transform: scale(1.08); }
+.mini-ref-row-sm { padding: .35rem .55rem; gap: .5rem; border-radius: 8px; }
+.mini-ref-avatar-sm { width: 26px; height: 26px; border-radius: 7px; font-size: 9px; }
+.mini-ref-name-sm { font-size: 11.5px; }
 .mini-ref-info {
   flex: 1;
   min-width: 0;

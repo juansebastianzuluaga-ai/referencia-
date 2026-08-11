@@ -206,7 +206,7 @@
     </div>
 
     <!-- ── Modal: Detalle ──────────────────────────────────────────────── -->
-    <el-dialog v-model="modalDetalle" width="640px" class="detalle-dialog" :show-close="true" align-center>
+    <el-dialog v-model="modalDetalle" width="860px" class="detalle-dialog" :show-close="true" align-center>
       <template v-if="solicitudSeleccionada">
         <div class="detalle-content">
           <!-- Header con gradiente azul -->
@@ -232,8 +232,8 @@
             </button>
           </div>
 
-          <!-- Paciente + Remisión en 2 columnas -->
-          <div class="grid grid-cols-2 gap-2.5 mb-2.5">
+          <!-- Paciente + Remisión + Diagnósticos en 3 columnas -->
+          <div class="grid grid-cols-3 gap-2 mb-2">
             <div class="detalle-card">
               <div class="card-icon" style="background:#dbeafe; color:#2563eb;"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
               <div class="card-body">
@@ -257,10 +257,6 @@
                 <div v-if="solicitudSeleccionada.correo_contacto" class="data-row"><span>Correo</span><strong>{{ solicitudSeleccionada.correo_contacto }}</strong></div>
               </div>
             </div>
-          </div>
-
-          <!-- Diagnósticos + Historia en 2 columnas -->
-          <div class="grid grid-cols-2 gap-2.5 mb-2.5">
             <div class="detalle-card">
               <div class="card-icon" style="background:#ede9fe; color:#7c3aed;"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
               <div class="card-body">
@@ -275,42 +271,48 @@
                 <p v-else class="card-text">—</p>
               </div>
             </div>
-            <div class="detalle-card">
-              <div class="card-icon" style="background:#e0f2fe; color:#0284c7;"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
-              <div class="card-body">
-                <p class="card-title">Historia clínica</p>
-                <p class="card-text-sm">{{ solicitudSeleccionada.resumen_historia_clinica }}</p>
+          </div>
+
+          <!-- Historia clínica a ancho completo -->
+          <div class="detalle-card mb-2 mx-4">
+            <div class="card-icon" style="background:#e0f2fe; color:#0284c7;"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
+            <div class="card-body">
+              <p class="card-title">Historia clínica</p>
+              <p class="card-text-sm card-text-clamp">{{ solicitudSeleccionada.resumen_historia_clinica }}</p>
+              <button
+                v-if="(solicitudSeleccionada.resumen_historia_clinica?.length ?? 0) > 180"
+                class="leer-mas-btn"
+                @click="modalHistoria = true"
+              >Leer más</button>
+            </div>
+          </div>
+
+          <!-- Código de aceptación + Respuesta/Negación en fila compacta -->
+          <div class="flex gap-2 mx-4 mb-2 flex-wrap">
+            <div v-if="solicitudSeleccionada.codigo_aceptacion" class="detalle-code-bar" style="margin-bottom:0; flex:1;">
+              <component :is="CheckCircleIcon" class="w-4 h-4 text-emerald-600" />
+              <span class="text-xs text-emerald-700 font-semibold">Código</span>
+              <span class="detalle-code-value">{{ solicitudSeleccionada.codigo_aceptacion }}</span>
+            </div>
+            <div v-if="solicitudSeleccionada.nombre_quien_responde" class="detalle-respuesta" style="margin-bottom:0; flex:1;">
+              <div class="flex items-center gap-2 mb-0.5">
+                <component :is="CheckCircleIcon" class="w-3.5 h-3.5 text-blue-600" />
+                <p class="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider">Respuesta</p>
               </div>
+              <p class="text-[11px] text-blue-700"><strong>{{ solicitudSeleccionada.nombre_quien_responde }}</strong> · {{ solicitudSeleccionada.hora_respuesta }}</p>
+              <p v-if="solicitudSeleccionada.observaciones_respuesta" class="text-[11px] text-blue-600 mt-0.5">{{ solicitudSeleccionada.observaciones_respuesta }}</p>
+            </div>
+            <div v-if="solicitudSeleccionada.motivo_negacion" class="detalle-negacion" style="margin-bottom:0; flex:1;">
+              <div class="flex items-center gap-2 mb-0.5">
+                <component :is="XCircleIcon" class="w-3.5 h-3.5 text-red-500" />
+                <p class="text-[10px] font-extrabold text-red-500 uppercase tracking-wider">Negación</p>
+              </div>
+              <p class="text-[11px] text-slate-700">{{ solicitudSeleccionada.motivo_negacion }}</p>
             </div>
           </div>
 
-          <!-- Código de aceptación -->
-          <div v-if="solicitudSeleccionada.codigo_aceptacion" class="detalle-code-bar">
-            <component :is="CheckCircleIcon" class="w-4 h-4 text-emerald-600" />
-            <span class="text-xs text-emerald-700 font-semibold">Código de aceptación</span>
-            <span class="detalle-code-value">{{ solicitudSeleccionada.codigo_aceptacion }}</span>
-          </div>
-
-          <!-- Respuesta / Negación -->
-          <div v-if="solicitudSeleccionada.nombre_quien_responde" class="detalle-respuesta">
-            <div class="flex items-center gap-2 mb-1">
-              <component :is="CheckCircleIcon" class="w-4 h-4 text-blue-600" />
-              <p class="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider">Respuesta del equipo</p>
-            </div>
-            <p class="text-xs text-blue-700">Respondió: <strong>{{ solicitudSeleccionada.nombre_quien_responde }}</strong> · {{ solicitudSeleccionada.hora_respuesta }}</p>
-            <p v-if="solicitudSeleccionada.observaciones_respuesta" class="text-xs text-blue-600 mt-1">{{ solicitudSeleccionada.observaciones_respuesta }}</p>
-          </div>
-
-          <div v-if="solicitudSeleccionada.motivo_negacion" class="detalle-negacion">
-            <div class="flex items-center gap-2 mb-1">
-              <component :is="XCircleIcon" class="w-4 h-4 text-red-500" />
-              <p class="text-[10px] font-extrabold text-red-500 uppercase tracking-wider">Motivo de negación</p>
-            </div>
-            <p class="text-xs text-slate-700">{{ solicitudSeleccionada.motivo_negacion }}</p>
-          </div>
-
-          <!-- Seguimiento + Adjuntos en 2 columnas -->
-          <div class="grid grid-cols-2 gap-2.5">
+          <!-- Seguimiento + Soportes en 2 columnas -->
+          <div class="grid grid-cols-2 gap-2 mx-4">
             <div v-if="solicitudSeleccionada.eventos?.length" class="detalle-card">
               <div class="card-icon" style="background:#f1f5f9; color:#475569;"><component :is="ClockIcon" class="w-4 h-4" /></div>
               <div class="card-body">
@@ -341,6 +343,11 @@
       </template>
     </el-dialog>
 
+    <!-- ── Modal: Historia clínica completa ──────────────────────────── -->
+    <el-dialog v-model="modalHistoria" width="560px" class="historia-dialog" :show-close="true" align-center title="Historia clínica completa">
+      <p class="historia-full-text">{{ solicitudSeleccionada?.resumen_historia_clinica }}</p>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -363,6 +370,7 @@ import { ESPECIALIDADES, EPS_LIST } from '@/data/referencia';
 const solicitudes = ref<any[]>([]);
 const cargando = ref(false);
 const modalDetalle = ref(false);
+const modalHistoria = ref(false);
 const solicitudSeleccionada = ref<any>(null);
 
 const busqueda = ref('');
@@ -1001,7 +1009,7 @@ onUnmounted(() => {
 :deep(.detalle-dialog .el-dialog__title) { display: none; }
 :deep(.detalle-dialog .el-dialog__body) {
   padding: 0;
-  max-height: calc(100vh - 3rem);
+  max-height: calc(100vh - 2rem);
   overflow: hidden;
   background: linear-gradient(180deg, #f0f5ff 0%, #f8faff 30%, #ffffff 100%);
 }
@@ -1011,20 +1019,19 @@ onUnmounted(() => {
 :deep(.el-overlay) { background-color: rgba(8, 27, 58, .56); backdrop-filter: blur(4px); }
 
 .detalle-content { padding: 0; }
-.detalle-content > .grid,
-.detalle-content > .detalle-code-bar,
-.detalle-content > .detalle-respuesta,
-.detalle-content > .detalle-negacion { padding-left: 1rem; padding-right: 1rem; margin-top: .8rem; }
+.detalle-content > .grid { padding-left: 1rem; padding-right: 1rem; margin-top: .6rem; }
+.detalle-content > .detalle-card.mx-4 { margin-left: 1rem; margin-right: 1rem; }
+.detalle-content > .flex { margin-top: 0; }
 .detalle-content > .grid:last-child { padding-bottom: 1rem; }
 
 /* Header con gradiente azul institucional */
 .detalle-head {
   position: relative;
   background: linear-gradient(125deg, #0d2d6b 0%, #16468e 50%, #1a3d8a 100%);
-  padding: 1.1rem 1.3rem;
+  padding: .8rem 1.2rem;
   display: flex;
   align-items: center;
-  gap: .8rem;
+  gap: .7rem;
   overflow: hidden;
 }
 .detalle-head::after {
@@ -1139,7 +1146,7 @@ onUnmounted(() => {
   margin: .6rem .6rem 0 .6rem;
   float: left;
 }
-.card-body { padding: .6rem .8rem .6rem .6rem; }
+.card-body { padding: .5rem .7rem .5rem .5rem; }
 .card-title {
   margin: 0 0 .35rem;
   font-size: .72rem;
@@ -1151,6 +1158,29 @@ onUnmounted(() => {
 }
 .card-text { font-size: .72rem; color: #334e70; line-height: 1.5; margin: 0; }
 .card-text-sm { font-size: .66rem; color: #64748b; line-height: 1.45; margin: 0; }
+.card-text-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.leer-mas-btn {
+  margin-top: .3rem;
+  font-size: .62rem;
+  font-weight: 700;
+  color: #2563eb;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.leer-mas-btn:hover { text-decoration: underline; }
+
+:deep(.historia-dialog) { border-radius: 18px; }
+:deep(.historia-dialog .el-dialog__header) { padding: 1.1rem 1.3rem .6rem; margin: 0; }
+:deep(.historia-dialog .el-dialog__title) { font-size: .9rem; font-weight: 800; color: #0d2d5e; }
+:deep(.historia-dialog .el-dialog__body) { padding: 0 1.3rem 1.3rem; max-height: 60vh; overflow-y: auto; }
+.historia-full-text { font-size: .8rem; color: #334155; line-height: 1.6; margin: 0; white-space: pre-wrap; }
 .card-dx-list { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
 .card-dx-item {
   display: flex; align-items: baseline; gap: 6px;
@@ -1168,7 +1198,7 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: baseline;
   gap: .4rem;
-  padding: .18rem 0;
+  padding: .12rem 0;
   border-bottom: 1px solid #f1f5f9;
 }
 .data-row:last-child { border-bottom: none; }
