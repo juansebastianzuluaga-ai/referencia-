@@ -21,6 +21,7 @@ export interface User {
   failed_login_attempts?: number;
   roles?: {
     name: string;
+    display_name?: string;
     permissions: { name: string }[];
   }[];
 }
@@ -38,10 +39,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(credentials: { username: string; password: string }) {
     await initCsrf();
-    const { data } = await http.post('/api/login', credentials);
-    user.value = data.data;
-    isHydrated.value = true;
+    await http.post('/api/login', credentials);
     markTab(AUTH_KEY);
+    // Se vuelve a pedir el usuario con /api/user (el mismo camino que se usa
+    // al recargar la página) en vez de confiar en lo que trajo la respuesta
+    // del login — así el menú lateral (que depende de los roles/permisos)
+    // arranca siempre con los mismos datos completos, sin importar si se
+    // acaba de iniciar sesión o si se recargó la página.
+    await fetchUser();
   }
 
   async function fetchUser() {

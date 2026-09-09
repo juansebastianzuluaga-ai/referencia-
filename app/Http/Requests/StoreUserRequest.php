@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Actions\Fortify\PasswordValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreUserRequest extends FormRequest
 {
+    use PasswordValidationRules;
+
     public function authorize(): bool
     {
         return $this->user()?->hasPermission('users.create') ?? false;
@@ -32,7 +35,7 @@ class StoreUserRequest extends FormRequest
             'sur_name' => ['nullable', 'string', 'max:80'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'job_title' => ['nullable', 'string', 'max:250'],
-            'password' => ['required', 'string', 'min:10', 'confirmed'],
+            'password' => $this->passwordRules(),
             'is_active' => ['sometimes', 'boolean'],
             'must_change_password' => ['sometimes', 'boolean'],
             'must_update_profile' => ['sometimes', 'boolean'],

@@ -1,24 +1,28 @@
 <template>
-  <header class="fixed top-0 left-0 right-0 h-[56px] bg-[var(--blue-800)] flex items-center justify-between pr-4 z-50 shadow-md border-b border-white/5">
+  <header
+    class="fixed top-0 left-0 right-0 h-[56px] flex items-center justify-between pr-4 z-50 transition-colors duration-300"
+    :style="{ background: layout.isDarkMode ? '#11151f' : 'linear-gradient(165deg, var(--rf-primary) 0%, var(--rf-primary-2) 100%)', borderBottom: layout.isDarkMode ? '1px solid rgba(255,255,255,0.06)' : 'none' }"
+  >
     <div class="flex items-center h-full">
       <div
-        class="h-full flex items-center bg-[var(--blue-900)] border-r border-white/10 transition-all duration-200 shrink-0 overflow-hidden w-[52px] md:px-4 px-2"
+        class="h-full flex items-center transition-all duration-200 shrink-0 overflow-hidden w-[52px] md:px-4 px-2"
         :class="layout.isSidebarCollapsed ? 'md:w-[64px] md:justify-center md:px-0' : 'md:w-[240px] md:justify-start md:px-4'"
       >
-        <div class="w-9 h-9 shrink-0 bg-white rounded-full flex items-center justify-center overflow-hidden">
+        <div class="w-9 h-9 shrink-0 rounded-full flex items-center justify-center overflow-hidden bg-white" :style="{ boxShadow: layout.isDarkMode ? 'none' : '0 0 0 2px rgba(255,255,255,0.4)' }">
           <img :src="logoAvatar" alt="Santa Bárbara" class="w-7 h-7 object-contain" />
         </div>
         <div
           class="hidden md:flex flex-col ml-2.5 overflow-hidden whitespace-nowrap transition-all duration-200"
           :class="layout.isSidebarCollapsed ? 'opacity-0 max-w-0' : 'opacity-100 max-w-[160px]'"
         >
-          <strong class="block text-sm font-semibold text-white leading-tight">Santa Bárbara</strong>
-          <span class="text-[10px] text-[var(--blue-300)] font-light tracking-wide">Clínica de Alta Complejidad</span>
+          <strong class="block text-sm font-semibold leading-tight" style="color:#ffffff;">Santa Bárbara</strong>
+          <span class="text-[10px] font-light tracking-wide" style="color:rgba(255,255,255,0.65);">Clínica de Alta Complejidad</span>
         </div>
       </div>
 
       <button
-        class="md:hidden w-9 h-9 rounded bg-white/10 hover:bg-white/20 text-white flex items-center justify-center mx-3 transition-colors shrink-0 border-none cursor-pointer"
+        class="md:hidden w-9 h-9 rounded-lg flex items-center justify-center mx-3 transition-colors shrink-0 border-none cursor-pointer hover:bg-white/10"
+        style="color:#fff;"
         title="Mostrar/ocultar menu"
         @click="layout.toggleMobileMenu"
       >
@@ -26,45 +30,43 @@
       </button>
 
       <button
-        class="hidden md:flex w-9 h-9 rounded bg-white/10 hover:bg-white/20 text-white flex items-center justify-center mx-3 transition-colors shrink-0 border-none cursor-pointer"
+        class="hidden md:flex w-9 h-9 rounded-lg items-center justify-center mx-3 transition-colors shrink-0 border-none cursor-pointer hover:bg-white/10"
+        style="color:#fff;"
         title="Mostrar/ocultar sidebar"
         @click="layout.toggleSidebar"
       >
         <MenuIcon class="w-4.5 h-4.5" />
       </button>
 
-      <nav class="hidden md:flex items-center gap-1.5 text-[13px] text-[var(--blue-300)]">
+      <nav class="hidden md:flex items-center gap-1.5 text-[13px] font-medium" style="color:rgba(255,255,255,0.75);">
         <span class="capitalize">{{ $route.name }}</span>
       </nav>
     </div>
 
     <div class="flex items-center gap-1.5">
-      <NotificationCenter />
+      <NotificationCenter :light="false" />
 
       <button
-        class="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all border-none cursor-pointer hover:scale-110"
+        class="w-9 h-9 rounded-lg flex items-center justify-center transition-all border-none cursor-pointer hover:scale-110 hover:bg-white/10"
+        style="color:#fff;"
         :title="layout.isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
         @click="layout.toggleDarkMode"
       >
         <component :is="layout.isDarkMode ? SunIcon : MoonIcon" class="w-5 h-5" />
       </button>
 
-      <button class="w-8 h-8 rounded bg-transparent hover:bg-white/10 text-[var(--blue-300)] hover:text-white flex items-center justify-center transition-colors border-none cursor-pointer">
-        <HelpCircleIcon class="w-4.5 h-4.5" />
-      </button>
-
-      <div class="w-px h-5 bg-white/10 mx-1"></div>
+      <div class="w-px h-5 mx-1" style="background:rgba(255,255,255,0.18);"></div>
 
       <el-dropdown trigger="click" @command="handleCommand">
-        <button class="flex items-center gap-2 py-1 pr-2 pl-1 rounded bg-transparent hover:bg-white/10 transition-colors border-none cursor-pointer outline-none md:gap-2 gap-0">
-          <div class="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
+        <button class="flex items-center gap-2 py-1 pr-2 pl-1 rounded-lg transition-colors border-none cursor-pointer outline-none md:gap-2 gap-0 hover:bg-white/10">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden text-white" :style="{ background: layout.isDarkMode ? 'linear-gradient(135deg, var(--rf-primary), var(--rf-primary-2))' : 'rgba(255,255,255,0.2)' }">
             <img :src="logoAvatarWhite" alt="Usuario" class="w-7 h-8 object-contain" />
           </div>
           <div class="hidden md:block text-left">
-            <div class="text-[12.5px] font-medium text-white leading-tight whitespace-nowrap">{{ auth.user?.full_name || 'Usuario' }}</div>
-            <div class="text-[10.5px] text-[var(--blue-300)] leading-none mt-0.5">{{ auth.user?.job_title || 'Personal' }}</div>
+            <div class="text-[12.5px] font-medium leading-tight whitespace-nowrap" style="color:#fff;">{{ auth.user?.full_name || 'Usuario' }}</div>
+            <div class="text-[10.5px] leading-none mt-0.5" style="color:rgba(255,255,255,0.55);">{{ auth.user?.job_title || 'Personal' }}</div>
           </div>
-          <ChevronDownIcon class="hidden md:block w-3.5 h-3.5 text-[var(--blue-300)] ml-0.5" />
+          <ChevronDownIcon class="hidden md:block w-3.5 h-3.5 ml-0.5" style="color:rgba(255,255,255,0.55);" />
         </button>
 
         <template #dropdown>
@@ -96,7 +98,6 @@ import { useAuthStore } from '@/stores/auth';
 import NotificationCenter from './NotificationCenter.vue';
 import {
   ChevronDown as ChevronDownIcon,
-  HelpCircle as HelpCircleIcon,
   Key as KeyIcon,
   LogOut as LogOutIcon,
   Menu as MenuIcon,

@@ -6,7 +6,6 @@ export interface NotifyItem {
   id: number;
   type: NotifyType;
   message: string;
-  duration: number;
 }
 
 let idCounter = 0;
@@ -21,8 +20,8 @@ function processQueue() {
   notifyState.current = notifyState.queue.shift() ?? null;
 }
 
-function push(type: NotifyType, message: string, duration: number) {
-  notifyState.queue.push({ id: ++idCounter, type, message, duration });
+function push(type: NotifyType, message: string) {
+  notifyState.queue.push({ id: ++idCounter, type, message });
   processQueue();
 }
 
@@ -33,16 +32,16 @@ export function dismissCurrent() {
 
 export const notify = {
   success(msg: string) {
-    push('success', msg, 3000);
+    push('success', msg);
   },
   error(msg: string) {
-    push('error', msg, 4000);
+    push('error', msg);
   },
   info(msg: string) {
-    push('info', msg, 3000);
+    push('info', msg);
   },
   warning(msg: string) {
-    push('warning', msg, 3500);
+    push('warning', msg);
   },
 };
 

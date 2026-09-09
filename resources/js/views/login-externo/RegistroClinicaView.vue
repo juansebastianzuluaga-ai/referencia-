@@ -8,7 +8,7 @@
     <div class="fixed bottom-0 right-1/4 w-[400px] h-[400px] rounded-full opacity-[0.05] pointer-events-none"
       style="background: radial-gradient(circle, #60a5fa, transparent 70%)" />
 
-    <div class="w-full max-w-2xl relative z-10 animate-fade-in-up"
+    <div class="w-full max-w-4xl relative z-10 animate-fade-in-up"
       style="animation-duration: 0.5s; animation-fill-mode: both;">
 
       <!-- Card -->
@@ -16,7 +16,7 @@
         style="box-shadow: 12px 12px 24px rgba(7,26,66,0.4), -12px -12px 24px rgba(255,255,255,0.15), 0 0 60px rgba(255,255,255,0.12);">
 
         <!-- Header -->
-        <div class="relative px-4 pt-2 pb-2 flex items-center overflow-hidden"
+        <div class="relative px-6 pt-4 pb-4 flex items-center overflow-hidden"
           style="background: linear-gradient(135deg, #16468E 0%, #0D2D6B 50%, #0a2150 100%);">
           <div class="absolute -top-8 -right-8 w-36 h-36 rounded-full opacity-[0.12]"
             style="background: radial-gradient(circle, #60a5fa, transparent 70%)" />
@@ -24,15 +24,15 @@
             style="background: radial-gradient(circle, #93c5fd, transparent 70%)" />
           <div class="absolute inset-0 opacity-[0.03]"
             style="background-image: repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 1px, transparent 12px)" />
-          <img :src="logoBlanco" alt="logo" class="h-7 object-contain relative z-10 drop-shadow-lg flex-shrink-0" />
+          <img :src="logoBlanco" alt="logo" class="h-9 object-contain relative z-10 drop-shadow-lg flex-shrink-0" />
           <div class="flex-1 text-center relative z-10">
-            <h1 class="text-base font-extrabold text-white tracking-wide">Registro de Clínica</h1>
-            <p class="text-blue-300/80 text-xs font-medium mt-0.5">Solicite acceso al Sistema de Referencia</p>
+            <h1 class="text-xl font-extrabold text-white tracking-wide">Registro de Clínica</h1>
+            <p class="text-blue-300/80 text-sm font-medium mt-0.5">Solicite acceso al Sistema de Referencia</p>
           </div>
         </div>
 
         <!-- Cuerpo -->
-        <div class="px-4 py-3 relative" style="background: #eef1f6;">
+        <div class="px-6 py-5 relative" style="background: #eef1f6;">
           <div class="absolute inset-0 opacity-[0.02] pointer-events-none" style="background-image: radial-gradient(circle, #0D2D6B 1px, transparent 1px); background-size: 16px 16px;" />
 
           <!-- ── Éxito ── -->
@@ -65,7 +65,7 @@
                   <span class="font-semibold text-gray-700">{{ form.email }}</span>
                 </div>
                 <div class="flex justify-between text-xs">
-                  <span class="text-gray-500">Representante</span>
+                  <span class="text-gray-500">Persona a cargo</span>
                   <span class="font-semibold text-gray-700">{{ form.representante_legal }}</span>
                 </div>
                 <div class="flex justify-between text-xs">
@@ -88,7 +88,7 @@
           <!-- ── Formulario ── -->
           <div v-else>
 
-            <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="small" autocomplete="off">
+            <el-form ref="formRef" :model="form" :rules="rules" label-position="top" autocomplete="off">
 
               <!-- Sección institución -->
               <div class="flex items-center gap-2 mb-2 relative z-10">
@@ -156,7 +156,7 @@
               <!-- Separador -->
               <div class="flex items-center gap-2 mb-2 mt-2.5 relative z-10">
                 <div class="w-6 h-6 rounded-xl flex items-center justify-center text-[10px] font-bold text-[#0D2D6B]" style="background: #eef1f6; box-shadow: 3px 3px 6px rgba(163,177,198,0.6), -3px -3px 6px rgba(255,255,255,0.9);">3</div>
-                <p class="text-xs font-bold text-[#0D2D6B] uppercase tracking-widest">Representante legal</p>
+                <p class="text-xs font-bold text-[#0D2D6B] uppercase tracking-widest">Persona a cargo</p>
                 <div class="flex-1 h-px" style="background: linear-gradient(90deg, #c5cfdb, transparent);" />
               </div>
 

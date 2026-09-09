@@ -91,6 +91,18 @@ const router = createRouter({
           component: () => import('@/views/DashboardView.vue'),
         },
         {
+          path: 'reportes',
+          name: 'reportes',
+          component: () => import('@/views/ReportesView.vue'),
+          meta: { permissions: ['clinicas.view'] },
+        },
+        {
+          path: 'historico',
+          name: 'historico',
+          component: () => import('@/views/historico/HistoricoView.vue'),
+          meta: { permissions: ['clinicas.view'] },
+        },
+        {
           path: 'usuarios',
           name: 'users',
           component: () => import('@/views/users/UsersView.vue'),

@@ -114,6 +114,21 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        'gomedisys' => [
+            'driver' => 'sqlsrv',
+            'url' => env('DATABASE_URL'),
+            'host' => env('GOMEDISYS_HOST', 'localhost'),
+            'port' => env('GOMEDISYS_PORT', '1433'),
+            'database' => env('GOMEDISYS_DATABASE', 'forge'),
+            'username' => env('GOMEDISYS_USERNAME', 'forge'),
+            'password' => env('GOMEDISYS_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            // 'encrypt' => env('DB_ENCRYPT', 'yes'),
+            // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
+        ],
+
     ],
 
     /*

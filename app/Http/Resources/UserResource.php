@@ -36,6 +36,9 @@ class UserResource extends JsonResource
             'must_update_profile' => $this->must_update_profile,
             'last_login_at' => $this->last_login_at,
             'failed_login_attempts' => $this->failed_login_attempts,
+            // El frontend usa este flag en vez de comparar user_name === 'superadmin'
+            // por su cuenta — así solo hay un lugar que decide qué cuenta está protegida.
+            'is_protected' => $this->user_name === 'superadmin',
             'roles' => RoleResource::collection($this->whenLoaded('roles')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

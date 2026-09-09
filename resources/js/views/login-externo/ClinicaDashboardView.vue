@@ -2,60 +2,13 @@
   <div class="ph-dashboard h-full flex overflow-hidden">
 
     <!-- ══ Columna principal ═══════════════════════════════════════════════ -->
-    <div class="flex-1 flex flex-col gap-2 p-3 sm:p-4 min-w-0 overflow-hidden">
-
-      <!-- ── Hero ── -->
-      <div class="hero-card rounded-2xl p-3 sm:p-4 flex items-center gap-4 relative overflow-hidden shrink-0 animate-fade-in-down"
-        style="animation-duration: 0.4s; animation-fill-mode: both;">
-        <div class="hero-glow"></div>
-        <div class="hero-glow-2"></div>
-        <div class="hero-pattern"></div>
-        <div class="hero-bubble hero-bubble-1"></div>
-        <div class="hero-bubble hero-bubble-2"></div>
-        <div class="flex items-center gap-4 z-10 shrink-0">
-          <div class="hero-logo">
-            <component :is="ClipboardListIcon" class="w-7 h-7" />
-          </div>
-        </div>
-        <div class="flex-1 min-w-0 z-10">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="hero-live-dot"></span>
-            <p class="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.12em]" style="color:rgba(255,255,255,0.6);">Sistema de referencia · En línea</p>
-          </div>
-          <h1 class="text-lg sm:text-2xl font-bold leading-tight text-white tracking-tight">
-            {{ saludoTexto }}, <span class="clinic-name font-extrabold">{{ clinicaAuth.clinica?.nombre }}</span>
-          </h1>
-          <p class="text-xs sm:text-sm mt-1.5" style="color:rgba(255,255,255,0.65);">{{ fechaHoy }} · Gestione sus remisiones al centro de referencia.</p>
-        </div>
-        <div class="hero-right z-10 shrink-0 hidden sm:flex items-center gap-3">
-          <button @click="router.push('/clinica/solicitud')" class="hero-link">
-            <component :is="PlusIcon" class="w-4 h-4" />
-            <span>Nueva solicitud</span>
-          </button>
-          <div class="hero-mini-stats">
-            <div class="hero-mini-stat">
-              <span class="hero-mini-stat-num">{{ stats.total }}</span>
-              <span class="hero-mini-stat-label">Total</span>
-            </div>
-            <div class="hero-mini-divider"></div>
-            <div class="hero-mini-stat">
-              <span class="hero-mini-stat-num">{{ stats.aceptadas }}</span>
-              <span class="hero-mini-stat-label">Aceptadas</span>
-            </div>
-            <div class="hero-mini-divider"></div>
-            <div class="hero-mini-stat">
-              <span class="hero-mini-stat-num">{{ tiempoPromedio }}</span>
-              <span class="hero-mini-stat-label">Respuesta</span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="flex-1 flex flex-col gap-1.5 p-2.5 sm:p-3 min-w-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
 
       <!-- ── Stat cards ── -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 shrink-0 animate-fade-in-up"
+      <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-1.5 shrink-0 animate-fade-in-up"
         style="animation-duration: 0.4s; animation-delay: 0.1s; animation-fill-mode: both;">
         <template v-if="cargando">
-          <Card v-for="i in 4" :key="i" class="stat-card rounded-2xl p-3 flex items-center gap-3">
+          <Card v-for="i in 5" :key="i" class="stat-card rounded-2xl p-3 flex items-center gap-3">
             <div class="shimmer-box" style="width:52px; height:52px; border-radius:14px;"></div>
             <div class="flex-1 space-y-2">
               <div class="shimmer-bar" style="width:70%; height:20px;"></div>
@@ -65,45 +18,43 @@
           </Card>
         </template>
         <template v-else>
-          <div
+          <StatCard
             v-for="(card, i) in statCards" :key="i"
-            class="stat-card rounded-2xl p-3 flex items-center gap-3 anim-slide-up group"
-            :style="{ animationDelay: (i * 0.06) + 's', '--accent': card.color, '--accent-2': card.color2, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
-          >
-            <div class="stat-card-glow" :style="{ background: 'radial-gradient(circle, ' + card.color2 + '45, transparent 70%)' }"></div>
-
-            <div class="stat-icon-chip shrink-0">
-              <component :is="card.icon" class="w-[18px] h-[18px]" />
-            </div>
-
-            <div class="flex-1 min-w-0 relative z-10">
-              <p class="stat-value">{{ card.value }}</p>
-              <p class="stat-label">{{ card.label }}</p>
-              <span class="stat-delta-badge">{{ card.delta }}</span>
-            </div>
-          </div>
+            class="anim-slide-up"
+            :style="{ animationDelay: (i * 0.06) + 's' }"
+            variant="pastel"
+            :dark="isDark"
+            :tone="card.tone"
+            :value="displayStats[i]"
+            :label="card.label"
+            :icon="card.icon"
+            :percent="card.percent"
+            :delta="card.delta"
+            :sparkline="card.sparkline"
+            :comparacion="card.comparacion"
+          />
         </template>
       </div>
 
       <!-- ── Gráficos: Tendencia + Distribución ── -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 shrink-0 animate-fade-in-up"
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-1.5 shrink-0 animate-fade-in-up"
         style="animation-duration: 0.4s; animation-delay: 0.18s; animation-fill-mode: both;">
 
         <!-- Tendencia area chart -->
-        <Card v-if="cargando" class="distrib-card rounded-2xl p-4 lg:col-span-2">
-          <div class="shimmer-bar" style="width:160px; height:14px; margin-bottom:12px;"></div>
-          <div class="shimmer-bar w-full" style="height:120px; border-radius:8px;"></div>
+        <Card v-if="cargando" class="distrib-card rounded-2xl p-3 lg:col-span-2">
+          <div class="shimmer-bar" style="width:160px; height:14px; margin-bottom:10px;"></div>
+          <div class="shimmer-bar w-full" style="height:100px; border-radius:8px;"></div>
         </Card>
-        <Card v-else class="distrib-card rounded-2xl p-3 sm:p-4 flex flex-col anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
+        <Card v-else class="distrib-card rounded-2xl p-2.5 sm:p-3 flex flex-col anim-slide-up lg:col-span-2" style="animation-delay:0.16s">
           <div class="distrib-card-glow"></div>
-          <div class="flex items-center justify-between mb-3 relative z-10">
+          <div class="flex items-center justify-between mb-2 relative z-10">
             <div class="flex items-center gap-3">
               <div class="chart-header-icon" style="background: linear-gradient(135deg,#dbeafe,#bfdbfe); color:#2563c4;">
                 <component :is="TrendingUpIcon" class="w-4 h-4" />
               </div>
               <div>
-                <p class="text-sm font-bold" style="color:#1e2d55;">Tendencia de solicitudes</p>
-                <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Volumen de remisiones · últimos 14 días</p>
+                <p class="text-sm font-bold" :style="{ color: isDark ? '#e2e8f0' : '#1e2d55' }">Tendencia de solicitudes</p>
+                <p class="text-[10px] mt-0.5 font-medium" :style="{ color: isDark ? '#64748b' : '#8a9ab5' }">Volumen de remisiones · últimos 14 días</p>
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -114,97 +65,134 @@
               <span class="estado-total-badge">14 días</span>
             </div>
           </div>
-          <div v-if="chartsReady" class="flex-1 w-full min-h-[120px] relative z-10">
-            <component :is="apexchart" type="area" :series="tendenciaSeries" :options="tendenciaOptions" height="140" />
+          <div v-if="chartsReady" class="flex-1 w-full min-h-[100px] relative z-10">
+            <component :is="apexchart" type="area" :series="tendenciaSeries" :options="tendenciaOptions" height="115" />
           </div>
         </Card>
 
         <!-- Distribución de estados (barras horizontales) -->
-        <Card v-if="cargando" class="distrib-card rounded-2xl p-4 flex flex-col">
-          <div class="shimmer-bar" style="width:120px; height:14px; margin-bottom:12px;"></div>
-          <div class="shimmer-bar w-full" style="height:120px; border-radius:8px;"></div>
+        <Card v-if="cargando" class="distrib-card rounded-2xl p-3 flex flex-col">
+          <div class="shimmer-bar" style="width:120px; height:14px; margin-bottom:10px;"></div>
+          <div class="shimmer-bar w-full" style="height:100px; border-radius:8px;"></div>
         </Card>
-        <Card v-else class="distrib-card rounded-2xl p-3 sm:p-4 flex flex-col anim-slide-up" style="animation-delay:0.2s">
-          <div class="flex items-center gap-3 mb-2">
+        <Card v-else class="distrib-card rounded-2xl p-2.5 sm:p-3 flex flex-col anim-slide-up" style="animation-delay:0.2s">
+          <div class="flex items-center gap-3 mb-1.5">
             <div class="chart-header-icon" style="background: linear-gradient(135deg,#fef3c7,#fde68a); color:#d97706;">
               <component :is="ActivityIcon" class="w-4 h-4" />
             </div>
             <div>
-              <p class="text-sm font-bold" style="color:#1e2d55;">Distribución de estados</p>
-              <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Resumen general</p>
+              <p class="text-sm font-bold" :style="{ color: isDark ? '#e2e8f0' : '#1e2d55' }">Distribución de estados</p>
+              <p class="text-[10px] mt-0.5 font-medium" :style="{ color: isDark ? '#64748b' : '#8a9ab5' }">Resumen general</p>
             </div>
           </div>
-          <div v-if="chartsReady && stats.total > 0" class="flex-1 w-full flex flex-col justify-center gap-2.5 min-h-[120px] py-1">
-            <div v-for="bar in distribucionBarras" :key="bar.label" class="dist-bar-item">
-              <div class="flex items-center justify-between mb-1">
-                <span class="dist-bar-label" :style="{ color: bar.color }">{{ bar.label }}</span>
-                <span class="dist-bar-count">{{ bar.count }} <span class="dist-bar-pct">({{ bar.pct }}%)</span></span>
-              </div>
-              <div class="dist-bar-track">
-                <div class="dist-bar-fill" :style="{ width: bar.pct + '%', background: bar.gradient, boxShadow: '0 2px 8px ' + bar.color + '40' }"></div>
+          <div v-if="chartsReady && stats.total > 0" class="flex-1 w-full min-h-[130px] flex items-center gap-2">
+            <div class="flex-1 h-full relative donut-chart-wrap">
+              <highcharts-chart :options="estadoDonut3DOptions" :highcharts="Highcharts" />
+              <div class="donut-center-overlay" :style="{ top: donutCenterTop + '%', left: donutCenterLeft + '%' }">
+                <span class="donut-center-num">{{ stats.total }}</span>
+                <span class="donut-center-label">Total</span>
               </div>
             </div>
+            <ul class="donut-legend">
+              <li v-for="fila in distribucionBarras" :key="fila.label" class="donut-legend-item">
+                <span class="donut-legend-dot" :style="{ background: fila.color }"></span>
+                <span class="donut-legend-label">{{ fila.label }}</span>
+                <span class="donut-legend-pct">{{ fila.pct }}%</span>
+                <span class="donut-legend-count">{{ fila.count }}</span>
+              </li>
+            </ul>
           </div>
-          <div v-else-if="chartsReady" class="flex-1 flex flex-col items-center justify-center min-h-[120px]">
+          <div v-else-if="chartsReady" class="flex-1 flex flex-col items-center justify-center min-h-[130px]">
             <component :is="ActivityIcon" class="w-8 h-8 mb-2" style="color:#cbd5e1;" />
             <p class="text-xs font-medium" style="color:#94a3b8;">Sin datos para mostrar</p>
           </div>
         </Card>
       </div>
 
-      <!-- ── Especialidades + Últimas referencias ── -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 flex-1 min-h-0 animate-fade-in-up"
+      <!-- ── Especialidades más solicitadas ── -->
+      <Card v-if="!cargando" class="distrib-card rounded-2xl p-2.5 sm:p-3 flex flex-col anim-slide-up shrink-0" style="animation-delay:0.19s">
+        <div class="flex items-center gap-3 mb-1.5">
+          <div class="chart-header-icon" style="background: linear-gradient(135deg,#f5f3ff,#ede9fe); color:#7c3aed;">
+            <component :is="StethoscopeIcon" class="w-4 h-4" />
+          </div>
+          <div>
+            <p class="text-sm font-bold" :style="{ color: isDark ? '#e2e8f0' : '#1e2d55' }">Especialidades más solicitadas</p>
+            <p class="text-[10px] mt-0.5 font-medium" :style="{ color: isDark ? '#64748b' : '#8a9ab5' }">Top {{ especialidadesTop.length }} por volumen · histórico</p>
+          </div>
+        </div>
+        <div v-if="especialidadesTop.length" class="esp-top-list">
+          <div v-for="fila in especialidadesTop" :key="fila.especialidad" class="esp-top-row">
+            <span class="esp-top-rank">{{ fila.rank }}</span>
+            <span class="esp-top-label" :style="{ color: isDark ? '#cbd5e1' : '#334155' }">{{ fila.especialidad }}</span>
+            <span class="esp-top-bar-track">
+              <span class="esp-top-bar-fill" :class="{ 'esp-top-bar-fill-top': fila.rank <= 2 }" :style="{ width: fila.pct + '%' }"></span>
+            </span>
+            <span class="esp-top-count">{{ fila.total }}</span>
+          </div>
+        </div>
+        <div v-else class="flex-1 flex flex-col items-center justify-center min-h-[100px]">
+          <component :is="StethoscopeIcon" class="w-8 h-8 mb-2" style="color:#cbd5e1;" />
+          <p class="text-xs font-medium" style="color:#94a3b8;">Sin datos para mostrar</p>
+        </div>
+      </Card>
+
+      <!-- ── Ritmo de solicitudes + Últimas referencias ── -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-1.5 items-stretch flex-1 min-h-[170px] animate-fade-in-up"
         style="animation-duration: 0.4s; animation-delay: 0.2s; animation-fill-mode: both;">
 
-        <!-- Especialidades (barras CSS) -->
-        <Card class="distrib-card rounded-2xl p-3 sm:p-4 flex flex-col anim-slide-up" style="animation-delay:0.22s">
-          <div class="flex items-center gap-3 mb-2">
-            <div class="chart-header-icon" style="background: linear-gradient(135deg,#dbeafe,#bfdbfe); color:#0d2d6b;">
-              <component :is="BarChart3Icon" class="w-4 h-4" />
+        <!-- Ritmo de solicitudes (métrica única) -->
+        <Card class="distrib-card rounded-2xl p-2.5 sm:p-3 flex flex-col anim-slide-up" style="animation-delay:0.22s">
+          <div class="flex items-center gap-3 mb-1.5">
+            <div class="chart-header-icon" style="background: linear-gradient(135deg,#ede9fe,#ddd6fe); color:#6d28d9;">
+              <component :is="CalendarIcon" class="w-4 h-4" />
             </div>
             <div class="flex-1">
-              <p class="text-sm font-bold" style="color:#1e2d55;">Especialidades</p>
-              <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Distribución por área</p>
-            </div>
-            <span v-if="chartsReady && especialidadPolarData.length > 0" class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:#e0ecff; color:#0d2d6b;">{{ especialidadPolarTotal }} total</span>
-          </div>
-          <div v-if="chartsReady && especialidadPolarData.length > 0" class="flex-1 w-full flex flex-col justify-center gap-2.5 min-h-[180px] py-1">
-            <div v-for="(esp, idx) in especialidadPolarData" :key="esp[0]" class="dist-bar-item">
-              <div class="flex items-center justify-between mb-1">
-                <span class="dist-bar-label" :style="{ color: POLAR_COLORS[idx % POLAR_COLORS.length] }">{{ esp[0].length > 18 ? esp[0].slice(0, 18) + '…' : esp[0] }}</span>
-                <span class="dist-bar-count">{{ esp[1] }} <span class="dist-bar-pct">({{ Math.round((esp[1] / especialidadPolarTotal) * 100) }}%)</span></span>
-              </div>
-              <div class="dist-bar-track">
-                <div class="dist-bar-fill" :style="{ width: Math.round((esp[1] / especialidadPolarTotal) * 100) + '%', background: 'linear-gradient(90deg, ' + POLAR_COLORS[idx % POLAR_COLORS.length] + ', ' + POLAR_COLORS[(idx + 3) % POLAR_COLORS.length] + ')', boxShadow: '0 2px 8px ' + POLAR_COLORS[idx % POLAR_COLORS.length] + '40' }"></div>
-              </div>
+              <p class="text-sm font-bold" :style="{ color: isDark ? '#e2e8f0' : '#1e2d55' }">Ritmo de solicitudes</p>
+              <p class="text-[10px] mt-0.5 font-medium" :style="{ color: isDark ? '#64748b' : '#8a9ab5' }">Promedio semanal · últimos 3 meses</p>
             </div>
           </div>
-          <div v-else class="flex-1 flex flex-col items-center justify-center min-h-[180px]">
-            <component :is="BarChart3Icon" class="w-8 h-8 mb-2" style="color:#cbd5e1;" />
-            <p class="text-xs font-medium" style="color:#94a3b8;">Sin especialidades registradas</p>
+          <div class="flex-1 w-full flex items-center gap-3">
+            <div class="flex flex-col items-start justify-center gap-1.5 shrink-0">
+              <div class="ritmo-metric">
+                <span class="ritmo-metric-num">{{ ritmoSemanal.promedio }}</span>
+                <span class="ritmo-metric-unit">/ semana</span>
+              </div>
+              <p class="ritmo-metric-total">{{ ritmoSemanal.total }} solicitudes en los últimos 3 meses</p>
+              <span class="ritmo-metric-pill" :class="ritmoSemanal.subiendo ? 'ritmo-pill-up' : 'ritmo-pill-down'" v-if="ritmoSemanal.comparacion">
+                {{ ritmoSemanal.comparacion }}
+              </span>
+            </div>
+            <div class="ritmo-sparkline-wrap">
+              <Sparkline :valores="ritmoSemanal.porSemana" :ancho="170" :alto="56" color="#7c3aed" />
+              <div class="ritmo-sparkline-labels">
+                <span>Hace 13 semanas</span>
+                <span>Hoy</span>
+              </div>
+            </div>
           </div>
         </Card>
 
         <!-- Últimas referencias -->
-        <Card class="distrib-card rounded-2xl p-3 sm:p-4 flex flex-col anim-slide-up" style="animation-delay:0.24s">
-          <div class="flex items-center gap-3 mb-2">
+        <Card class="distrib-card rounded-2xl p-2.5 sm:p-3 flex flex-col anim-slide-up" style="animation-delay:0.24s">
+          <div class="flex items-center gap-3 mb-1.5">
             <div class="chart-header-icon" style="background: linear-gradient(135deg,#dcfce7,#bbf7d0); color:#15966a;">
               <component :is="ClipboardListIcon" class="w-4 h-4" />
             </div>
             <div class="flex-1">
-              <p class="text-sm font-bold" style="color:#1e2d55;">Últimas referencias</p>
-              <p class="text-[10px] mt-0.5 font-medium" style="color:#8a9ab5;">Solicitudes más recientes · hover para detalle</p>
+              <p class="text-sm font-bold" :style="{ color: isDark ? '#e2e8f0' : '#1e2d55' }">Últimas referencias</p>
+              <p class="text-[10px] mt-0.5 font-medium" :style="{ color: isDark ? '#64748b' : '#8a9ab5' }">Solicitudes más recientes · hover para detalle</p>
             </div>
             <button @click="irHistorial" class="text-[10px] font-bold px-2.5 py-1 rounded-full transition-all" style="background:#e0ecff; color:#16468e;">Ver todas</button>
           </div>
           <div class="flex-1 overflow-y-auto space-y-0.5 pr-1 mini-ref-list">
             <button
-              v-for="(sol, idx) in solicitudes.slice(0, 4)"
+              v-for="(sol, idx) in solicitudes.slice(0, 6)"
               :key="sol.id"
               type="button"
               class="mini-ref-row mini-ref-row-sm"
+              :class="{ 'mini-ref-row-resaltada': idsActualizados.has(sol.id) }"
               :style="{ '--ref-color': estadoColorMap[sol.estado] ?? '#94a3b8', borderLeftColor: estadoColorMap[sol.estado] ?? '#94a3b8', animationDelay: (idx * 0.05) + 's' }"
-              @click="verDetalle(sol)"
+              @click="irADetalleHistorial(sol)"
               @mouseenter="onRefRowEnter($event, sol)"
               @mouseleave="onRefRowLeave"
             >
@@ -251,138 +239,6 @@
 
     <!-- ── Modales ──────────────────────────────────────────────────────── -->
 
-    <!-- ── Modal: Detalle ──────────────────────────────────────────────── -->
-    <el-dialog v-model="modalDetalle" width="640px" class="detalle-dialog" :show-close="true" align-center>
-      <template v-if="solicitudSeleccionada">
-        <div class="detalle-content">
-          <!-- Header con gradiente azul -->
-          <div class="detalle-head">
-            <div class="detalle-head-glow"></div>
-            <div class="detalle-head-icon">
-              <component
-                :is="solicitudSeleccionada.estado === 'aceptado' ? CheckCircleIcon : solicitudSeleccionada.estado === 'negado' ? XCircleIcon : solicitudSeleccionada.estado === 'en_espera' ? ClockIcon : solicitudSeleccionada.estado === 'completado' ? CheckCircleIcon : ClockIcon"
-                class="w-7 h-7"
-              />
-            </div>
-            <div class="detalle-head-info">
-              <p class="detalle-head-title">Detalle de solicitud</p>
-              <p class="detalle-head-sub">{{ formatFecha(solicitudSeleccionada.created_at) }}</p>
-            </div>
-            <div class="detalle-head-id-badge">ID #{{ solicitudSeleccionada.id }}</div>
-            <div class="detalle-head-badge" :class="'badge-' + solicitudSeleccionada.estado">
-              {{ estadoLabel(solicitudSeleccionada.estado) }}
-            </div>
-          </div>
-
-          <!-- Paciente + Remisión en 2 columnas -->
-          <div class="grid grid-cols-2 gap-2.5 mb-2.5">
-            <div class="detalle-card">
-              <div class="card-icon" style="background:#dbeafe; color:#2563eb;"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
-              <div class="card-body">
-                <p class="card-title">Paciente</p>
-                <div class="data-row"><span>Nombre</span><strong>{{ solicitudSeleccionada.primer_nombre }} {{ solicitudSeleccionada.segundo_nombre }} {{ solicitudSeleccionada.primer_apellido }} {{ solicitudSeleccionada.segundo_apellido }}</strong></div>
-                <div class="data-row"><span>Documento</span><strong>{{ solicitudSeleccionada.tipo_documento }} {{ solicitudSeleccionada.numero_documento }}</strong></div>
-                <div class="data-row"><span>Edad / Género</span><strong>{{ solicitudSeleccionada.edad }} años · {{ solicitudSeleccionada.genero === 'M' ? 'Masc.' : 'Fem.' }}</strong></div>
-                <div class="data-row"><span>EPS</span><strong>{{ solicitudSeleccionada.eps }}</strong></div>
-              </div>
-            </div>
-            <div class="detalle-card">
-              <div class="card-icon" style="background:#fef3c7; color:#d97706;"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
-              <div class="card-body">
-                <p class="card-title">Remisión</p>
-                <div class="data-row"><span>Especialidad</span><strong>{{ solicitudSeleccionada.especialidad_requerida }}</strong></div>
-                <div class="data-row"><span>Servicio actual</span><strong>{{ solicitudSeleccionada.servicio_ubicacion_actual }}</strong></div>
-                <div class="data-row"><span>Municipio</span><strong>{{ solicitudSeleccionada.municipio_capita }}</strong></div>
-                <div v-if="solicitudSeleccionada.servicio_remision" class="data-row"><span>Destino</span><strong>{{ solicitudSeleccionada.servicio_remision }}</strong></div>
-                <div v-if="solicitudSeleccionada.quien_remitente" class="data-row"><span>Remite</span><strong>{{ solicitudSeleccionada.quien_remitente }}</strong></div>
-                <div v-if="solicitudSeleccionada.telefono_contacto" class="data-row"><span>Teléfono</span><strong>{{ solicitudSeleccionada.telefono_contacto }}</strong></div>
-                <div v-if="solicitudSeleccionada.correo_contacto" class="data-row"><span>Correo</span><strong>{{ solicitudSeleccionada.correo_contacto }}</strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Diagnósticos + Historia en 2 columnas -->
-          <div class="grid grid-cols-2 gap-2.5 mb-2.5">
-            <div class="detalle-card">
-              <div class="card-icon" style="background:#ede9fe; color:#7c3aed;"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
-              <div class="card-body">
-                <p class="card-title">Diagnósticos</p>
-                <div v-if="solicitudSeleccionada.diagnosticos?.length" class="card-dx-list">
-                  <div v-for="dx in solicitudSeleccionada.diagnosticos" :key="dx.id" class="card-dx-item">
-                    <strong class="card-dx-code">{{ dx.codigo_cie10 }}</strong>
-                    <span class="card-dx-desc">{{ dx.descripcion }}</span>
-                  </div>
-                </div>
-                <p v-else-if="solicitudSeleccionada.diagnostico" class="card-text">{{ solicitudSeleccionada.diagnostico }}</p>
-                <p v-else class="card-text">—</p>
-              </div>
-            </div>
-            <div class="detalle-card">
-              <div class="card-icon" style="background:#e0f2fe; color:#0284c7;"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
-              <div class="card-body">
-                <p class="card-title">Historia clínica</p>
-                <p class="card-text-sm">{{ solicitudSeleccionada.resumen_historia_clinica }}</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Código de aceptación -->
-          <div v-if="solicitudSeleccionada.codigo_aceptacion" class="detalle-code-bar">
-            <component :is="CheckCircleIcon" class="w-4 h-4 text-emerald-600" />
-            <span class="text-xs text-emerald-700 font-semibold">Código de aceptación</span>
-            <span class="detalle-code-value">{{ solicitudSeleccionada.codigo_aceptacion }}</span>
-          </div>
-
-          <!-- Respuesta / Negación -->
-          <div v-if="solicitudSeleccionada.nombre_quien_responde" class="detalle-respuesta">
-            <div class="flex items-center gap-2 mb-1">
-              <component :is="CheckCircleIcon" class="w-4 h-4 text-blue-600" />
-              <p class="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider">Respuesta del equipo</p>
-            </div>
-            <p class="text-xs text-blue-700">Respondió: <strong>{{ solicitudSeleccionada.nombre_quien_responde }}</strong> · {{ solicitudSeleccionada.hora_respuesta }}</p>
-            <p v-if="solicitudSeleccionada.observaciones_respuesta" class="text-xs text-blue-600 mt-1">{{ solicitudSeleccionada.observaciones_respuesta }}</p>
-          </div>
-
-          <div v-if="solicitudSeleccionada.motivo_negacion" class="detalle-negacion">
-            <div class="flex items-center gap-2 mb-1">
-              <component :is="XCircleIcon" class="w-4 h-4 text-red-500" />
-              <p class="text-[10px] font-extrabold text-red-500 uppercase tracking-wider">Motivo de negación</p>
-            </div>
-            <p class="text-xs text-slate-700">{{ solicitudSeleccionada.motivo_negacion }}</p>
-          </div>
-
-          <!-- Seguimiento + Adjuntos en 2 columnas -->
-          <div class="grid grid-cols-2 gap-2.5">
-            <div v-if="solicitudSeleccionada.eventos?.length" class="detalle-card">
-              <div class="card-icon" style="background:#f1f5f9; color:#475569;"><component :is="ClockIcon" class="w-4 h-4" /></div>
-              <div class="card-body">
-                <p class="card-title">Seguimiento</p>
-                <div v-for="evento in solicitudSeleccionada.eventos" :key="evento.id" class="timeline-item">
-                  <div class="timeline-dot"></div>
-                  <div><p class="text-[11px] font-semibold text-slate-700">{{ evento.titulo }}</p><p class="text-[9px] text-slate-400">{{ formatFecha(evento.created_at) }}</p></div>
-                </div>
-              </div>
-            </div>
-            <div class="detalle-card">
-              <div class="card-icon" style="background:#fef2f2; color:#dc2626;"><component :is="ClipboardListIcon" class="w-4 h-4" /></div>
-              <div class="card-body">
-                <p class="card-title">Soportes</p>
-                <div v-if="solicitudSeleccionada.adjuntos?.length">
-                  <div v-for="adj in solicitudSeleccionada.adjuntos" :key="adj.id" class="adjunto-item">
-                    <a :href="`/api/externo/solicitudes/${solicitudSeleccionada.id}/adjuntos/${adj.id}/descargar`" target="_blank" class="adjunto-link">
-                      <span class="adjunto-icon" :class="getAdjuntoBadgeClass(adj.mime_type, adj.nombre_original)">{{ getAdjuntoBadgeLabel(adj.mime_type, adj.nombre_original) }}</span>
-                      <span class="adjunto-name">{{ adj.nombre_original }}</span>
-                    </a>
-                  </div>
-                </div>
-                <p v-else class="adjunto-empty">Sin archivos adjuntos</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
-    </el-dialog>
-
     <!-- ── Modal: Éxito envío ─────────────────────────────────────────── -->
     <el-dialog v-model="modalExito" width="480px" class="exito-dialog" :show-close="false" align-center @close="onCerrarExito">
       <div class="exito-content">
@@ -408,33 +264,34 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { usePolling } from '@/lib/usePolling';
+import { actualizarSiCambio } from '@/lib/silentRefresh';
 import { useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
 import notify from '@/plugins/toast';
 import {
-  Plus as PlusIcon,
   X as XIcon,
   ClipboardList as ClipboardListIcon,
   Clock as ClockIcon,
+  Hourglass as HourglassIcon,
   CheckCircle as CheckCircleIcon,
   XCircle as XCircleIcon,
+  Calendar as CalendarIcon,
+  Stethoscope as StethoscopeIcon,
   RefreshCw as RefreshCwIcon,
-  PieChart as PieChartIcon,
   ChevronRight as ChevronRightIcon,
   ArrowRight as ArrowRightIcon,
   Paperclip as PaperclipIcon,
   UploadCloud as UploadCloudIcon,
-  Stethoscope as StethoscopeIcon,
   CheckCircle2 as CheckCircle2Icon,
   User as UserIcon,
   UserCheck as UserCheckIcon,
   FileCheck as FileCheckIcon,
   TrendingUp as TrendingUpIcon,
   Activity as ActivityIcon,
-  Target as TargetIcon,
-  BarChart3 as BarChart3Icon,
 } from '@lucide/vue';
 import VueApexCharts from 'vue3-apexcharts';
+import Highcharts from 'highcharts/esm/highcharts';
 
 import http from '@/plugins/axios';
 import Card from '@/components/ui/card/Card.vue';
@@ -443,31 +300,28 @@ import CardTitle from '@/components/ui/card/CardTitle.vue';
 import CardDescription from '@/components/ui/card/CardDescription.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
 import Badge from '@/components/ui/badge/Badge.vue';
-import { useClinicaAuthStore } from '@/stores/clinicaAuth';
-import { useLayoutStore } from '@/stores/layout';
+import StatCard, { type StatCardTone } from '@/components/ui/StatCard.vue';
+import Sparkline from '@/components/ui/Sparkline.vue';
+import { useClinicaLayoutStore } from '@/stores/clinicaLayout';
 import { TIPOS_DOCUMENTO, EPS_LIST, ESPECIALIDADES, SERVICIOS } from '@/data/referencia';
-import { CIE10 } from '@/data/cie10';
 
 const apexchart = VueApexCharts;
 
-const clinicaAuth = useClinicaAuthStore();
-const layout = useLayoutStore();
+const layout = useClinicaLayoutStore();
 const isDark = computed(() => layout.isDarkMode);
 const router = useRouter();
 const solicitudes = ref<any[]>([]);
+const idsActualizados = ref<Set<number>>(new Set());
 const cargando = ref(false);
 const chartsReady = ref(false);
 const drawerVisible = ref(false);
 const guardando = ref(false);
 const showConfirmResumen = ref(false);
 const formRef = ref();
-const modalDetalle = ref(false);
-const solicitudSeleccionada = ref<any>(null);
 const adjuntos = ref<File[]>([]);
 const dragOver = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
 const pasoFormulario = ref(1);
-const cie10Filtrados = ref(CIE10.slice(0, 20));
 
 interface DiagnosticoItem {
   codigo_cie10: string;
@@ -482,43 +336,6 @@ function agregarDiagnostico() {
 
 function quitarDiagnostico(i: number) {
   diagnosticos.value.splice(i, 1);
-}
-
-async function onDxSelect(i: number, val: string) {
-  if (val === '__otro_dx') {
-    diagnosticos.value[i].codigo_cie10 = '';
-    try {
-      const { value } = await ElMessageBox.prompt('Escriba el código CIE-10', 'Nuevo diagnóstico', {
-        confirmButtonText: 'Continuar',
-        cancelButtonText: 'Cancelar',
-        inputPlaceholder: 'Ej: J18.9',
-        inputValidator: (v) => v?.trim() ? true : 'El código es requerido',
-      });
-      diagnosticos.value[i].codigo_cie10 = value.trim();
-    } catch {
-      diagnosticos.value[i].codigo_cie10 = '';
-    }
-    return;
-  }
-  if (!val) return;
-  const match = CIE10.find(c => c.codigo === val);
-  if (match) {
-    diagnosticos.value[i].codigo_cie10 = match.codigo;
-    if (!diagnosticos.value[i].descripcion) {
-      diagnosticos.value[i].descripcion = match.descripcion;
-    }
-  }
-}
-
-function filtrarCIE10(query: string) {
-  if (!query) {
-    cie10Filtrados.value = CIE10.slice(0, 20);
-    return;
-  }
-  const q = query.toLowerCase().trim();
-  cie10Filtrados.value = CIE10.filter(
-    c => c.codigo.toLowerCase().includes(q) || c.descripcion.toLowerCase().includes(q),
-  ).slice(0, 30);
 }
 
 async function onEspecialidadSelect(val: string) {
@@ -544,88 +361,102 @@ const formSteps = [
 ];
 
 // ── Stat cards config ───────────────────────────────────────────────────────
-const statCards = computed(() => [
+const statCards = computed((): { label: string; icon: typeof ClipboardListIcon; tone: StatCardTone; delta: string; percent: number; sparkline: number[]; comparacion: string }[] => [
   {
     label: 'Solicitudes totales',
-    value: String(displayStats.value[0]),
     icon: ClipboardListIcon,
-    color: '#2563c4',
-    color2: '#60a5fa',
-    iconBg: '#dbe1ff',
+    tone: 'info',
     delta: stats.value.pendientes ? `${stats.value.pendientes} pend.` : 'sin pendientes',
-    deltaBg: '#dbeafe',
-    deltaColor: '#2563c4',
-    percent: stats.value.total ? Math.round((stats.value.aceptadas / stats.value.total) * 100) : 0,
+    percent: 100,
+    sparkline: conteoPorDia(14, 0),
+    comparacion: comparacionPeriodo(),
   },
   {
     label: 'Pendientes',
-    value: String(displayStats.value[1]),
     icon: ClockIcon,
-    color: '#e67700',
-    color2: '#fbbf24',
-    iconBg: '#fff3cd',
-    delta: stats.value.pendientes ? 'En espera' : 'Al día',
-    deltaBg: '#fef3c7',
-    deltaColor: '#e67700',
+    tone: 'warning',
+    delta: stats.value.pendientes ? 'Sin revisar' : 'Al día',
     percent: stats.value.total ? Math.round((stats.value.pendientes / stats.value.total) * 100) : 0,
+    sparkline: conteoPorDia(14, 0, s => s.estado === 'pendiente'),
+    comparacion: comparacionPeriodo(s => s.estado === 'pendiente'),
   },
   {
-    label: 'Aceptadas',
-    value: String(displayStats.value[2]),
+    label: 'En espera',
+    icon: HourglassIcon,
+    tone: 'info',
+    delta: stats.value.enEspera ? 'Esperando llegada' : 'Sin pacientes en espera',
+    percent: stats.value.total ? Math.round((stats.value.enEspera / stats.value.total) * 100) : 0,
+    sparkline: conteoPorDia(14, 0, s => s.estado === 'en_espera'),
+    comparacion: comparacionPeriodo(s => s.estado === 'en_espera'),
+  },
+  {
+    label: 'Completadas',
     icon: CheckCircleIcon,
-    color: '#15966a',
-    color2: '#4ade80',
-    iconBg: '#d3f9d8',
+    tone: 'violet',
     delta: `${tasaAceptacion.value}% tasa`,
-    deltaBg: '#dcfce7',
-    deltaColor: '#15966a',
-    percent: stats.value.total ? Math.round((stats.value.aceptadas / stats.value.total) * 100) : 0,
+    percent: stats.value.total ? Math.round((stats.value.completadas / stats.value.total) * 100) : 0,
+    sparkline: conteoPorDia(14, 0, s => s.estado === 'completado'),
+    comparacion: comparacionPeriodo(s => s.estado === 'completado'),
   },
   {
     label: 'Negadas',
-    value: String(displayStats.value[3]),
     icon: XCircleIcon,
-    color: '#c92a2a',
-    color2: '#f87171',
-    iconBg: '#ffe3e3',
+    tone: 'danger',
     delta: stats.value.negadas ? 'Revisar' : 'Sin rechazos',
-    deltaBg: '#fee2e2',
-    deltaColor: '#c92a2a',
     percent: stats.value.total ? Math.round((stats.value.negadas / stats.value.total) * 100) : 0,
+    sparkline: conteoPorDia(14, 0, s => s.estado === 'negado'),
+    comparacion: comparacionPeriodo(s => s.estado === 'negado'),
   },
 ]);
 
-const estadoBars = computed(() => {
-  const total = Math.max(1, stats.value.total);
+// ── Tendencia chart (multi-línea: Total/Completadas/Pendientes/Negadas) ─────
+const tendenciaSeries = computed(() => {
+  const dias = 14;
   return [
-    { label: 'Pendientes', value: stats.value.pendientes, color: '#f59e0b', color2: '#fbbf24', pct: Math.round((stats.value.pendientes / total) * 100) },
-    { label: 'Aceptadas', value: stats.value.aceptadas, color: '#10b981', color2: '#34d399', pct: Math.round((stats.value.aceptadas / total) * 100) },
-    { label: 'En espera', value: stats.value.enEspera, color: '#3b82f6', color2: '#60a5fa', pct: Math.round((stats.value.enEspera / total) * 100) },
-    { label: 'Negadas', value: stats.value.negadas, color: '#ef4444', color2: '#f87171', pct: Math.round((stats.value.negadas / total) * 100) },
+    { name: 'Total', data: conteoPorDia(dias, 0) },
+    { name: 'Completadas', data: conteoPorDia(dias, 0, s => s.estado === 'completado') },
+    { name: 'Pendientes', data: conteoPorDia(dias, 0, s => s.estado === 'pendiente' || s.estado === 'en_espera') },
+    { name: 'Negadas', data: conteoPorDia(dias, 0, s => s.estado === 'negado') },
   ];
 });
 
-// ── Tendencia chart (area) ──────────────────────────────────────────────────
-const tendenciaSeries = computed(() => {
-  const dias = 14;
+/**
+ * Conteo diario de los últimos `dias`, con un desfase de `offsetDias` hacia
+ * atrás (offset 0 = ventana actual, offset 14 = los 14 días previos a esos).
+ * Mismo agrupado por `created_at` que ya usa `tendenciaSeries`, reutilizado
+ * para los mini-gráficos de cada stat-card y la comparación de periodos.
+ */
+function conteoPorDia(dias: number, offsetDias: number, filtro?: (s: any) => boolean): number[] {
+  const base = filtro ? solicitudes.value.filter(filtro) : solicitudes.value;
   const conteo: Record<string, number> = {};
-  solicitudes.value.forEach(s => {
+  base.forEach(s => {
     const fecha = new Date(s.created_at).toISOString().slice(0, 10);
     conteo[fecha] = (conteo[fecha] ?? 0) + 1;
   });
   const datos: number[] = [];
   for (let i = dias - 1; i >= 0; i--) {
-    const fecha = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    const fecha = new Date(Date.now() - (i + offsetDias) * 86400000).toISOString().slice(0, 10);
     datos.push(conteo[fecha] ?? 0);
   }
-  return [{ name: 'Solicitudes', data: datos }];
-});
+  return datos;
+}
+
+/** "↑12% vs periodo anterior": compara los últimos 14 días contra los 14 previos a esos (no hay volumen para comparar contra un año fijo). */
+function comparacionPeriodo(filtro?: (s: any) => boolean): string {
+  const actual = conteoPorDia(14, 0, filtro).reduce((a, b) => a + b, 0);
+  const anterior = conteoPorDia(14, 14, filtro).reduce((a, b) => a + b, 0);
+  if (anterior === 0) return actual > 0 ? `+${actual} vs periodo anterior` : 'Sin cambios';
+  const pct = Math.round(((actual - anterior) / anterior) * 100);
+  return `${pct >= 0 ? '↑' : '↓'}${Math.abs(pct)}% vs periodo anterior`;
+}
 
 const tendenciaTotal = computed(() => tendenciaSeries.value[0].data.reduce((a: number, b: number) => a + b, 0));
 
+const TENDENCIA_COLORES = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444'];
+
 const tendenciaOptions = computed(() => ({
   chart: {
-    type: 'area' as const,
+    type: 'line' as const,
     fontFamily: 'inherit',
     background: 'transparent',
     toolbar: { show: false },
@@ -638,24 +469,19 @@ const tendenciaOptions = computed(() => ({
       dynamicAnimation: { enabled: true, speed: 350 },
     },
   },
-  colors: ['#2563c4', '#60a5fa'],
-  stroke: { curve: 'smooth' as const, width: 3, lineCap: 'round' as const },
-  fill: {
-    type: 'gradient',
-    gradient: {
-      shadeIntensity: 1,
-      type: 'vertical' as const,
-      opacityFrom: 0.45,
-      opacityTo: 0.05,
-      stops: [0, 50, 100],
-      colorStops: [
-        { offset: 0, color: '#2563c4', opacity: 0.45 },
-        { offset: 50, color: '#60a5fa', opacity: 0.2 },
-        { offset: 100, color: '#93c5fd', opacity: 0.05 },
-      ],
-    },
-  },
+  colors: TENDENCIA_COLORES,
+  stroke: { curve: 'smooth' as const, width: [3, 2, 2, 2], lineCap: 'round' as const },
   dataLabels: { enabled: false },
+  legend: {
+    show: true,
+    position: 'top' as const,
+    horizontalAlign: 'right' as const,
+    fontSize: '10px',
+    fontWeight: 600,
+    labels: { colors: isDark.value ? '#94a3b8' : '#64748b' },
+    markers: { size: 4, offsetX: -2 },
+    itemMargin: { horizontal: 8, vertical: 0 },
+  },
   grid: {
     borderColor: isDark.value ? '#1e293b' : '#f1f5f9',
     strokeDashArray: 5,
@@ -685,17 +511,19 @@ const tendenciaOptions = computed(() => ({
     tickAmount: 3,
   },
   tooltip: {
+    shared: true,
     y: { formatter: (val: number) => `${val} solicitud${val !== 1 ? 'es' : ''}` },
     style: { fontSize: '12px', fontFamily: 'inherit' },
     theme: isDark.value ? 'dark' as const : 'light' as const,
-    marker: { show: true, fillColors: ['#2563c4'] },
   },
   markers: {
-    size: 0,
-    hover: { size: 6, sizeOffset: 4 },
+    // Puntos siempre visibles (no solo al pasar el mouse): con pocas
+    // solicitudes reales, una línea casi plana sin marcadores se lee como
+    // "vacía" aunque sí haya datos puntuales.
+    size: 2.5,
+    hover: { size: 5, sizeOffset: 2 },
     strokeColors: isDark.value ? '#0f172a' : '#fff',
     strokeWidth: 2,
-    fillColors: ['#2563c4'],
   },
   annotations: {
     points: tendenciaTotal.value > 0 ? [{
@@ -705,7 +533,7 @@ const tendenciaOptions = computed(() => ({
         text: 'Hoy',
         style: {
           color: '#fff',
-          background: '#2563c4',
+          background: TENDENCIA_COLORES[0],
           fontSize: '9px',
           fontWeight: 700,
           padding: { left: 5, right: 5, top: 2, bottom: 2 },
@@ -720,126 +548,148 @@ const distribucionBarras = computed(() => {
   const total = Math.max(1, stats.value.total);
   return [
     { label: 'Pendientes', count: stats.value.pendientes, pct: Math.round((stats.value.pendientes / total) * 100), color: '#f59e0b', gradient: 'linear-gradient(90deg, #fbbf24, #f59e0b)' },
-    { label: 'Aceptadas', count: stats.value.aceptadas, pct: Math.round((stats.value.aceptadas / total) * 100), color: '#22c55e', gradient: 'linear-gradient(90deg, #4ade80, #22c55e)' },
     { label: 'En espera', count: stats.value.enEspera, pct: Math.round((stats.value.enEspera / total) * 100), color: '#3b82f6', gradient: 'linear-gradient(90deg, #60a5fa, #3b82f6)' },
+    { label: 'Completadas', count: stats.value.completadas, pct: Math.round((stats.value.completadas / total) * 100), color: '#22c55e', gradient: 'linear-gradient(90deg, #4ade80, #22c55e)' },
     { label: 'Negadas', count: stats.value.negadas, pct: Math.round((stats.value.negadas / total) * 100), color: '#ef4444', gradient: 'linear-gradient(90deg, #f87171, #ef4444)' },
   ];
 });
 
-// ── Estado color map ────────────────────────────────────────────────────────
-const estadoColorMap: Record<string, string> = {
-  pendiente: '#f59e0b',
-  aceptado: '#22c55e',
-  en_espera: '#3b82f6',
-  completado: '#6366f1',
-  negado: '#ef4444',
-};
-
-// ── Polar area especialidades ───────────────────────────────────────────────
-const POLAR_COLORS = ['#0d2d6b', '#16468e', '#1e5a96', '#2b6cb0', '#3a82c4', '#4a98d8', '#5aaee8', '#6ac0f0', '#7ad0f5', '#8ae0fa'];
-
-const especialidadPolarData = computed(() => {
+// ── Especialidades más solicitadas ───────────────────────────────────────────
+const especialidadesTop = computed(() => {
   const conteo: Record<string, number> = {};
   solicitudes.value.forEach(s => {
     const esp = s.especialidad_requerida || 'Sin especificar';
     conteo[esp] = (conteo[esp] ?? 0) + 1;
   });
-  return Object.entries(conteo)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
+  const entradas = Object.entries(conteo).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const max = entradas.length ? entradas[0][1] : 1;
+  return entradas.map(([especialidad, total], i) => ({
+    especialidad,
+    total,
+    pct: Math.max(6, Math.round((total / max) * 100)),
+    rank: i + 1,
+  }));
 });
 
-const especialidadPolarSeries = computed(() => {
-  return especialidadPolarData.value.map(e => e[1]);
+// ── Ritmo de solicitudes (métrica única: promedio semanal, últimos 3 meses) ─
+const ritmoSemanal = computed(() => {
+  const DIAS = 91;
+  const SEMANAS = DIAS / 7;
+  const ahora = Date.now();
+  const desde = ahora - DIAS * 86400000;
+  const desdeAnterior = desde - DIAS * 86400000;
+
+  const total = solicitudes.value.filter(s => new Date(s.created_at).getTime() >= desde).length;
+  const totalAnterior = solicitudes.value.filter(s => {
+    const t = new Date(s.created_at).getTime();
+    return t >= desdeAnterior && t < desde;
+  }).length;
+
+  const promedio = total / SEMANAS;
+  const promedioAnterior = totalAnterior / SEMANAS;
+
+  let comparacion = '';
+  if (totalAnterior > 0) {
+    const pct = Math.round(((promedio - promedioAnterior) / promedioAnterior) * 100);
+    comparacion = `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}% vs. trimestre anterior`;
+  }
+
+  // Conteo por semana (de la más vieja a la más nueva) para el sparkline.
+  const porSemana: number[] = Array.from({ length: SEMANAS }, () => 0);
+  solicitudes.value.forEach(s => {
+    const t = new Date(s.created_at).getTime();
+    if (t < desde) return;
+    const idx = Math.min(SEMANAS - 1, Math.floor((t - desde) / (7 * 86400000)));
+    porSemana[idx]++;
+  });
+
+  return {
+    promedio: promedio.toFixed(1),
+    total,
+    comparacion,
+    subiendo: promedio >= promedioAnterior,
+    porSemana,
+  };
 });
 
-const especialidadPolarTotal = computed(() => especialidadPolarSeries.value.reduce((a, b) => a + b, 0));
+// ── Estado color map ────────────────────────────────────────────────────────
+const estadoColorMap: Record<string, string> = {
+  pendiente: '#f59e0b',
+  en_espera: '#3b82f6',
+  completado: '#22c55e',
+  negado: '#ef4444',
+};
 
-const especialidadPolarOptions = computed(() => ({
-  chart: {
-    type: 'donut' as const,
-    fontFamily: 'inherit',
-    background: 'transparent',
-    toolbar: { show: false },
-    animations: {
-      enabled: true,
-      easing: 'easeinout' as const,
-      speed: 800,
-      animateGradually: { enabled: true, delay: 80 },
-      dynamicAnimation: { enabled: true, speed: 400 },
-    },
-  },
-  labels: especialidadPolarData.value.map(e => e[0].length > 14 ? e[0].slice(0, 14) + '…' : e[0]),
-  colors: POLAR_COLORS.slice(0, especialidadPolarData.value.length),
-  stroke: {
-    width: 3,
-    colors: [isDark.value ? '#1e293b' : '#fff'],
-  },
-  fill: {
-    opacity: 1,
-  },
-  dataLabels: {
-    enabled: true,
-    formatter: (val: number) => `${val.toFixed(0)}%`,
-    style: { fontSize: '10px', fontWeight: 700, colors: ['#fff'] },
-    dropShadow: { enabled: true, top: 0, left: 0, blur: 2, opacity: 0.4 },
-  },
-  plotOptions: {
-    pie: {
-      donut: {
-        size: '58%',
-        labels: {
-          show: true,
-          name: {
-            show: true,
-            fontSize: '9px',
-            fontWeight: 700,
-            color: isDark.value ? '#e2e8f0' : '#1e2d55',
-            offsetY: -2,
-          },
-          value: {
-            show: true,
-            fontSize: '15px',
-            fontWeight: 800,
-            color: isDark.value ? '#f1f5f9' : '#0d2d6b',
-            offsetY: 2,
-            formatter: (val: string) => val,
-          },
-          total: {
-            show: true,
-            label: 'Total',
-            fontSize: '9px',
-            fontWeight: 600,
-            color: isDark.value ? '#94a3b8' : '#8a9ab5',
-            formatter: () => `${especialidadPolarTotal.value}`,
-          },
-        },
+// ── Highcharts 3D: distribución de estados (donut) ──────────────────────────
+/** Posición real (en % del contenedor) del centro del anillo, leída del propio gráfico
+ *  tras cada render — evita tener que adivinar un top/left fijo cada vez que cambian
+ *  las opciones (distance de las etiquetas, center del pie, etc). */
+const donutCenterTop = ref(50);
+const donutCenterLeft = ref(50);
+
+function actualizarCentroDonut(chart: any): void {
+  const centro = chart?.series?.[0]?.center;
+  if (!centro || !chart.chartWidth || !chart.chartHeight) return;
+  const [cx, cy] = centro;
+  donutCenterLeft.value = ((chart.plotLeft + cx) / chart.chartWidth) * 100;
+  donutCenterTop.value = ((chart.plotTop + cy) / chart.chartHeight) * 100;
+}
+
+const estadoDonut3DOptions = computed(() => {
+  const isDarkMode = isDark.value;
+  const puntos = distribucionBarras.value.filter(b => b.count > 0);
+  return {
+    chart: {
+      type: 'pie',
+      backgroundColor: 'transparent',
+      height: 130,
+      spacing: [8, 8, 8, 8],
+      style: { fontFamily: 'inherit' },
+      events: {
+        render(this: any) { actualizarCentroDonut(this); },
       },
     },
-  },
-  legend: {
-    position: 'bottom' as const,
-    fontSize: '8px',
-    fontWeight: 600,
-    labels: { colors: isDark.value ? '#94a3b8' : '#475569' },
-    markers: { size: 3, strokeWidth: 0 },
-    itemMargin: { horizontal: 3, vertical: 0 },
-    offsetY: -4,
-  },
-  tooltip: {
-    y: {
-      formatter: (val: number) => `${val} solicitud${val !== 1 ? 'es' : ''}`,
+    title: { text: undefined },
+    credits: { enabled: false },
+    tooltip: {
+      backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+      borderColor: isDarkMode ? '#334155' : '#e2e8f0',
+      borderRadius: 10,
+      shadow: true,
+      style: { color: isDarkMode ? '#e2e8f0' : '#1e2d55', fontSize: '12px', fontFamily: 'inherit' },
+      formatter(this: Highcharts.Point) {
+        const y = this.y ?? 0;
+        return `<b>${this.name}</b><br/>${y} solicitud${y !== 1 ? 'es' : ''} (${(this.percentage ?? 0).toFixed(1)}%)`;
+      },
     },
-    style: { fontSize: '12px', fontFamily: 'inherit' },
-    theme: isDark.value ? 'dark' as const : 'light' as const,
-  },
-  responsive: [{
-    breakpoint: 480,
-    options: {
-      legend: { position: 'bottom' as const, fontSize: '7px' },
+    plotOptions: {
+      pie: {
+        innerSize: '60%',
+        center: ['50%', '50%'],
+        allowPointSelect: true,
+        cursor: 'pointer',
+        animation: { duration: 1000 },
+        states: { hover: { brightness: 0.08, halo: { size: 6 } } },
+        dataLabels: {
+          enabled: true,
+          format: '<b>{point.percentage:.0f}%</b>',
+          distance: 14,
+          connectorColor: isDarkMode ? '#475569' : '#cbd5e1',
+          style: { fontSize: '11px', fontWeight: '700', color: isDarkMode ? '#e2e8f0' : '#1e2d55', textOutline: 'none' },
+        },
+        showInLegend: true,
+      },
     },
-  }],
-}));
+    /* La leyenda vive como lista HTML (.donut-legend) al lado del gráfico —
+       más fácil de alinear con pct+cantidad que la leyenda nativa de Highcharts. */
+    legend: { enabled: false },
+    series: [{
+      name: 'Solicitudes',
+      colorByPoint: true,
+      data: puntos.map(b => ({ name: b.label, y: b.count, color: b.color })),
+    }],
+  };
+});
 
 // ── Tooltip flotante (como dashboard interno) ───────────────────────────────
 const refTooltip = ref<{ top: number; left: number; placement: 'top' | 'bottom'; sol: any } | null>(null);
@@ -868,7 +718,7 @@ const tasaRechazo = computed(() => {
 });
 
 // Contador animado
-const displayStats = ref([0, 0, 0, 0]);
+const displayStats = ref([0, 0, 0, 0, 0]);
 
 function animateCounters(targets: number[]) {
   const duration = 900;
@@ -887,16 +737,9 @@ function animateCounters(targets: number[]) {
   }, interval);
 }
 
-const hora = new Date().getHours();
-const saludoTexto = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches';
-const fechaHoy = new Date().toLocaleDateString('es-CO', {
-  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-});
-
 const stats = computed(() => ({
   total: solicitudes.value.length,
   pendientes: solicitudes.value.filter(s => s.estado === 'pendiente').length,
-  aceptadas: solicitudes.value.filter(s => s.estado === 'aceptado').length,
   enEspera: solicitudes.value.filter(s => s.estado === 'en_espera').length,
   completadas: solicitudes.value.filter(s => s.estado === 'completado').length,
   negadas: solicitudes.value.filter(s => s.estado === 'negado').length,
@@ -907,29 +750,16 @@ const statPercents = computed(() => {
   return [
     100,
     Math.round((stats.value.pendientes / total) * 100),
-    Math.round((stats.value.aceptadas / total) * 100),
     Math.round((stats.value.negadas / total) * 100),
   ];
 });
 
+// "Aceptadas" ya no es un estado propio (aceptar pasa directo a en_espera),
+// así que la tasa de aceptación cuenta todo lo que avanzó más allá de
+// pendiente sin ser negado.
 const tasaAceptacion = computed(() => {
   if (!stats.value.total) return 0;
-  return Math.round((stats.value.aceptadas / stats.value.total) * 100);
-});
-
-const tiempoPromedio = computed(() => {
-  const respondidas = solicitudes.value.filter(s => s.estado !== 'pendiente' && s.updated_at && s.created_at);
-  if (!respondidas.length) return '—';
-  let totalHoras = 0;
-  respondidas.forEach(s => {
-    const creado = new Date(s.created_at).getTime();
-    const respondido = new Date(s.updated_at).getTime();
-    totalHoras += Math.max(0, (respondido - creado) / (1000 * 60 * 60));
-  });
-  const promedioHoras = totalHoras / respondidas.length;
-  if (promedioHoras < 1) return `${Math.round(promedioHoras * 60)} min`;
-  if (promedioHoras < 24) return `${promedioHoras.toFixed(1)} h`;
-  return `${(promedioHoras / 24).toFixed(1)} días`;
+  return Math.round(((stats.value.enEspera + stats.value.completadas) / stats.value.total) * 100);
 });
 
 // ── Sparklines decorativas por fila ─────────────────────────────────────────
@@ -1000,6 +830,20 @@ async function cargar() {
   }
 }
 
+/** Refresco automático de fondo: sin esqueleto de carga, y solo toca lo que
+ * de verdad cambió, resaltando esa fila puntual en "Últimas referencias". */
+async function cargarSilencioso() {
+  try {
+    const { data } = await http.get('/api/externo/solicitudes');
+    const cambiados = actualizarSiCambio(solicitudes, data.data);
+    if (cambiados.length === 0) return;
+    idsActualizados.value = new Set(cambiados);
+    setTimeout(() => { idsActualizados.value = new Set(); }, 3000);
+  } catch {
+    // Refresco de fondo: si falla, se reintenta en el siguiente ciclo sin interrumpir al usuario.
+  }
+}
+
 function abrirFormulario() { router.push('/clinica/solicitud'); }
 
 function irHistorial() { router.push('/clinica/historial'); }
@@ -1027,7 +871,6 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'n' || e.key === 'N') {
     const tag = (e.target as HTMLElement)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement)?.isContentEditable) return;
-    if (modalDetalle.value) return;
     e.preventDefault();
     abrirFormulario();
   }
@@ -1090,29 +933,6 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function getAdjuntoBadgeLabel(mime: string, nombre: string): string {
-  const ext = nombre.split('.').pop()?.toLowerCase() ?? '';
-  if (ext === 'pdf' || mime?.includes('pdf')) return 'PDF';
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg'].includes(ext) || mime?.startsWith('image/')) return 'IMG';
-  if (['doc', 'docx'].includes(ext)) return 'DOC';
-  if (['xls', 'xlsx', 'csv'].includes(ext)) return 'XLS';
-  if (['ppt', 'pptx'].includes(ext)) return 'PPT';
-  if (['zip', 'rar'].includes(ext)) return 'ZIP';
-  if (['txt'].includes(ext)) return 'TXT';
-  return ext.toUpperCase().slice(0, 3) || 'FILE';
-}
-
-function getAdjuntoBadgeClass(mime: string, nombre: string): string {
-  const ext = nombre.split('.').pop()?.toLowerCase() ?? '';
-  if (ext === 'pdf' || mime?.includes('pdf')) return 'adjunto-pdf';
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg'].includes(ext) || mime?.startsWith('image/')) return 'adjunto-img';
-  if (['doc', 'docx'].includes(ext)) return 'adjunto-doc';
-  if (['xls', 'xlsx', 'csv'].includes(ext)) return 'adjunto-xls';
-  if (['ppt', 'pptx'].includes(ext)) return 'adjunto-ppt';
-  if (['zip', 'rar'].includes(ext)) return 'adjunto-zip';
-  return 'adjunto-default';
-}
-
 async function avanzarPaso(): Promise<void> {
   const camposPorPaso = [
     ['primer_nombre', 'primer_apellido', 'genero', 'edad', 'tipo_documento', 'numero_documento', 'municipio_capita', 'eps'],
@@ -1149,7 +969,7 @@ async function abrirConfirmacion(): Promise<void> {
   }
 }
 
-function verDetalle(sol: any) { solicitudSeleccionada.value = sol; modalDetalle.value = true; }
+function irADetalleHistorial(sol: any) { router.push(`/clinica/historial?resaltar=${sol.id}`); }
 function formatFecha(fecha: string) {
   return new Date(fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
 }
@@ -1159,7 +979,7 @@ function initialesPaciente(solicitud: any): string {
 }
 
 function estadoLabel(estado: string): string {
-  return { pendiente: 'Pendiente', aceptado: 'Aceptada', en_espera: 'En espera', completado: 'Completada', negado: 'Negada' }[estado] ?? estado;
+  return { pendiente: 'Pendiente', en_espera: 'En espera', completado: 'Completada', negado: 'Negada' }[estado] ?? estado;
 }
 
 function tiempoRelativo(fecha: string): string {
@@ -1204,7 +1024,7 @@ async function guardar() {
       paciente: nombreCompleto.value,
       documento: `${form.value.tipo_documento} ${form.value.numero_documento}`,
       especialidad: form.value.especialidad_requerida || '—',
-      diagnosticos: validDx.map(d => `${d.codigo_cie10} — ${d.descripcion}`).join('\n') || '—',
+      diagnosticos: validDx.map(d => (d.codigo_cie10 && !d.descripcion.startsWith(d.codigo_cie10)) ? `${d.codigo_cie10} — ${d.descripcion}` : d.descripcion).join('\n') || '—',
       servicio: form.value.servicio_ubicacion_actual || '—',
       adjuntos: adjuntos.value.length ? `${adjuntos.value.length} archivo(s)` : '',
     };
@@ -1218,7 +1038,7 @@ async function guardar() {
 }
 
 watch(stats, (s) => {
-  animateCounters([s.total, s.pendientes, s.aceptadas, s.negadas]);
+  animateCounters([s.total, s.pendientes, s.enEspera, s.completadas, s.negadas]);
 });
 
 watch(drawerVisible, (isOpen) => {
@@ -1235,22 +1055,30 @@ watch(drawerVisible, (isOpen) => {
   }
 });
 
-let pollTimer: ReturnType<typeof setInterval> | null = null;
-
 onMounted(() => {
   cargar();
   window.addEventListener('keydown', onKeydown);
-  pollTimer = setInterval(() => {
-    if (!cargando.value && !drawerVisible.value) cargar();
-  }, 30000);
 });
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown);
-  if (pollTimer) clearInterval(pollTimer);
 });
+
+usePolling(() => {
+  if (!cargando.value && !drawerVisible.value) cargarSilencioso();
+}, 30000);
 </script>
 
 <style scoped>
+/*
+ * A esta vista le faltaba la regla base de `.custom-scrollbar` que sí
+ * tienen sus hermanas (DashboardView.vue, UsersView.vue, RolesView.vue...):
+ * sin ella, en modo claro cae al scrollbar nativo del SO en vez del
+ * delgado y temático. `tailwind.css` solo trae el override para `.dark`.
+ */
+.custom-scrollbar::-webkit-scrollbar { width: 5px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+
 /* ════════════════════════════════════════════════════════════════
    NUEVO FORMULARIO PROFESIONAL — Sistema de Referencia
    Paleta: #0D2D6B (azul institucional), #1E293B (slate), #F8FAFC (fondo)
@@ -1912,91 +1740,85 @@ onUnmounted(() => {
 :deep(.detalle-dialog .el-dialog__body) {
   padding: 0;
   max-height: calc(100vh - 3rem);
-  overflow: hidden;
-  background: linear-gradient(180deg, #f0f5ff 0%, #f8faff 30%, #ffffff 100%);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #F8FAFC;
 }
-:deep(.detalle-dialog .el-dialog__headerbtn) { z-index: 10; top: 14px; right: 14px; }
-:deep(.detalle-dialog .el-dialog__headerbtn .el-dialog__close) { color: #fff; font-size: 1.1rem; }
-:deep(.detalle-dialog .el-dialog__headerbtn:hover .el-dialog__close) { color: #e1f7ff; }
+:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar { width: 5px; }
+:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
+:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar-track { background: transparent; }
 
-.detalle-content { padding: 0; }
+.detalle-content { padding: 0; position: relative; }
 .detalle-content > .grid,
 .detalle-content > .detalle-code-bar,
 .detalle-content > .detalle-respuesta,
 .detalle-content > .detalle-negacion { padding-left: 1rem; padding-right: 1rem; margin-top: .8rem; }
 .detalle-content > .grid:last-child { padding-bottom: 1rem; }
 
-/* Header con gradiente azul institucional */
+.detalle-close-btn {
+  position: absolute;
+  top: .8rem; right: .9rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background: #fff;
+  color: #94A3B8;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.detalle-close-btn:hover { color: #DC2626; border-color: #FCA5A5; background: #FEF2F2; }
+
+/* Header claro */
 .detalle-head {
   position: relative;
-  background: linear-gradient(125deg, #0d2d6b 0%, #16468e 50%, #1a3d8a 100%);
-  padding: 1.1rem 1.3rem;
+  overflow: hidden;
   display: flex;
   align-items: center;
-  gap: .8rem;
-  overflow: hidden;
+  gap: .65rem;
+  padding: .7rem 2.6rem .7rem 1.1rem;
+  background: #fff;
+  border-bottom: 1px solid #EEF2F9;
 }
-.detalle-head::after {
-  content: '';
+.detalle-head-pattern {
   position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
-}
-.detalle-head-glow {
-  position: absolute;
-  top: -40px; right: -30px;
-  width: 140px; height: 140px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.06);
-}
-.detalle-head-glow::after {
-  content: '';
-  position: absolute;
-  top: 20px; left: 30px;
-  width: 60px; height: 60px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.04);
+  inset: 0;
+  background-image: radial-gradient(rgba(79,70,229,.06) 1.4px, transparent 1.4px);
+  background-size: 15px 15px;
+  -webkit-mask-image: linear-gradient(115deg, rgba(0,0,0,.9), transparent 70%);
+  mask-image: linear-gradient(115deg, rgba(0,0,0,.9), transparent 70%);
+  pointer-events: none;
 }
 .detalle-head-icon {
-  width: 2.8rem; height: 2.8rem;
-  border-radius: 12px;
-  background: rgba(255,255,255,.15);
-  border: 1px solid rgba(255,255,255,.2);
+  position: relative; z-index: 1;
+  width: 36px; height: 36px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
   display: grid; place-items: center;
   color: #fff;
   flex-shrink: 0;
-  z-index: 1;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, .3);
 }
-.detalle-head-info { flex: 1; z-index: 1; }
-.detalle-head-title { margin: 0; color: #fff; font-size: 1rem; font-weight: 800; }
-.detalle-head-sub { margin: .15rem 0 0; color: rgba(255,255,255,.55); font-size: .68rem; }
-.detalle-head-id-badge {
-  flex-shrink: 0; z-index: 1;
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.25);
-  border-radius: 8px;
-  padding: .35rem .7rem;
-  font-size: .72rem; font-weight: 800;
-  color: #fff;
-  letter-spacing: 0.03em;
-  font-family: monospace;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
+.detalle-head-info { position: relative; z-index: 1; flex: 1; min-width: 0; }
+.detalle-head-title { margin: 0; color: #0F172A; font-size: 1rem; font-weight: 800; }
+.detalle-head-sub { margin: .15rem 0 0; color: #64748b; font-size: .7rem; }
 
 .detalle-head-badge {
+  position: relative; z-index: 1;
   padding: .3rem .7rem;
   border-radius: 999px;
   font-size: .65rem;
   font-weight: 700;
   flex-shrink: 0;
-  z-index: 1;
+  display: inline-flex; align-items: center; gap: .3rem;
 }
-.badge-pendiente { background: #f59e0b; color: #fff; }
-.badge-aceptado { background: #22c55e; color: #fff; }
-.badge-en_espera { background: #3b82f6; color: #fff; }
-.badge-completado { background: #6366f1; color: #fff; }
-.badge-negado { background: #ef4444; color: #fff; }
+.detalle-head-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.detalle-head-badge.estado-pendiente { background: #fef3c7; color: #b45309; }
+.detalle-head-badge.estado-en_espera { background: #dbeafe; color: #1d4ed8; }
+.detalle-head-badge.estado-completado { background: #e0e7ff; color: #4338ca; }
+.detalle-head-badge.estado-negado { background: #fee2e2; color: #b91c1c; }
 
 /* Cards */
 .detalle-card {
@@ -2042,6 +1864,34 @@ onUnmounted(() => {
 }
 .card-text { font-size: .72rem; color: #334e70; line-height: 1.5; margin: 0; }
 .card-text-sm { font-size: .66rem; color: #64748b; line-height: 1.45; margin: 0; }
+.card-text-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.leer-mas-btn {
+  margin-top: .3rem;
+  font-size: .62rem;
+  font-weight: 700;
+  color: #2563eb;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.leer-mas-btn:hover { text-decoration: underline; }
+
+:deep(.historia-dialog) { border-radius: 18px; overflow: hidden; box-shadow: 0 32px 80px rgba(11,35,73,.35); }
+:deep(.historia-dialog .el-dialog__header) { margin: 0; padding: 1rem 1.25rem; background: linear-gradient(135deg, #0D2D6B, #16468E); }
+:deep(.historia-dialog .el-dialog__body) { padding: 1.25rem; }
+:deep(.historia-dialog .el-dialog__headerbtn) { top: 14px; right: 14px; }
+:deep(.historia-dialog .el-dialog__headerbtn .el-dialog__close) { color: #fff; }
+.historia-dialog-header { display: flex; align-items: center; gap: .7rem; color: #fff; }
+.historia-dialog-header > svg { color: #7dd3fc; flex-shrink: 0; }
+.historia-dialog-header p { margin: 0; font-size: 14px; font-weight: 800; }
+.historia-dialog-header span { display: block; margin-top: 2px; color: rgba(255,255,255,.65); font-size: 11px; }
+.historia-dialog-text { max-height: min(55vh, 520px); margin: 0; overflow-y: auto; white-space: pre-wrap; word-break: break-word; color: #334155; font-size: 13px; line-height: 1.7; }
 
 .data-row {
   display: flex;
@@ -2245,267 +2095,8 @@ onUnmounted(() => {
     linear-gradient(165deg, #f6f8fc 0%, #eef2fb 45%, #f4f8fd 100%);
 }
 
-/* ── Hero banner ── */
-.hero-card {
-  background: linear-gradient(125deg, #0a2a66 0%, #123f8f 45%, #2563eb 110%);
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 16px 40px rgba(13, 45, 107, .28), 0 0 0 1px rgba(255,255,255,0.05) inset;
-  position: relative;
-  overflow: hidden;
-}
-.hero-card::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, #60a5fa, #93c5fd, #60a5fa);
-  background-size: 200% 100%;
-  animation: heroShimmer 3s linear infinite;
-  z-index: 20;
-}
-@keyframes heroShimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.hero-bubble {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-  pointer-events: none;
-  animation: heroBubbleFloat 9s ease-in-out infinite;
-}
-.hero-bubble-1 {
-  width: 120px; height: 120px;
-  bottom: -40px; left: 18%;
-}
-.hero-bubble-2 {
-  width: 60px; height: 60px;
-  top: -20px; left: 42%;
-  animation-delay: 2.5s;
-}
-@keyframes heroBubbleFloat {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(6px, -10px); }
-}
-
-.hero-pattern {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0);
-  background-size: 24px 24px;
-  pointer-events: none;
-}
-
-.hero-live-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 10px rgba(74, 222, 128, .6);
-  animation: livePulse 2s ease-in-out infinite;
-}
-
-@keyframes livePulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: .5; transform: scale(1.3); }
-}
-
-.hero-glow {
-  position: absolute;
-  top: -50%;
-  right: -10%;
-  width: 280px;
-  height: 280px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(126, 179, 255, .12), transparent 70%);
-  pointer-events: none;
-  animation: heroGlowFloat 8s ease-in-out infinite;
-}
-@keyframes heroGlowFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
-  50% { transform: translate(-12px, 8px) scale(1.1); opacity: 0.7; }
-}
-.hero-glow-2 {
-  position: absolute;
-  bottom: -60px; left: 30%;
-  width: 200px; height: 200px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(74,222,128,0.08), transparent 70%);
-  pointer-events: none;
-  animation: heroGlowFloat 10s ease-in-out infinite;
-  animation-delay: 3s;
-}
-
-.hero-logo {
-  width: 52px; height: 52px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  backdrop-filter: blur(10px);
-}
-.hero-mini-stats {
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-  padding: .5rem .9rem;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.07);
-}
-.hero-mini-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.hero-mini-stat-num {
-  font-size: 15px;
-  font-weight: 800;
-  color: #fff;
-  line-height: 1;
-  transition: transform .3s ease;
-}
-.hero-mini-stats:hover .hero-mini-stat-num {
-  transform: scale(1.1);
-}
-.hero-mini-stat-label {
-  font-size: 9px;
-  color: rgba(255,255,255,0.5);
-  margin-top: 3px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  white-space: nowrap;
-}
-.hero-mini-divider {
-  width: 1px; height: 24px;
-  background: rgba(255,255,255,0.1);
-}
-
-.clinic-name::first-letter {
-  font-size: 1.4em;
-  font-weight: 900;
-}
-
-.hero-link {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-  color: #0d2d6b;
-  background: #fff;
-  border: 0;
-  padding: .75rem 1.4rem;
-  font-size: .85rem;
-  font-weight: 800;
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .15);
-  transition: transform .25s ease, box-shadow .25s ease;
-  position: relative;
-  overflow: hidden;
-}
-.hero-link::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(13, 45, 107, 0.1), transparent);
-  transform: translateX(-100%);
-  transition: transform .6s ease;
-}
-.hero-link:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, .22), 0 0 22px rgba(126, 179, 255, .35);
-}
-.hero-link:hover::before {
-  transform: translateX(100%);
-}
-.hero-link:active { transform: translateY(0); }
-
-/* ── Stat cards (dashboard interno style) ── */
-.stat-card {
-  background: linear-gradient(145deg, #ffffff 0%, color-mix(in srgb, var(--accent) 6%, #ffffff) 100%);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, #e2e8f0);
-  border-top: 3px solid var(--accent);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 15%, transparent), 0 1px 0 rgba(255,255,255,0.8) inset;
-  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1), border-color .3s ease;
-  position: relative;
-  overflow: hidden;
-}
-.stat-card-glow {
-  position: absolute;
-  top: -50%; right: -30%;
-  width: 140px; height: 140px;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent-2) 55%, transparent), transparent 70%);
-  filter: blur(20px);
-  opacity: .8;
-  transition: opacity .3s ease, transform .5s ease;
-  pointer-events: none;
-}
-.stat-card:hover {
-  transform: translateY(-6px) scale(1.015);
-  box-shadow: 0 20px 40px color-mix(in srgb, var(--accent) 30%, transparent);
-  border-color: var(--accent);
-}
-.stat-card:hover .stat-card-glow {
-  opacity: 1;
-  transform: scale(1.15);
-}
-
-/* Icon chip */
-.stat-icon-chip {
-  position: relative;
-  z-index: 10;
-  width: 42px; height: 42px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--icon-bg);
-  color: var(--icon-color);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--icon-color) 28%, transparent);
-  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s ease;
-}
-.stat-card:hover .stat-icon-chip {
-  transform: translateY(-3px) scale(1.06);
-  box-shadow: 0 10px 22px color-mix(in srgb, var(--icon-color) 38%, transparent);
-}
-
-.stat-delta-badge {
-  display: inline-block;
-  font-size: 8.5px;
-  font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 999px;
-  white-space: nowrap;
-  background: var(--delta-bg);
-  color: var(--delta-color);
-  margin-top: 3px;
-  position: relative;
-  z-index: 10;
-}
-.stat-value {
-  font-size: 18px;
-  font-weight: 900;
-  line-height: 1.1;
-  letter-spacing: -.03em;
-  color: #1e293b;
-  position: relative;
-  z-index: 10;
-}
-.stat-label {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #64748b;
-  margin-top: 1px;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  position: relative;
-  z-index: 10;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* ── Stat cards ── */
+/* El marcado y estilos de la tarjeta viven ahora en components/ui/StatCard.vue (variante `dense`) */
 
 /* ── Distribución + charts ── */
 .distrib-card {
@@ -2516,12 +2107,17 @@ onUnmounted(() => {
   overflow: hidden;
   transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s cubic-bezier(.22,1,.36,1);
 }
+.dark .distrib-card {
+  background: #161b28 !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25) !important;
+}
 .distrib-card-glow {
   position: absolute; top: -40px; right: -40px; width: 160px; height: 160px;
   border-radius: 50%; pointer-events: none;
   background: radial-gradient(circle, rgba(126,179,255,0.20), transparent 70%);
 }
-.distrib-card:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(22,70,142,.16) !important; }
+.distrib-card:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(99,102,241,.18) !important; }
 .distrib-card-donut { overflow: visible !important; }
 .distrib-card-donut :deep(.apexcharts-canvas) { overflow: visible !important; }
 .distrib-segment { position: relative; cursor: pointer; transition: opacity .2s ease; }
@@ -2550,6 +2146,96 @@ onUnmounted(() => {
 .donut-num { font-size: 16px; font-weight: 800; color: #1e2d55; line-height: 1; }
 .donut-label { font-size: 8px; color: #8a9ab5; margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
 
+/* ── Center overlay for the 3D estados donut ── */
+.donut-chart-wrap { position: relative; }
+.donut-center-overlay {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: fadeInScale .5s ease .3s both;
+}
+.donut-center-num {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -.03em;
+  color: #0d2d6b;
+  line-height: 1;
+}
+.donut-center-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: #8a9ab5;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-top: 2px;
+}
+.dark .donut-center-num { color: #e2e8f0; }
+.dark .donut-center-label { color: #64748b; }
+
+/* ── Leyenda del donut (lista HTML, no la de Highcharts) ── */
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 96px;
+}
+.donut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+}
+.donut-legend-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.donut-legend-label {
+  flex: 1;
+  min-width: 0;
+  color: #475569;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.donut-legend-pct {
+  font-weight: 800;
+  color: #1e293b;
+}
+.donut-legend-count {
+  color: #94a3b8;
+  font-size: 9px;
+  min-width: 14px;
+  text-align: right;
+}
+.dark .donut-legend-label { color: #94a3b8; }
+.dark .donut-legend-pct { color: #e2e8f0; }
+.dark .donut-legend-count { color: #64748b; }
+.donut-legend-item {
+  border-radius: 6px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.donut-legend-item:hover {
+  background: rgba(99, 102, 241, 0.08);
+  transform: translateX(2px);
+}
+.donut-legend-item:hover .donut-legend-dot {
+  transform: scale(1.3);
+}
+.donut-legend-dot { transition: transform 0.2s ease; }
+@keyframes fadeInScale {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.8); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
 /* ── Chart header icon ── */
 .chart-header-icon {
   width: 28px; height: 28px;
@@ -2558,6 +2244,116 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* ── Especialidades más solicitadas ── */
+.esp-top-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.esp-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.esp-top-rank {
+  width: 16px;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  color: #b0bccf;
+  text-align: center;
+}
+.esp-top-label {
+  width: 150px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.esp-top-bar-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+.dark .esp-top-bar-track { background: #1e293b; }
+.esp-top-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa, #3b82f6);
+  transition: width 0.6s cubic-bezier(.22,1,.36,1);
+}
+.esp-top-bar-fill-top {
+  background: linear-gradient(90deg, #a78bfa, #7c3aed);
+}
+.esp-top-count {
+  width: 28px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 800;
+  color: #1e2d55;
+}
+.dark .esp-top-count { color: #e2e8f0; }
+
+/* ── Ritmo de solicitudes (métrica única) ── */
+.ritmo-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.ritmo-metric-num {
+  font-size: 2.6rem;
+  font-weight: 800;
+  line-height: 1;
+  background: linear-gradient(135deg, #6d28d9, #a855f7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ritmo-metric-unit {
+  font-size: .85rem;
+  font-weight: 700;
+  color: #94a3b8;
+}
+.ritmo-metric-total {
+  font-size: .72rem;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0;
+}
+.ritmo-metric-pill {
+  margin-top: 2px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: .68rem;
+  font-weight: 800;
+}
+.ritmo-pill-up { background: #ecfdf5; color: #059669; }
+.ritmo-pill-down { background: #fef2f2; color: #dc2626; }
+.ritmo-sparkline-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.ritmo-sparkline-wrap svg { width: 100%; height: 56px; }
+.ritmo-sparkline-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .03em;
 }
 
 /* ── Trend stat pill ── */
@@ -2705,6 +2501,14 @@ onUnmounted(() => {
   box-shadow: 0 6px 16px rgba(22,70,142,.1);
   border-color: #b9c8e0;
   background: #f8fbff;
+}
+/* ── Fila resaltada (actualización silenciosa en segundo plano) ── */
+.mini-ref-row-resaltada {
+  animation: mini-ref-glow 2.2s ease-in-out 2;
+}
+@keyframes mini-ref-glow {
+  0%, 100% { background: #fff; }
+  50% { background: rgba(217, 119, 6, .12); }
 }
 .mini-ref-avatar {
   width: 32px; height: 32px;

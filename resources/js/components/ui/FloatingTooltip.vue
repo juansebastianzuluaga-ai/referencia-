@@ -30,7 +30,7 @@ const floatingRef = ref<HTMLElement | null>(null);
 const arrowRef = ref<HTMLElement | null>(null);
 const isVisible = ref(false);
 const position = reactive({ x: 0, y: 0 });
-const arrowStyle = reactive({ left: '', top: '' });
+const arrowStyle = reactive<Partial<Record<'top' | 'right' | 'bottom' | 'left', string>>>({ left: '', top: '' });
 
 let cleanup: (() => void) | null = null;
 
@@ -71,7 +71,7 @@ watch(isVisible, async (visible) => {
       right: 'left',
       bottom: 'top',
       left: 'right',
-    }[side] as string;
+    }[side] as 'top' | 'right' | 'bottom' | 'left';
 
     arrowStyle.left = arrowX ? `${arrowX}px` : '';
     arrowStyle.top = arrowY ? `${arrowY}px` : '';

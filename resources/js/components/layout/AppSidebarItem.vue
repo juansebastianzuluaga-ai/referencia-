@@ -7,7 +7,6 @@
       active-class="menu-item-active"
       @click="layout.closeMobileMenu()"
     >
-      <span class="menu-accent-bar"></span>
       <div class="menu-icon-wrap">
         <component :is="resolvedIcon" class="shrink-0" style="width:20px; height:20px;" />
       </div>
@@ -19,8 +18,9 @@
       </span>
       <span
         v-if="badge !== undefined"
-        class="text-[10px] font-semibold bg-blue-600 text-white px-1.5 py-0.5 rounded-full transition-opacity"
+        class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full transition-opacity"
         :class="layout.isSidebarCollapsed ? 'opacity-0' : 'opacity-100'"
+        style="background: #fff; color: var(--rf-primary);"
       >
         {{ badge }}
       </span>
@@ -57,97 +57,93 @@ const resolvedIcon = computed(() => {
   display: flex;
   align-items: center;
   gap: .75rem;
-  padding: 12px 14px;
-  border-radius: 14px;
-  margin: 0 16px 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin: 0 12px 4px;
   cursor: pointer;
   transition: all .2s ease;
   position: relative;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.04);
   white-space: nowrap;
   overflow: hidden;
 }
 .menu-item:hover {
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.14);
 }
-
-.menu-accent-bar {
-  position: absolute;
-  left: 0; top: 50%;
-  transform: translateY(-50%);
-  width: 3px; height: 60%;
-  border-radius: 0 3px 3px 0;
-  background: linear-gradient(180deg, #7eb3ff, #16468e);
-  box-shadow: 0 0 8px rgba(126,179,255,0.4);
-  opacity: 0;
-  transition: opacity .2s ease;
+.dark .menu-item:hover {
+  background: rgba(255,255,255,0.06);
 }
 
 .menu-icon-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px; height: 32px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.05);
-  color: #6b82a8;
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  color: rgba(255,255,255,0.75);
   transition: all .2s ease;
   flex-shrink: 0;
 }
 .menu-item:hover .menu-icon-wrap {
-  color: #8294b8;
-  background: rgba(255,255,255,0.08);
+  color: #ffffff;
 }
+.dark .menu-icon-wrap { color: #64748b; }
+.dark .menu-item:hover .menu-icon-wrap { color: #a5b4fc; }
 
 .menu-label {
   font-size: 13.5px;
-  font-weight: 500;
-  color: #8294b8;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
   transition: all .2s ease;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .menu-item:hover .menu-label {
-  color: #a0b3d0;
+  color: #ffffff;
 }
+.dark .menu-label { color: #94a3b8; }
+.dark .menu-item:hover .menu-label { color: #e2e8f0; }
 
-/* Active state */
+/* Active state: sobre fondo azul se invierte a pastilla blanca; en modo
+   oscuro (fondo casi negro) sigue siendo la pastilla con degradado. */
 .menu-item-active {
-  background: linear-gradient(135deg, rgba(22,70,142,0.5), rgba(13,45,107,0.6)) !important;
-  border-color: rgba(126,179,255,0.15) !important;
-  box-shadow: 0 4px 14px rgba(22,70,142,0.3), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(15,23,42,0.18) !important;
 }
 .menu-item-active:hover {
-  background: linear-gradient(135deg, rgba(22,70,142,0.55), rgba(13,45,107,0.65)) !important;
-}
-.menu-item-active .menu-accent-bar {
-  opacity: 1;
+  background: #ffffff !important;
 }
 .menu-item-active .menu-icon-wrap {
-  background: linear-gradient(135deg, rgba(126,179,255,0.2), rgba(22,70,142,0.3));
-  color: #7eb3ff;
-  box-shadow: 0 2px 8px rgba(126,179,255,0.15);
+  color: var(--rf-primary) !important;
 }
 .menu-item-active .menu-label {
+  color: var(--rf-primary) !important;
+  font-weight: 700;
+}
+.dark .menu-item-active {
+  background: linear-gradient(135deg, var(--rf-primary), var(--rf-primary-2)) !important;
+  box-shadow: 0 6px 16px rgba(22,70,142,0.35) !important;
+}
+.dark .menu-item-active:hover {
+  background: linear-gradient(135deg, var(--rf-primary), var(--rf-primary-2)) !important;
+}
+.dark .menu-item-active .menu-icon-wrap {
+  color: #ffffff;
+}
+.dark .menu-item-active .menu-label {
   color: #ffffff;
   font-weight: 700;
 }
 
 /* Collapsed state */
 .menu-item-collapsed {
-  margin: 0 8px 8px;
+  margin: 0 8px 4px;
   padding: 10px 0;
   justify-content: center;
   gap: 0;
 }
 .menu-item-collapsed .menu-icon-wrap {
-  width: 36px;
-  height: 36px;
-}
-.menu-item-collapsed .menu-accent-bar {
-  left: -8px;
+  width: 34px;
+  height: 34px;
 }
 </style>

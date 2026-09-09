@@ -28,6 +28,26 @@
   --color-input: 214.3 31.8% 91.4%;
   --color-ring: 221.2 83.2% 53.3%;
   --radius: 0.5rem;
+
+  /*
+   * Tonos semánticos para tarjetas de métrica y acentos de estado.
+   *
+   * A diferencia de los `--color-*` de arriba (tripleta HSL sin `hsl()`,
+   * pensados solo para las utilidades `bg-*`/`text-*` de shadcn), estos son
+   * colores CSS válidos: los consumen directamente `color-mix()` y estilos
+   * inline (`--accent`) en StatCard.vue, así que tienen que evaluarse a un
+   * color real con `var()`, no a una tripleta suelta.
+   */
+  --color-info: #2563c4;
+  --color-info-2: #60a5fa;
+  --color-success: #15966a;
+  --color-success-2: #4ade80;
+  --color-warning: #e67700;
+  --color-warning-2: #fbbf24;
+  --color-danger: #c92a2a;
+  --color-danger-2: #f87171;
+  --color-violet: #7048e8;
+  --color-violet-2: #c4b5fd;
 }
 
 /* ── Dark mode overrides ── */

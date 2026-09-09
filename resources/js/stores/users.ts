@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import notify from '@/plugins/toast';
 import http from '@/plugins/axios';
+import { actualizarSiCambio } from '@/lib/silentRefresh';
 
 export const useUsersStore = defineStore('users', () => {
   const users = ref<any[]>([]);
@@ -80,6 +81,21 @@ export const useUsersStore = defineStore('users', () => {
     }
   }
 
+  /** Refresco automático de fondo: no toca `loading` (evita el esqueleto de
+   * carga) y solo reemplaza `users` si de verdad cambió algo. Devuelve los
+   * ids que cambiaron para poder resaltar solo esas filas. */
+  async function loadUsersSilent(payload: any = {}): Promise<number[]> {
+    try {
+      await http.get('/sanctum/csrf-cookie', { headers: { 'X-Skip-Auth-Redirect': '1' } }).catch(() => {});
+      const body = { per_page: pagination.value.per_page, page: pagination.value.current_page, ...payload };
+      const { data } = await http.post('/api/users/get-all', body);
+      const nuevos = data.data?.data || data.data || [];
+      return actualizarSiCambio(users, nuevos);
+    } catch {
+      return [];
+    }
+  }
+
   function resetLoaded() {
     usersLoaded.value = false;
     rolesLoaded.value = false;
@@ -113,6 +129,7 @@ export const useUsersStore = defineStore('users', () => {
     loadRoles,
     loadIdentificationTypes,
     loadUsers,
+    loadUsersSilent,
     getUser,
     createUser,
     updateUser,

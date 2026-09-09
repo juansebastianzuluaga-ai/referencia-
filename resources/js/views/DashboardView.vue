@@ -1,104 +1,91 @@
 <template>
-  <div class="h-full flex flex-col gap-2 p-2 sm:p-3 overflow-hidden dashboard-bg">
+  <div class="h-full flex flex-col gap-2 p-2 sm:p-3 overflow-y-auto dashboard-bg">
 
-    <!-- ── Hero + Filtros compacto ── -->
-    <div class="hero-card rounded-2xl p-3 sm:p-4 flex items-center gap-4 relative overflow-hidden shrink-0 animate-fade-in-down"
-      style="animation-duration: 0.4s; animation-fill-mode: both;">
-      <div class="hero-glow"></div>
-      <div class="hero-pattern"></div>
-      <div class="flex items-center gap-3 z-10 shrink-0">
-        <div class="hero-logo">
-          <img :src="'/images/logo-w.png'" alt="Logo" class="w-full h-full object-contain" />
-        </div>
+    <!-- ── Encabezado + Filtros ── -->
+    <div class="flex items-start justify-between gap-3 flex-wrap shrink-0">
+      <div>
+        <h1 class="dash-title">Panel principal</h1>
+        <p class="dash-subtitle">Resumen general del sistema de referencia</p>
       </div>
-      <div class="flex-1 min-w-0 z-10">
-        <div class="flex items-center gap-2 mb-0.5">
-          <span class="hero-live-dot"></span>
-          <p class="text-[9px] font-semibold uppercase tracking-[0.12em]" style="color:rgba(255,255,255,0.55);">En línea</p>
-        </div>
-        <h1 class="text-sm sm:text-lg font-bold leading-tight text-white tracking-tight">
-          Centro de control
-        </h1>
-        <p class="text-[10px] sm:text-xs font-semibold mt-0.5" style="color:#7eb3ff;">Clínica Santa Bárbara · {{ today }}</p>
+      <div class="flex items-center gap-2 flex-wrap">
+        <el-date-picker
+          v-model="rangoFechas"
+          type="daterange"
+          unlink-panels
+          range-separator="–"
+          start-placeholder="Desde"
+          end-placeholder="Hasta"
+          size="small"
+          format="DD MMM YYYY"
+          value-format="YYYY-MM-DD"
+          clearable
+          @change="aplicarFiltros"
+        />
+        <el-select v-model="filtros.estado" size="small" style="width:150px" @change="aplicarFiltros">
+          <el-option value="todas" label="Todos los estados" />
+          <el-option value="pendiente" label="Pendientes" />
+          <el-option value="en_espera" label="En espera" />
+          <el-option value="completado" label="Completadas" />
+          <el-option value="negado" label="Negadas" />
+        </el-select>
+        <el-select v-model="filtros.especialidad" size="small" style="width:170px" clearable placeholder="Especialidad" @change="aplicarFiltros">
+          <el-option v-for="esp in especialidadesOpciones" :key="esp" :value="esp" :label="esp" />
+        </el-select>
+        <el-select v-model="filtros.eps" size="small" style="width:150px" clearable placeholder="EPS" @change="aplicarFiltros">
+          <el-option v-for="e in epsOpciones" :key="e" :value="e" :label="e" />
+        </el-select>
+        <button v-if="hayFiltrosActivos" class="dash-clear-btn" @click="limpiarFiltros">
+          <component :is="XIcon" class="w-3.5 h-3.5" />
+          Limpiar
+        </button>
       </div>
-      <div class="hero-right z-10 shrink-0 hidden sm:flex items-center gap-3">
-        <div class="hero-mini-stats">
-          <div class="hero-mini-stat">
-            <span class="hero-mini-stat-num">{{ stats.solicitudes.total }}</span>
-            <span class="hero-mini-stat-label">Solicitudes</span>
-          </div>
-          <div class="hero-mini-divider"></div>
-          <div class="hero-mini-stat">
-            <span class="hero-mini-stat-num">{{ stats.clinicas.activas }}</span>
-            <span class="hero-mini-stat-label">Clínicas</span>
-          </div>
-          <div class="hero-mini-divider"></div>
-          <div class="hero-mini-stat">
-            <span class="hero-mini-stat-num">{{ stats.usuarios.activos }}</span>
-            <span class="hero-mini-stat-label">Usuarios</span>
-          </div>
-        </div>
-      </div>
+    </div>
+
+    <!-- ── Aviso de error ── -->
+    <div v-if="errorCarga" class="dash-error-banner shrink-0">
+      <component :is="AlertTriangleIcon" class="w-4 h-4" />
+      <span>No se pudieron cargar las estadísticas. Verifica tu conexión.</span>
+      <button @click="cargarStats">Reintentar</button>
     </div>
 
     <!-- ── Stat cards ── -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0 animate-fade-in-up"
-      style="animation-duration: 0.4s; animation-delay: 0.1s; animation-fill-mode: both;">
-      <div
-        v-for="(card, i) in statCards" :key="i"
-        class="stat-card rounded-2xl p-3.5 flex items-center gap-3 anim-slide-up"
-        :style="{ animationDelay: (i * 0.06) + 's', '--accent': card.color, '--accent-2': card.color2, '--icon-bg': card.iconBg, '--icon-color': card.color, '--delta-bg': card.deltaBg, '--delta-color': card.deltaColor }"
-      >
-        <div class="stat-card-mesh"></div>
-        <div class="stat-card-glow"></div>
-
-        <div class="stat-ring shrink-0" :style="{ '--ring-pct': card.percent }">
-          <svg viewBox="0 0 64 64" class="stat-ring-svg">
-            <circle cx="32" cy="32" r="27" class="stat-ring-track" />
-            <circle cx="32" cy="32" r="27" class="stat-ring-fill" :style="{ strokeDashoffset: 169.6 - (169.6 * card.percent / 100) }" />
-          </svg>
-          <div class="stat-ring-icon">
-            <component :is="card.icon" class="w-[18px] h-[18px]" />
-          </div>
-        </div>
-
-        <div class="flex-1 min-w-0 relative z-10">
-          <p class="stat-value">{{ card.value }}</p>
-          <p class="stat-label">{{ card.label }}</p>
-          <span class="stat-delta-badge">{{ card.delta }}</span>
+    <div v-if="primeraCarga && cargando" class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
+      <div v-for="i in 4" :key="i" class="stat-card-pastel-skeleton rounded-2xl p-3.5 flex items-center gap-3">
+        <div class="shimmer-box" style="width:42px; height:42px; border-radius:12px; flex-shrink:0;"></div>
+        <div class="flex-1 space-y-2">
+          <div class="shimmer-bar" style="width:50%; height:20px;"></div>
+          <div class="shimmer-bar" style="width:65%; height:10px;"></div>
         </div>
       </div>
     </div>
+    <div v-else class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0 animate-fade-in-up"
+      style="animation-duration: 0.4s; animation-delay: 0.1s; animation-fill-mode: both;">
+      <StatCard
+        v-for="(card, i) in statCards" :key="i"
+        class="anim-slide-up"
+        :style="{ animationDelay: (i * 0.06) + 's' }"
+        variant="pastel"
+        :dark="isDark"
+        :tone="card.tone"
+        :value="card.value"
+        :label="card.label"
+        :icon="card.icon"
+        :percent="card.percent"
+        :delta="card.delta"
+        :sparkline="card.sparkline"
+        :comparacion="card.comparacion"
+      />
+    </div>
 
-    <!-- ── Distribución + Donut ── -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 shrink-0 animate-fade-in-up"
+    <!-- ── Antigüedad de la solicitud pendiente más vieja ── -->
+    <div v-if="slaAlerta" class="sla-alert shrink-0" :class="slaAlerta.clase">
+      <component :is="ClockIcon" class="w-3.5 h-3.5" />
+      <span>La solicitud pendiente más antigua lleva <strong>{{ slaAlerta.texto }}</strong> esperando revisión</span>
+    </div>
+
+    <!-- ── Proporción de estados + Mapa de calor + Solicitudes por clínica ── -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-2 shrink-0 animate-fade-in-up"
       style="animation-duration: 0.4s; animation-delay: 0.18s; animation-fill-mode: both;">
-      <div class="distrib-card rounded-xl p-3 flex flex-col lg:col-span-2 distrib-card-hover">
-        <div class="flex items-center justify-between mb-1">
-          <div class="flex items-center gap-2">
-            <div class="chart-header-icon" style="background: linear-gradient(135deg,#eaf4ff,#dbeafe); color:#16468E;">
-              <component :is="TrendingUpIcon" class="w-3.5 h-3.5" />
-            </div>
-            <div>
-              <p class="text-xs font-bold" style="color:#1e2d55;">Tendencia de solicitudes</p>
-              <p class="text-[10px] mt-0.5" style="color:#8a9ab5;">Últimos 14 días · {{ tendenciaTotal }} solicitudes</p>
-            </div>
-          </div>
-          <span class="trend-badge" :class="tendenciaCambioPct >= 0 ? 'trend-badge-up' : 'trend-badge-down'">
-            <component :is="tendenciaCambioPct >= 0 ? TrendingUpIcon : TrendingDownIcon" class="w-3 h-3" />
-            {{ tendenciaCambioPct >= 0 ? '+' : '' }}{{ tendenciaCambioPct }}%
-          </span>
-        </div>
-        <div class="flex-1">
-          <apexchart
-            type="area"
-            height="140"
-            :options="tendenciaChartOptions"
-            :series="tendenciaChartSeries"
-          />
-        </div>
-      </div>
-
       <div class="distrib-card rounded-xl p-3 flex flex-col distrib-card-hover">
         <div class="flex items-center gap-2 mb-2">
           <div class="donut-header-icon">
@@ -107,23 +94,60 @@
           <p class="text-xs font-bold" style="color:#1e2d55;">Proporción de estados</p>
           <span class="estado-total-badge">{{ stats.solicitudes.total }} total</span>
         </div>
-        <div class="flex-1 w-full flex flex-col justify-center gap-2.5 min-h-0">
-          <div v-for="(item, i) in donutBars" :key="item.label"
-            class="estado-bar-wrap anim-slide-up"
-            :style="{ animationDelay: (i * 0.08) + 's', '--bar-color': item.color, '--bar-color2': item.color2 }">
-            <div class="flex items-center justify-between mb-1">
-              <div class="flex items-center gap-1.5">
-                <span class="estado-bar-dot" :style="{ background: item.color }"></span>
-                <span class="estado-bar-label">{{ item.label }}</span>
-              </div>
-              <span class="estado-bar-value" :style="{ color: item.color }">{{ item.value }}</span>
+        <div class="flex-1 flex items-center gap-3 min-h-0">
+          <div class="estado-donut-wrap">
+            <apexchart type="donut" height="108" width="108" :options="estadoDonutOptions" :series="estadoDonutSeries" />
+            <div class="estado-donut-center">
+              <span class="estado-donut-num">{{ stats.solicitudes.total }}</span>
+              <span class="estado-donut-label">Total</span>
             </div>
-            <div class="estado-bar-track">
-              <div class="estado-bar-fill"
-                :style="{ width: item.pct + '%', background: `linear-gradient(90deg, ${item.color}, ${item.color2})` }">
-                <div class="estado-bar-shine"></div>
-              </div>
+          </div>
+          <div class="flex-1 min-w-0 flex flex-col gap-1.5">
+            <div v-for="item in donutBars" :key="item.label" class="estado-legend-row">
+              <span class="estado-legend-dot" :style="{ background: item.color }"></span>
+              <span class="estado-legend-label">{{ item.label }}</span>
+              <span class="estado-legend-value" :style="{ color: item.color }">{{ item.value }}</span>
+              <span class="estado-legend-pct">{{ item.pct }}%</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="distrib-card rounded-xl p-3 flex flex-col lg:col-span-2 distrib-card-hover">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="donut-header-icon">
+            <component :is="Grid3x3Icon" class="w-3.5 h-3.5" />
+          </div>
+          <div>
+            <p class="text-xs font-bold" style="color:#1e2d55;">Solicitudes por día y hora</p>
+            <p class="text-[10px] mt-0.5" style="color:#8a9ab5;">Mapa de calor · histórico completo</p>
+          </div>
+        </div>
+        <div class="flex-1">
+          <apexchart type="heatmap" height="150" :options="heatmapOptions" :series="heatmapSeries" />
+        </div>
+      </div>
+
+      <div class="distrib-card rounded-xl p-3 flex flex-col distrib-card-hover">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="donut-header-icon">
+            <component :is="Building2Icon" class="w-3.5 h-3.5" />
+          </div>
+          <p class="text-xs font-bold" style="color:#1e2d55;">Solicitudes por clínica</p>
+        </div>
+        <div class="flex-1 w-full flex flex-col justify-center gap-2 min-h-0">
+          <div v-for="(item, i) in clinicaBars" :key="item.clinica"
+            class="ciudad-row anim-slide-up"
+            :style="{ animationDelay: (i * 0.06) + 's' }">
+            <span class="ciudad-label" :title="item.clinica">{{ item.clinica }}</span>
+            <div class="ciudad-track">
+              <div class="ciudad-fill" :style="{ width: item.pct + '%' }"></div>
+            </div>
+            <span class="ciudad-value">{{ item.total }}</span>
+          </div>
+          <div v-if="!clinicaBars.length" class="specialties-empty">
+            <component :is="Building2Icon" class="w-6 h-6" />
+            <span>Sin datos de clínicas</span>
           </div>
         </div>
       </div>
@@ -136,26 +160,26 @@
         <div class="operations-heading">
           <div class="flex items-center gap-2">
             <div class="donut-header-icon">
-              <component :is="BarChart3Icon" class="w-3.5 h-3.5" />
+              <component :is="ShieldIcon" class="w-3.5 h-3.5" />
             </div>
             <div>
-              <p class="panel-eyebrow">Demanda por servicio</p>
-              <h3 class="panel-title">Especialidades más solicitadas</h3>
+              <p class="panel-eyebrow">Aseguradoras</p>
+              <h3 class="panel-title">Solicitudes por EPS</h3>
             </div>
           </div>
-          <span class="operations-hint">Top 5 · periodo filtrado</span>
+          <span class="operations-hint">Histórico completo</span>
         </div>
 
         <div class="specialties-chart-wrap">
           <apexchart
-            v-if="topEspecialidadesSeries[0]?.data?.length"
+            v-if="epsBars.length"
             type="bar"
             height="100%"
-            :options="topEspecialidadesOptions"
-            :series="topEspecialidadesSeries"
+            :options="epsChartOptions"
+            :series="epsChartSeries"
           />
           <div v-else class="specialties-empty">
-            <component :is="StethoscopeIcon" class="w-6 h-6" />
+            <component :is="ShieldIcon" class="w-6 h-6" />
             <span>Sin datos suficientes</span>
           </div>
         </div>
@@ -235,31 +259,26 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useLayoutStore } from '@/stores/layout';
+import { usePolling } from '@/lib/usePolling';
 import {
   ArrowRight as ArrowRightIcon,
   CalendarDays as CalendarDaysIcon,
-  CheckCircle2 as CheckCircleIcon,
   Clock3 as ClockIcon,
-  Stethoscope as StethoscopeIcon,
   Users as UsersIcon,
-  Activity as ActivityIcon,
-  BedDouble as BedDoubleIcon,
-  AlertTriangle as AlertTriangleIcon,
-  FileText as FileTextIcon,
-  UserCheck as UserCheckIcon,
-  FlaskConical as FlaskIcon,
-  Building2 as Building2Icon,
   ClipboardList as ClipboardListIcon,
   Hospital as HospitalIcon,
-  Filter as FilterIcon,
-  X as XIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
   PieChart as PieChartIcon,
-  BarChart3 as BarChart3Icon,
   Target as TargetIcon,
+  Grid3x3 as Grid3x3Icon,
+  Building2 as Building2Icon,
+  Shield as ShieldIcon,
+  X as XIcon,
+  AlertTriangle as AlertTriangleIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
+import StatCard, { type StatCardTone } from '@/components/ui/StatCard.vue';
 
 const router = useRouter();
 const layout = useLayoutStore();
@@ -288,21 +307,12 @@ function onRefRowLeave() {
   refTooltip.value = null;
 }
 
-const today = new Intl.DateTimeFormat('es-CO', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-}).format(new Date());
-
-const todayShort = new Intl.DateTimeFormat('es-CO', {
-  day: '2-digit',
-  month: 'short',
-}).format(new Date());
-
 const cargando = ref(true);
+const primeraCarga = ref(true);
+const errorCarga = ref(false);
 
 const stats = ref({
-  solicitudes: { total: 0, pendientes: 0, aceptadas: 0, negadas: 0, en_espera: 0, completadas: 0 },
+  solicitudes: { total: 0, pendientes: 0, negadas: 0, en_espera: 0, completadas: 0 },
   clinicas: { total: 0, activas: 0, pendientes: 0 },
   usuarios: { total: 0, activos: 0 },
   solicitudes_recientes: [] as Array<{
@@ -310,8 +320,15 @@ const stats = ref({
   }>,
   filtros: { especialidades: [] as string[], eps: [] as string[] },
   tendencia: [] as Array<{ fecha: string; total: number }>,
+  tendencia_clinicas: [] as Array<{ fecha: string; total: number }>,
+  tendencia_usuarios: [] as Array<{ fecha: string; total: number }>,
+  tendencia_pendientes: [] as Array<{ fecha: string; total: number }>,
+  pendiente_mas_antigua_horas: null as number | null,
   top_especialidades: [] as Array<{ especialidad: string; total: number }>,
   tasa_aceptacion: 0,
+  por_dia_hora: [] as Array<{ dia: string; hora: string; total: number }>,
+  por_clinica: [] as Array<{ clinica: string; total: number }>,
+  por_eps: [] as Array<{ eps: string; total: number }>,
 });
 
 const filtros = ref({
@@ -324,6 +341,14 @@ const filtros = ref({
 
 const especialidadesOpciones = computed(() => stats.value.filtros?.especialidades ?? []);
 const epsOpciones = computed(() => stats.value.filtros?.eps ?? []);
+
+const rangoFechas = computed<[string, string] | null>({
+  get: (): [string, string] | null => (filtros.value.desde && filtros.value.hasta) ? [filtros.value.desde, filtros.value.hasta] : null,
+  set: (val: [string, string] | null) => {
+    filtros.value.desde = val?.[0] ?? '';
+    filtros.value.hasta = val?.[1] ?? '';
+  },
+});
 
 const hayFiltrosActivos = computed(() =>
   filtros.value.desde || filtros.value.hasta ||
@@ -359,136 +384,48 @@ function animateCounters(targets: number[]) {
   }, interval);
 }
 
-const statCards = computed(() => [
+const statCards = computed((): { label: string; value: string; icon: typeof ClipboardListIcon; tone: StatCardTone; delta: string; percent: number; sparkline?: number[]; comparacion?: string }[] => [
   {
     label: 'Solicitudes totales',
     value: String(displayStats.value[0]),
     icon: ClipboardListIcon,
-    color: '#2563c4',
-    color2: '#60a5fa',
-    iconBg: '#dbe1ff',
+    tone: 'info',
     delta: `${stats.value.solicitudes.pendientes} pend.`,
-    deltaBg: '#dbeafe',
-    deltaColor: '#2563c4',
-    percent: stats.value.solicitudes.total ? Math.round((stats.value.solicitudes.aceptadas / stats.value.solicitudes.total) * 100) : 0,
+    percent: stats.value.solicitudes.total ? Math.round(((stats.value.solicitudes.en_espera + stats.value.solicitudes.completadas) / stats.value.solicitudes.total) * 100) : 0,
+    sparkline: stats.value.tendencia.map(t => t.total),
+    comparacion: comparacionTexto(tendenciaCambioPct.value),
   },
   {
     label: 'Clínicas registradas',
     value: String(displayStats.value[1]),
     icon: HospitalIcon,
-    color: '#15966a',
-    color2: '#4ade80',
-    iconBg: '#d3f9d8',
+    tone: 'success',
     delta: `${stats.value.clinicas.activas} activas`,
-    deltaBg: '#dcfce7',
-    deltaColor: '#15966a',
     percent: stats.value.clinicas.total ? Math.round((stats.value.clinicas.activas / stats.value.clinicas.total) * 100) : 0,
+    sparkline: stats.value.tendencia_clinicas.map(t => t.total),
+    comparacion: comparacionTexto(cambioPct(stats.value.tendencia_clinicas)),
   },
   {
     label: 'Solicitudes pendientes',
     value: String(displayStats.value[2]),
     icon: ClockIcon,
-    color: '#e67700',
-    color2: '#fbbf24',
-    iconBg: '#fff3cd',
-    delta: `${stats.value.solicitudes.aceptadas} aceptadas`,
-    deltaBg: '#fef3c7',
-    deltaColor: '#e67700',
+    tone: 'warning',
+    delta: `${stats.value.solicitudes.en_espera} en espera`,
     percent: stats.value.solicitudes.total ? Math.round((stats.value.solicitudes.pendientes / stats.value.solicitudes.total) * 100) : 0,
+    sparkline: stats.value.tendencia_pendientes.map(t => t.total),
+    comparacion: comparacionTexto(cambioPct(stats.value.tendencia_pendientes)),
   },
   {
     label: 'Usuarios activos',
     value: String(displayStats.value[3]),
     icon: UsersIcon,
-    color: '#7048e8',
-    color2: '#c4b5fd',
-    iconBg: '#ede9fe',
+    tone: 'violet',
     delta: `${stats.value.usuarios.total} total`,
-    deltaBg: '#ede9fe',
-    deltaColor: '#7048e8',
     percent: stats.value.usuarios.total ? Math.round((stats.value.usuarios.activos / stats.value.usuarios.total) * 100) : 0,
+    sparkline: stats.value.tendencia_usuarios.map(t => t.total),
+    comparacion: comparacionTexto(cambioPct(stats.value.tendencia_usuarios)),
   },
 ]);
-
-const donutChartSeries = computed(() => {
-  const s = stats.value.solicitudes;
-  return [s.pendientes, s.en_espera, s.aceptadas, s.negadas].filter(v => v > 0);
-});
-
-const donutChartOptions = computed(() => ({
-  chart: {
-    type: 'donut' as const,
-    fontFamily: 'inherit',
-    toolbar: { show: false },
-    animations: {
-      enabled: true,
-      easing: 'easeinout' as const,
-      speed: 800,
-      animateGradually: { enabled: true, delay: 150 },
-      dynamicAnimation: { enabled: true, speed: 400 },
-    },
-    dropShadow: {
-      enabled: true,
-      top: 2,
-      left: 0,
-      blur: 8,
-      opacity: 0.15,
-    },
-  },
-  labels: ['Pendientes', 'En espera', 'Aceptadas', 'Negadas'].filter((_, i) => {
-    const s = stats.value.solicitudes;
-    return [s.pendientes, s.en_espera, s.aceptadas, s.negadas][i] > 0;
-  }),
-  colors: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'].filter((_, i) => {
-    const s = stats.value.solicitudes;
-    return [s.pendientes, s.en_espera, s.aceptadas, s.negadas][i] > 0;
-  }),
-  fill: {
-    type: 'gradient',
-    gradient: {
-      shade: 'light',
-      type: 'vertical',
-      shadeIntensity: 0.3,
-      gradientToColors: ['#fbbf24', '#60a5fa', '#34d399', '#f87171'],
-      inverseColors: false,
-      opacityFrom: 1,
-      opacityTo: 0.85,
-    },
-  },
-  legend: { show: false },
-  dataLabels: {
-    enabled: true,
-    formatter: (val: number) => `${Math.round(val)}%`,
-    style: { fontSize: '11px', fontWeight: 700, colors: ['#fff'] },
-    dropShadow: { enabled: false },
-  },
-  tooltip: {
-    y: { formatter: (val: number) => `${val} solicitudes` },
-    style: { fontSize: '12px', fontFamily: 'inherit' },
-    fillSeriesColor: false,
-  },
-  plotOptions: {
-    pie: {
-      donut: {
-        size: '65%',
-        labels: {
-          show: true,
-          name: { fontSize: '10px', color: '#8a9ab5', fontWeight: 600 },
-          value: { fontSize: '20px', fontWeight: 800, color: '#1e2d55', formatter: (val: string) => val },
-          total: {
-            show: true,
-            label: 'Total',
-            fontSize: '9px',
-            color: '#8a9ab5',
-            fontWeight: 600,
-            formatter: () => String(stats.value.solicitudes.total),
-          },
-        },
-      },
-    },
-  },
-  stroke: { width: 2, colors: ['#fff'] },
-}));
 
 const donutBars = computed(() => {
   const s = stats.value.solicitudes;
@@ -496,118 +433,104 @@ const donutBars = computed(() => {
   return [
     { label: 'Pendientes', value: s.pendientes, color: '#f59e0b', color2: '#fbbf24', pct: Math.round((s.pendientes / total) * 100) },
     { label: 'En espera', value: s.en_espera, color: '#3b82f6', color2: '#60a5fa', pct: Math.round((s.en_espera / total) * 100) },
-    { label: 'Aceptadas', value: s.aceptadas, color: '#10b981', color2: '#34d399', pct: Math.round((s.aceptadas / total) * 100) },
+    { label: 'Completadas', value: s.completadas, color: '#22c55e', color2: '#4ade80', pct: Math.round((s.completadas / total) * 100) },
     { label: 'Negadas', value: s.negadas, color: '#ef4444', color2: '#f87171', pct: Math.round((s.negadas / total) * 100) },
   ];
 });
 
-const tendenciaChartSeries = computed(() => [{
-  name: 'Solicitudes',
-  data: stats.value.tendencia.map(t => t.total),
-}]);
-
-const tendenciaChartOptions = computed(() => ({
-  chart: {
-    type: 'area' as const,
-    fontFamily: 'inherit',
-    background: 'transparent',
-    toolbar: { show: false },
-    zoom: { enabled: false },
-    animations: {
-      enabled: true,
-      easing: 'easeinout' as const,
-      speed: 900,
-      animateGradually: { enabled: true, delay: 100 },
-      dynamicAnimation: { enabled: true, speed: 400 },
-    },
-    dropShadow: {
-      enabled: true,
-      top: 6,
-      left: 0,
-      blur: 6,
-      opacity: 0.15,
-      color: '#2563c4',
-    },
-  },
-  stroke: { curve: 'smooth' as const, width: 3, colors: ['#2563c4'] },
-  colors: ['#2563c4'],
-  fill: {
-    type: 'gradient',
-    gradient: {
-      shadeIntensity: 1,
-      opacityFrom: 0.45,
-      opacityTo: 0.02,
-      stops: [0, 90, 100],
-      colorStops: [
-        { offset: 0, color: '#2563c4', opacity: 0.4 },
-        { offset: 100, color: '#2563c4', opacity: 0.02 },
-      ],
-    },
-  },
-  markers: {
-    size: 0,
-    hover: { size: 6 },
-    strokeWidth: 2,
-    strokeColors: '#fff',
-    colors: ['#2563c4'],
-  },
-  xaxis: {
-    categories: stats.value.tendencia.map(t =>
-      new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short' }).format(new Date(t.fecha + 'T00:00:00'))
-    ),
-    labels: { style: { fontSize: '10px', fontWeight: 600, colors: '#94a3b8' } },
-    axisBorder: { show: false },
-    axisTicks: { show: false },
-    tooltip: { enabled: false },
-  },
-  yaxis: {
-    labels: { style: { fontSize: '10px', colors: '#94a3b8' } },
-  },
-  grid: {
-    borderColor: isDark.value ? '#1e293b' : '#f1f5f9',
-    strokeDashArray: 4,
-    xaxis: { lines: { show: false } },
-    padding: { top: 0, right: 8, bottom: 0, left: 0 },
-  },
+const estadoDonutSeries = computed(() => donutBars.value.map(b => b.value));
+const estadoDonutOptions = computed(() => ({
+  chart: { type: 'donut' as const, fontFamily: 'inherit', animations: { enabled: true, speed: 700 }, sparkline: { enabled: true } },
+  labels: donutBars.value.map(b => b.label),
+  colors: donutBars.value.map(b => b.color),
+  legend: { show: false, floating: true },
   dataLabels: { enabled: false },
+  stroke: { width: 2, colors: [isDark.value ? '#0f172a' : '#fff'] },
+  plotOptions: { pie: { offsetY: 10, customScale: 1, donut: { size: '72%', labels: { show: false } } } },
+  grid: { padding: { top: 0, right: 0, bottom: 0, left: 0 } },
   tooltip: {
-    y: { formatter: (val: number) => `${val} solicitud${val === 1 ? '' : 'es'}` },
-    style: { fontSize: '12px', fontFamily: 'inherit', background: isDark.value ? '#1e293b' : '#fff' },
     theme: isDark.value ? 'dark' : 'light',
-    x: { show: true },
+    y: { formatter: (val: number) => `${val} solicitudes` },
+    // Fijo en vez de seguir el cursor — en un donut chico (108px) el tooltip
+    // "flotante" se salía de la tarjeta y quedaba recortado para las
+    // porciones cercanas al borde (Completadas/Negadas).
+    fixed: { enabled: true, position: 'topRight' },
   },
 }));
 
-const tendenciaTotal = computed(() => stats.value.tendencia.reduce((acc, t) => acc + t.total, 0));
+/** Mapa de calor: día de la semana × franja horaria, sobre el histórico completo. */
+const heatmapSeries = computed(() => {
+  const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  return dias.map(dia => ({
+    name: dia,
+    data: stats.value.por_dia_hora
+      .filter(c => c.dia === dia)
+      .map(c => ({ x: c.hora, y: c.total })),
+  })).reverse();
+});
+const heatmapOptions = computed(() => ({
+  chart: { type: 'heatmap' as const, fontFamily: 'inherit', toolbar: { show: false } },
+  dataLabels: { enabled: false },
+  legend: { show: false },
+  xaxis: {
+    labels: { style: { fontSize: '9px', colors: '#94a3b8' } },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  },
+  yaxis: { labels: { style: { fontSize: '9px', colors: '#475569' } } },
+  grid: { padding: { left: 4, right: 4 } },
+  plotOptions: {
+    heatmap: {
+      radius: 3,
+      colorScale: {
+        ranges: [
+          { from: 0, to: 0, color: isDark.value ? '#1e293b' : '#eef2ff', name: 'Sin solicitudes' },
+          { from: 1, to: 1, color: '#a5b4fc', name: 'Baja' },
+          { from: 2, to: 3, color: '#6366f1', name: 'Media' },
+          { from: 4, to: 999, color: '#3730a3', name: 'Alta' },
+        ],
+      },
+    },
+  },
+  tooltip: { theme: isDark.value ? 'dark' : 'light', y: { formatter: (val: number) => `${val} solicitud${val === 1 ? '' : 'es'}` } },
+}));
 
-const tendenciaCambioPct = computed(() => {
-  const dias = stats.value.tendencia;
+/** Distribución real por clínica, viene ya agregada y ordenada desde el backend. */
+const clinicaBars = computed(() => {
+  const filas = stats.value.por_clinica;
+  const max = Math.max(1, ...filas.map(f => f.total));
+  return filas.map(f => ({ ...f, pct: Math.round((f.total / max) * 100) }));
+});
+
+/** % de cambio entre la primera y segunda mitad de una serie diaria — mismo cálculo para cualquier tendencia (solicitudes, clínicas, usuarios, pendientes). */
+function cambioPct(dias: Array<{ total: number }>): number {
   const mitad = Math.floor(dias.length / 2);
   if (!mitad) return 0;
   const primeraMitad = dias.slice(0, mitad).reduce((acc, t) => acc + t.total, 0);
   const segundaMitad = dias.slice(mitad).reduce((acc, t) => acc + t.total, 0);
   if (primeraMitad === 0) return segundaMitad > 0 ? 100 : 0;
   return Math.round(((segundaMitad - primeraMitad) / primeraMitad) * 100);
-});
+}
 
-const topEspecialidadesSeries = computed(() => [{
+function comparacionTexto(pct: number): string {
+  return `${pct >= 0 ? '↑' : '↓'}${Math.abs(pct)}% vs periodo anterior`;
+}
+
+const tendenciaCambioPct = computed(() => cambioPct(stats.value.tendencia));
+
+/** Distribución real por EPS (aseguradora), viene ya agregada desde el backend. */
+const epsBars = computed(() => stats.value.por_eps);
+const epsChartSeries = computed(() => [{
   name: 'Solicitudes',
-  data: stats.value.top_especialidades.map(e => e.total),
+  data: epsBars.value.map(e => e.total),
 }]);
-
-const topEspecialidadesOptions = computed(() => ({
+const epsChartOptions = computed(() => ({
   chart: {
     type: 'bar' as const,
     fontFamily: 'inherit',
     background: 'transparent',
     toolbar: { show: false },
-    animations: {
-      enabled: true,
-      easing: 'easeinout' as const,
-      speed: 700,
-      animateGradually: { enabled: true, delay: 90 },
-      dynamicAnimation: { enabled: true, speed: 350 },
-    },
+    animations: { enabled: true, easing: 'easeinout' as const, speed: 700 },
   },
   plotOptions: {
     bar: {
@@ -619,31 +542,15 @@ const topEspecialidadesOptions = computed(() => ({
       dataLabels: { position: 'end' as const },
     },
   },
-  colors: ['#2563c4', '#3b82c9', '#4f9dcf', '#5cb8d1', '#7dd3c0'],
-  fill: {
-    type: 'gradient',
-    gradient: {
-      shade: 'light',
-      type: 'horizontal',
-      shadeIntensity: 0.3,
-      gradientToColors: ['#60a5fa'],
-      inverseColors: false,
-      opacityFrom: 1,
-      opacityTo: 0.85,
-    },
-  },
+  colors: ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#7048e8', '#9333ea', '#c026d3', '#db2777'],
   xaxis: {
-    categories: stats.value.top_especialidades.map(e => e.especialidad),
-    labels: { style: { fontSize: '10px', colors: isDark.value ? '#94a3b8' : '#94a3b8' } },
+    categories: epsBars.value.map(e => e.eps),
+    labels: { style: { fontSize: '10px', colors: '#94a3b8' } },
     axisBorder: { show: false },
     axisTicks: { show: false },
   },
   yaxis: {
-    labels: {
-      style: { fontSize: '9px', fontWeight: 600, colors: isDark.value ? '#cbd5e1' : '#475569' },
-      maxWidth: 280,
-      trim: true,
-    },
+    labels: { style: { fontSize: '9px', fontWeight: 600, colors: isDark.value ? '#cbd5e1' : '#475569' }, maxWidth: 260, trim: false },
   },
   grid: {
     borderColor: isDark.value ? '#1e293b' : '#f1f5f9',
@@ -662,7 +569,6 @@ const topEspecialidadesOptions = computed(() => ({
   },
   tooltip: {
     y: { formatter: (val: number) => `${val} solicitudes` },
-    style: { fontSize: '12px', fontFamily: 'inherit', background: isDark.value ? '#1e293b' : '#fff' },
     theme: isDark.value ? 'dark' : 'light',
   },
   legend: { show: false },
@@ -671,204 +577,32 @@ const topEspecialidadesOptions = computed(() => ({
 // ── Últimas 5 referencias (bar chart horizontal) ───────────────────────────
 const estadoColorMap: Record<string, string> = {
   pendiente: '#f59e0b',
-  aceptado: '#22c55e',
   en_espera: '#3b82f6',
-  completado: '#6366f1',
+  completado: '#22c55e',
   negado: '#ef4444',
 };
 
-const estadoGradientMap: Record<string, string[]> = {
-  pendiente: ['#fbbf24', '#f59e0b'],
-  aceptado: ['#34d399', '#22c55e'],
-  en_espera: ['#60a5fa', '#3b82f6'],
-  completado: ['#818cf8', '#6366f1'],
-  negado: ['#f87171', '#ef4444'],
-};
-
 function estadoLabel(estado: string): string {
-  return { pendiente: 'Pendiente', aceptado: 'Aceptada', en_espera: 'En espera', completado: 'Completada', negado: 'Negada' }[estado] ?? estado;
-}
-
-function estadoLabelShort(estado: string): string {
-  return { pendiente: 'Pend', aceptado: 'Acept', en_espera: 'Espera', completado: 'Compl', negado: 'Negada' }[estado] ?? estado;
+  return { pendiente: 'Pendiente', en_espera: 'En espera', completado: 'Completada', negado: 'Negada' }[estado] ?? estado;
 }
 
 const ultimas5Ref = computed(() => stats.value.solicitudes_recientes.slice(0, 5));
 
-const ultimasRefSeries = computed(() => [{
-  name: 'Referencias',
-  data: ultimas5Ref.value.map(() => 1),
-}]);
+/** Texto/color del aviso de antigüedad de la solicitud pendiente más vieja. */
+const slaAlerta = computed(() => {
+  const horas = stats.value.pendiente_mas_antigua_horas;
+  if (horas === null || horas === undefined) return null;
 
-const ultimasRefOptions = computed(() => ({
-  chart: {
-    type: 'bar' as const,
-    fontFamily: 'inherit',
-    background: 'transparent',
-    toolbar: { show: false },
-    animations: {
-      enabled: true,
-      easing: 'easeinout' as const,
-      speed: 800,
-      animateGradually: { enabled: true, delay: 60 },
-      dynamicAnimation: { enabled: true, speed: 350 },
-    },
-    events: {
-      click: () => { router.push('/solicitudes-referencia'); },
-    },
-    dropShadow: {
-      enabled: true,
-      top: 2,
-      left: 0,
-      blur: 6,
-      opacity: 0.12,
-    },
-  },
-  plotOptions: {
-    bar: {
-      horizontal: true,
-      barHeight: '68%',
-      borderRadius: 10,
-      borderRadiusApplication: 'end' as const,
-      distributed: true,
-    },
-  },
-  fill: {
-    type: 'solid',
-    opacity: 1,
-  },
-  colors: ultimas5Ref.value.map(s => estadoColorMap[s.estado] ?? '#94a3b8'),
-  stroke: {
-    show: true,
-    width: 0,
-  },
-  dataLabels: {
-    enabled: true,
-    textAnchor: 'start' as const,
-    offsetX: 14,
-    style: { fontSize: '10px', fontWeight: 700, colors: ['#fff'] },
-    formatter: (_val: number, opts: any) => {
-      const s = ultimas5Ref.value[opts.dataPointIndex];
-      if (!s) return '';
-      return estadoLabelShort(s.estado);
-    },
-    dropShadow: { enabled: false },
-  },
-  xaxis: {
-    categories: ultimas5Ref.value.map(s => s.paciente),
-    labels: { show: false },
-    axisBorder: { show: false },
-    axisTicks: { show: false },
-  },
-  yaxis: {
-    show: true,
-    labels: {
-      show: true,
-      align: 'right' as const,
-      minWidth: 0,
-      maxWidth: 160,
-      style: {
-        fontSize: '11px',
-        fontWeight: 600,
-        colors: isDark.value ? ['#cbd5e1'] : ['#334155'],
-      },
-      formatter: (_val: number, index: number) => {
-        const s = ultimas5Ref.value[index];
-        if (!s) return '';
-        const nombre = s.paciente;
-        return nombre.length > 18 ? nombre.slice(0, 18) + '…' : nombre;
-      },
-    },
-    axisBorder: { show: false },
-    axisTicks: { show: false },
-  },
-  grid: { show: false, padding: { left: 0, right: 0, top: -6, bottom: -6 } },
-  legend: { show: false },
-  tooltip: {
-    enabled: true,
-    custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
-      const s = ultimas5Ref.value[dataPointIndex];
-      if (!s) return '';
-      const nombre = s.nombre_completo || s.paciente;
-      const doc = `${s.tipo_documento ?? ''} ${s.numero_documento ?? ''}`.trim() || '—';
-      const tel = s.telefono_contacto || '—';
-      const estado = estadoLabel(s.estado);
-      const estadoShort = estadoLabelShort(s.estado);
-      const color = estadoColorMap[s.estado] ?? '#94a3b8';
-      const grad = estadoGradientMap[s.estado] ?? ['#94a3b8', '#94a3b8'];
-      return `
-        <div style="padding:0; border-radius:12px; font-family:inherit; min-width:230px; overflow:hidden; box-shadow:0 8px 28px rgba(0,0,0,0.16); border:1px solid ${isDark.value ? '#334155' : '#e2e8f0'}; background:${isDark.value ? '#1e293b' : '#fff'};">
-          <div style="background:linear-gradient(135deg, ${grad[0]}, ${grad[1]}); padding:10px 14px; display:flex; align-items:center; gap:8px;">
-            <div style="width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,0.22); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </div>
-            <div style="flex:1; min-width:0;">
-              <p style="font-size:12px; font-weight:800; color:#fff; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${nombre}</p>
-              <p style="font-size:9px; font-weight:600; color:rgba(255,255,255,0.75); margin:2px 0 0; text-transform:uppercase; letter-spacing:0.05em;">${estadoShort}</p>
-            </div>
-          </div>
-          <div style="padding:10px 14px;">
-            <div style="display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid ${isDark.value ? '#334155' : '#f1f5f9'};">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isDark.value ? '#94a3b8' : '#64748b'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect width="18" height="14" x="3" y="5" rx="2"/><path d="M3 10h18"/></svg>
-              <span style="font-size:11px; color:${isDark.value ? '#94a3b8' : '#64748b'};"><strong style="color:${isDark.value ? '#cbd5e1' : '#475569'};">Doc:</strong> ${doc}</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid ${isDark.value ? '#334155' : '#f1f5f9'};">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isDark.value ? '#94a3b8' : '#64748b'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              <span style="font-size:11px; color:${isDark.value ? '#94a3b8' : '#64748b'};"><strong style="color:${isDark.value ? '#cbd5e1' : '#475569'};">Tel:</strong> ${tel}</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px; padding:5px 0;">
-              <div style="width:13px; height:13px; border-radius:50%; background:${color}; flex-shrink:0; box-shadow:0 0 0 3px ${color}25;"></div>
-              <span style="font-size:11px; color:${isDark.value ? '#94a3b8' : '#64748b'};"><strong style="color:${isDark.value ? '#cbd5e1' : '#475569'};">Estado:</strong> <span style="color:${color}; font-weight:700;">${estado}</span></span>
-            </div>
-          </div>
-        </div>
-      `;
-    },
-  },
-  states: {
-    hover: { filter: { type: 'darken' as const, value: 0.88 } },
-    active: { filter: { type: 'darken' as const, value: 0.82 } },
-  },
-}));
+  const texto = horas < 1
+    ? 'menos de 1 hora'
+    : horas < 24
+      ? `${Math.floor(horas)} h`
+      : `${Math.floor(horas / 24)} día(s)`;
 
-const services = computed(() => {
-  const total = Math.max(1, stats.value.solicitudes.total);
-  const pctPend = Math.round((stats.value.solicitudes.pendientes / total) * 100);
-  const pctAcept = Math.round((stats.value.solicitudes.aceptadas / total) * 100);
-  const pctNeg = Math.round((stats.value.solicitudes.negadas / total) * 100);
-  return [
-    { name: 'Pendientes', value: pctPend, count: stats.value.solicitudes.pendientes, color: 'linear-gradient(90deg, #e67700, #ffa94d)', solid: '#e67700', tag: stats.value.solicitudes.pendientes > 0 ? 'En espera' : 'Sin pendientes', tagBg: '#fef3c7', tagColor: '#e67700' },
-    { name: 'Aceptadas', value: pctAcept, count: stats.value.solicitudes.aceptadas, color: 'linear-gradient(90deg, #15966a, #5ac996)', solid: '#15966a', tag: 'Aprobadas', tagBg: '#dcfce7', tagColor: '#15966a' },
-    { name: 'Negadas', value: pctNeg, count: stats.value.solicitudes.negadas, color: 'linear-gradient(90deg, #c92a2a, #ff8787)', solid: '#c92a2a', tag: 'Rechazadas', tagBg: '#fee2e2', tagColor: '#c92a2a' },
-  ];
+  const clase = horas > 6 ? 'sla-alert-danger' : horas > 2 ? 'sla-alert-warning' : 'sla-alert-ok';
+
+  return { texto, clase };
 });
-
-const activities = computed(() => {
-  const recientes = stats.value.solicitudes_recientes;
-  return recientes.map(s => {
-    const tone = s.estado === 'aceptado' ? 'activity-success' : s.estado === 'negado' ? 'activity-warning' : 'activity-primary';
-    const icon = s.estado === 'aceptado' ? CheckCircleIcon : s.estado === 'negado' ? AlertTriangleIcon : FileTextIcon;
-    const estadoLabel = s.estado === 'aceptado' ? 'aceptada' : s.estado === 'negado' ? 'negada' : 'recibida';
-    return {
-      title: `Solicitud de referencia ${estadoLabel}`,
-      description: `${s.paciente} · ${s.especialidad} · ${s.clinica ?? '—'}`,
-      time: s.created_at ? timeAgo(s.created_at) : '',
-      icon,
-      tone,
-    };
-  });
-});
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Hace un momento';
-  if (mins < 60) return `Hace ${mins} min`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `Hace ${hours} h`;
-  const days = Math.floor(hours / 24);
-  return `Hace ${days} d`;
-}
 
 async function cargarStats() {
   try {
@@ -881,6 +615,7 @@ async function cargarStats() {
     if (filtros.value.eps) params.eps = filtros.value.eps;
     const { data } = await http.get('/api/dashboard/stats', { params });
     stats.value = data.data;
+    errorCarga.value = false;
     animateCounters([
       stats.value.solicitudes.total,
       stats.value.clinicas.total,
@@ -888,13 +623,20 @@ async function cargarStats() {
       stats.value.usuarios.activos,
     ]);
   } catch {
-    // silent fail
+    errorCarga.value = true;
   } finally {
     cargando.value = false;
+    primeraCarga.value = false;
   }
 }
 
 onMounted(cargarStats);
+
+// Refresco silencioso: mantiene honesto el "En línea" de Últimas referencias
+// sin mostrar el esqueleto de carga en cada ciclo.
+usePolling(() => {
+  if (!cargando.value) cargarStats();
+}, 30000);
 </script>
 
 <style scoped>
@@ -905,317 +647,56 @@ onMounted(cargarStats);
     radial-gradient(ellipse at 10% 100%, rgba(208, 242, 226, 0.25), transparent 28rem);
 }
 
-/* ── Filter bar ── */
-.filter-bar {
-  background: linear-gradient(135deg, #f0f6ff 0%, #e6efff 50%, #f0f9ff 100%);
-  border: 1px solid #b8c8e0;
-  box-shadow: 0 4px 20px rgba(13, 45, 107, 0.08), inset 0 1px 0 rgba(255,255,255,0.6);
-  position: relative;
-  overflow: hidden;
-  transition: box-shadow .3s ease, transform .3s ease;
+/* ── Encabezado + filtros ── */
+.dash-title { font-size: 20px; font-weight: 800; color: #1e293b; letter-spacing: -0.02em; }
+.dark .dash-title { color: #e2e8f0; }
+.dash-subtitle { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+.dark .dash-subtitle { color: #64748b; }
+.dash-clear-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: #64748b;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 7px 12px; cursor: pointer; transition: all .15s ease;
 }
-.filter-bar:hover {
-  box-shadow: 0 6px 28px rgba(13, 45, 107, 0.12), inset 0 1px 0 rgba(255,255,255,0.6);
-  transform: translateY(-1px);
-}
-.filter-bar::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #0D2D6B, #16468E, #2563eb, #16468E, #0D2D6B);
-  background-size: 200% 100%;
-  animation: filterBarShimmer 3s linear infinite;
-}
-@keyframes filterBarShimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-.filter-bar-icon {
-  width: 32px; height: 32px;
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #0D2D6B, #16468E);
-  color: #fff;
-  box-shadow: 0 3px 10px rgba(13, 45, 107, 0.25);
-  animation: filterIconPulse 2.5s ease-in-out infinite;
-}
-@keyframes filterIconPulse {
-  0%, 100% { box-shadow: 0 3px 10px rgba(13, 45, 107, 0.25); }
-  50% { box-shadow: 0 3px 18px rgba(13, 45, 107, 0.40); }
-}
-.filter-bar-title {
-  font-size: 13px;
-  font-weight: 800;
-  color: #0D2D6B;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-.filter-divider {
-  width: 1px; height: 24px;
-  background: linear-gradient(180deg, transparent, #b8c8e0, transparent);
-}
-.filter-arrow {
-  font-size: 14px;
-  font-weight: 700;
-  color: #94a3b8;
-  animation: filterArrowBounce 2s ease-in-out infinite;
-}
-@keyframes filterArrowBounce {
-  0%, 100% { transform: translateX(0); opacity: 0.5; }
-  50% { transform: translateX(3px); opacity: 1; }
-}
-.filter-picker {
-  width: 140px !important;
-}
-.filter-select {
-  width: 150px !important;
-}
-.filter-bar :deep(.el-input__wrapper),
-.filter-bar :deep(.el-select__wrapper) {
-  background: rgba(255, 255, 255, 0.7) !important;
-  border: 1px solid #d4deea !important;
-  border-radius: 10px !important;
-  transition: all .2s ease;
-}
-.filter-bar :deep(.el-input__wrapper:hover),
-.filter-bar :deep(.el-select__wrapper:hover) {
-  border-color: #16468E !important;
-  box-shadow: 0 0 0 2px rgba(22, 70, 142, 0.08) !important;
-}
+.dash-clear-btn:hover { border-color: var(--rf-primary); color: var(--rf-primary); }
+.dark .dash-clear-btn { background: #161b28; border-color: rgba(255,255,255,0.08); color: #cbd5e1; }
+.dark .dash-clear-btn:hover { border-color: var(--rf-primary); color: #a5b4fc; }
 
-/* ── Hero ── */
-.hero-card {
-  background: linear-gradient(135deg, #0a1f4d 0%, #0D2D6B 30%, #16468E 65%, #1e3a7a 100%);
-  box-shadow: 0 10px 40px rgba(13, 45, 107, .35), inset 0 1px 0 rgba(255,255,255,0.08);
+/* ── Aviso de error ── */
+.dash-error-banner {
+  display: flex; align-items: center; gap: 8px;
+  background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
+  border-radius: 10px; padding: 8px 12px; font-size: 12px; font-weight: 600;
 }
-.hero-glow {
-  position: absolute;
-  top: -80px; right: -80px;
-  width: 280px; height: 280px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(126,179,255,0.22), transparent 70%);
-  pointer-events: none;
-  animation: heroGlowFloat 8s ease-in-out infinite;
+.dash-error-banner button {
+  margin-left: auto; background: #fff; border: 1px solid #fecaca; color: #b91c1c;
+  border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer;
 }
-@keyframes heroGlowFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
-  50% { transform: translate(-12px, 8px) scale(1.1); opacity: 0.7; }
+.dash-error-banner button:hover { background: #fee2e2; }
+.dark .dash-error-banner { background: rgba(220,38,38,0.12); border-color: rgba(220,38,38,0.3); color: #fca5a5; }
+.dark .dash-error-banner button { background: transparent; border-color: rgba(220,38,38,0.3); color: #fca5a5; }
+
+/* ── Skeleton de tarjetas ── */
+.stat-card-pastel-skeleton {
+  background: #fff; border: 1px solid rgba(15, 23, 42, 0.04);
 }
-.hero-glow-2 {
-  position: absolute;
-  bottom: -60px; left: 30%;
-  width: 200px; height: 200px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(74,222,128,0.08), transparent 70%);
-  pointer-events: none;
+.dark .stat-card-pastel-skeleton { background: #161b28; }
+
+/* ── Antigüedad de la solicitud pendiente más vieja ── */
+.sla-alert {
+  display: flex; align-items: center; gap: 7px;
+  border-radius: 10px; padding: 7px 12px; font-size: 12px; font-weight: 600;
 }
-.hero-pattern {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
-  background-size: 24px 24px;
-  pointer-events: none;
-}
-.hero-logo {
-  width: 40px; height: 40px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  backdrop-filter: blur(8px);
-}
-.hero-date-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  padding: .4rem .9rem;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.hero-mini-stats {
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-  padding: .5rem .9rem;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-}
-.hero-mini-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.hero-mini-stat-num {
-  font-size: 14px;
-  font-weight: 800;
-  color: #fff;
-  line-height: 1;
-  transition: transform .3s ease;
-}
-.hero-mini-stats:hover .hero-mini-stat-num {
-  transform: scale(1.1);
-}
-.hero-mini-stat-label {
-  font-size: 9px;
-  color: rgba(255,255,255,0.5);
-  margin-top: 3px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-}
-.hero-mini-divider {
-  width: 1px; height: 24px;
-  background: rgba(255,255,255,0.12);
-}
-.hero-live-dot {
-  width: 7px; height: 7px;
-  border-radius: 999px;
-  background: #4ade80;
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, .25);
-  animation: livePulse 2s ease-in-out infinite;
-}
-@keyframes livePulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: .5; transform: scale(.85); }
-}
-.hero-pill {
-  position: absolute;
-  border-radius: 999px;
-  pointer-events: none;
-  animation: floatPill 6s ease-in-out infinite;
-}
-@keyframes floatPill {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
+.sla-alert strong { font-weight: 800; }
+.sla-alert-ok { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.sla-alert-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.sla-alert-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.dark .sla-alert-ok { background: rgba(34,197,94,0.12); color: #86efac; border-color: rgba(34,197,94,0.25); }
+.dark .sla-alert-warning { background: rgba(245,158,11,0.12); color: #fcd34d; border-color: rgba(245,158,11,0.25); }
+.dark .sla-alert-danger { background: rgba(220,38,38,0.12); color: #fca5a5; border-color: rgba(220,38,38,0.3); }
 
 /* ── Stat cards ── */
-.stat-card {
-  background: linear-gradient(145deg, #ffffff 0%, #fbfdff 100%);
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, #e2e8f0);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 10%, transparent), 0 1px 0 rgba(255,255,255,0.8) inset;
-  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1), border-color .3s ease;
-  position: relative;
-  overflow: hidden;
-}
-.stat-card-mesh {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%);
-  pointer-events: none;
-}
-.stat-card-glow {
-  position: absolute;
-  top: -50%; right: -30%;
-  width: 140px; height: 140px;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent-2) 45%, transparent), transparent 70%);
-  filter: blur(20px);
-  opacity: .7;
-  transition: opacity .3s ease, transform .5s ease;
-  pointer-events: none;
-}
-.stat-card:hover {
-  transform: translateY(-6px) scale(1.015);
-  box-shadow: 0 20px 40px color-mix(in srgb, var(--accent) 24%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 45%, #e2e8f0);
-}
-.stat-card:hover .stat-card-glow {
-  opacity: 1;
-  transform: scale(1.15);
-}
-
-/* Circular progress ring */
-.stat-ring {
-  position: relative;
-  width: 58px; height: 58px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-}
-.stat-ring-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%; height: 100%;
-  transform: rotate(-90deg);
-}
-.stat-ring-track {
-  fill: none;
-  stroke: color-mix(in srgb, var(--accent) 14%, #eef2f7);
-  stroke-width: 5;
-}
-.stat-ring-fill {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 5;
-  stroke-linecap: round;
-  stroke-dasharray: 169.6;
-  stroke-dashoffset: 169.6;
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 55%, transparent));
-  transition: stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1);
-}
-.stat-ring-icon {
-  position: relative;
-  z-index: 1;
-  width: 34px; height: 34px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--icon-bg);
-  color: var(--icon-color);
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--icon-color) 25%, transparent);
-  transition: transform .3s cubic-bezier(.22,1,.36,1);
-}
-.stat-card:hover .stat-ring-icon {
-  transform: scale(1.12) rotate(-6deg);
-}
-
-.stat-delta-badge {
-  display: inline-block;
-  font-size: 9.5px;
-  font-weight: 800;
-  padding: 3px 9px;
-  border-radius: 999px;
-  white-space: nowrap;
-  background: var(--delta-bg);
-  color: var(--delta-color);
-  margin-top: 4px;
-  position: relative;
-  z-index: 10;
-}
-.stat-value {
-  font-size: 22px;
-  font-weight: 900;
-  line-height: 1.1;
-  letter-spacing: -.03em;
-  color: #1e293b;
-  position: relative;
-  z-index: 10;
-}
-.stat-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: #64748b;
-  margin-top: 1px;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  position: relative;
-  z-index: 10;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* El marcado y estilos de la tarjeta viven ahora en components/ui/StatCard.vue */
 
 /* ── Panel cards ── */
 .panel-card {
@@ -1428,16 +909,6 @@ onMounted(cargarStats);
   box-shadow: 0 16px 36px rgba(22,70,142,.14);
 }
 
-/* ── Chart header icon ── */
-.chart-header-icon {
-  width: 24px; height: 24px;
-  border-radius: 7px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
 /* ── Estado total badge ── */
 .estado-total-badge {
   margin-left: auto;
@@ -1448,20 +919,6 @@ onMounted(cargarStats);
   background: #e0ecff;
   color: #16468e;
 }
-
-/* ── Trend badge ── */
-.trend-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: .25rem;
-  padding: .3rem .6rem;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-.trend-badge-up { background: #dcfce7; color: #15966a; }
-.trend-badge-down { background: #fee2e2; color: #c92a2a; }
 
 /* ── Donut header + custom legend ── */
 .donut-header-icon {
@@ -1580,6 +1037,32 @@ onMounted(cargarStats);
   0% { left: -40%; }
   100% { left: 100%; }
 }
+
+/* ── Dona de estados ── */
+.estado-donut-wrap { position: relative; flex-shrink: 0; width: 108px; height: 108px; }
+.estado-donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.estado-donut-num { font-size: 17px; font-weight: 800; color: #1e293b; }
+.dark .estado-donut-num { color: #e2e8f0; }
+.estado-donut-label { font-size: 8.5px; color: #94a3b8; font-weight: 600; }
+.dark .estado-donut-label { color: #64748b; }
+
+.estado-legend-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.estado-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.estado-legend-label { flex: 1; min-width: 0; color: #475569; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dark .estado-legend-label { color: #cbd5e1; }
+.estado-legend-value { font-weight: 800; font-size: 11.5px; }
+.estado-legend-pct { color: #94a3b8; font-weight: 700; font-size: 10px; min-width: 30px; text-align: right; }
+.dark .estado-legend-pct { color: #64748b; }
+
+/* ── Barras por ciudad/clínica ── */
+.ciudad-row { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+.ciudad-label { width: 100px; flex-shrink: 0; color: #475569; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dark .ciudad-label { color: #cbd5e1; }
+.ciudad-track { flex: 1; height: 6px; border-radius: 999px; background: #f1f5f9; overflow: hidden; }
+.dark .ciudad-track { background: rgba(255,255,255,0.06); }
+.ciudad-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #16468E, #2563c4); transition: width .6s cubic-bezier(.22,1,.36,1); }
+.ciudad-value { width: 22px; flex-shrink: 0; text-align: right; font-weight: 800; color: #1e293b; }
+.dark .ciudad-value { color: #e2e8f0; }
 
 /* ── Specialties bar chart ── */
 .specialties-chart-wrap {

@@ -15,30 +15,34 @@
       </el-button>
       <el-button size="small" @click="exportarExcel" :disabled="solicitudesFiltradas.length === 0">
         <component :is="DownloadIcon" class="w-3.5 h-3.5 mr-1" />
-        Exportar
+        Exportar CSV
+      </el-button>
+      <el-button size="small" :loading="verificandoTodosIngresos" :disabled="!solicitudesEnEspera.length" @click="verificarTodosIngresos">
+        <component :is="SearchIcon" class="w-3.5 h-3.5 mr-1" />
+        Verificar ingresos
       </el-button>
     </div>
 
     <!-- ── Stat cards ── -->
     <div class="sol-stats-bar shrink-0">
-      <div
-        v-for="(card, i) in statCards"
-        :key="card.label"
-        class="sol-stat-card"
-        :style="{ '--stat-color': card.color, '--stat-bg': card.iconBackground }"
-      >
-        <div class="sol-stat-icon" :style="{ background: card.iconBackground, color: card.color }">
-          <component :is="card.icon" class="w-4 h-4" />
-        </div>
-        <div class="sol-stat-body">
-          <p class="sol-stat-label">{{ card.label }}</p>
-          <p class="sol-stat-value" :style="{ color: card.color }">{{ displayStats[i] }}</p>
-          <div class="sol-stat-bar-track">
-            <div class="sol-stat-bar-fill" :style="{ width: statPercents[i] + '%', background: card.color }"></div>
-          </div>
-        </div>
-        <span class="sol-stat-delta" :style="{ background: card.iconBackground, color: card.color }">{{ card.sub(cardValue(i)) }}</span>
-      </div>
+      <StatCard
+        variant="pastel" tone="info"
+        label="Solicitudes" :value="displayStats[0]"
+        :comparacion="resumen.total ? `${resumen.total} registradas` : 'sin registros'"
+        :icon="ClipboardListIcon" :sparkline="crecimientoSolicitudes"
+      />
+      <StatCard
+        variant="pastel" tone="warning"
+        label="Pendientes" :value="displayStats[1]"
+        :comparacion="resumen.pendientes ? `${resumen.pendientes} sin revisar` : 'sin pendientes'"
+        :icon="ClockIcon"
+      />
+      <StatCard
+        variant="pastel" tone="info"
+        label="En espera" :value="displayStats[2]"
+        :comparacion="resumen.enEspera ? `${resumen.enEspera} esperando llegada` : 'sin pacientes en espera'"
+        :icon="HourglassIcon"
+      />
     </div>
 
     <!-- ── Tabs + Búsqueda ── -->
@@ -78,10 +82,7 @@
     <Transition name="bulk-slide">
       <div v-if="seleccionadas.size > 0" class="sol-bulk-bar shrink-0">
         <span class="text-xs font-bold" style="color:#0D2D6B;">{{ seleccionadas.size }} seleccionada(s)</span>
-        <el-button type="success" size="small" @click="aceptarLote">
-          <component :is="CheckIcon" class="w-3 h-3 mr-0.5" /> Aceptar
-        </el-button>
-        <el-button type="danger" size="small" @click="negarLote">
+        <el-button type="danger" size="small" :loading="procesandoLote" @click="abrirNegarLote">
           <component :is="XIcon" class="w-3 h-3 mr-0.5" /> Negar
         </el-button>
         <el-button size="small" text @click="seleccionadas.clear()">Limpiar</el-button>
@@ -143,10 +144,11 @@
             </thead>
             <TransitionGroup name="sol-row" tag="tbody">
               <tr
-                v-for="(s, idx) in solicitudesPaginadas"
+                v-for="s in solicitudesPaginadas"
+                :id="`sol-row-${s.id}`"
                 :key="s.id"
                 class="sol-table-row"
-                :class="{ 'sol-table-row-selected': seleccionadas.has(s.id) }"
+                :class="{ 'sol-table-row-selected': seleccionadas.has(s.id), 'sol-table-row-resaltada': resaltarId === s.id || idsActualizados.has(s.id) }"
               >
                 <td class="sol-td sol-td-check">
                   <input type="checkbox" :checked="seleccionadas.has(s.id)" @change="toggleSeleccion(s.id)" class="sol-checkbox" />
@@ -155,14 +157,17 @@
                   <div class="sol-table-paciente">
                     <div class="sol-table-avatar"
                       :style="{
-                        background: s.estado === 'pendiente' ? '#fef3c7' : s.estado === 'aceptado' ? '#dcfce7' : s.estado === 'en_espera' ? '#dbeafe' : s.estado === 'completado' ? '#e0e7ff' : '#fee2e2',
-                        color: s.estado === 'pendiente' ? '#d97706' : s.estado === 'aceptado' ? '#16a34a' : s.estado === 'en_espera' ? '#2563eb' : s.estado === 'completado' ? '#4f46e5' : '#dc2626'
+                        background: s.estado === 'pendiente' ? '#fef3c7' : s.estado === 'en_espera' ? '#dbeafe' : s.estado === 'completado' ? '#dcfce7' : '#fee2e2',
+                        color: s.estado === 'pendiente' ? '#d97706' : s.estado === 'en_espera' ? '#2563eb' : s.estado === 'completado' ? '#16a34a' : '#dc2626'
                       }">
                       {{ inicialesPaciente(s) }}
                     </div>
                     <div class="sol-table-paciente-info">
-                      <p class="sol-table-name">{{ nombreCompleto(s) }}</p>
-                      <p class="sol-table-doc">{{ formatFecha(s.created_at) }} · {{ s.hora }}</p>
+                      <p class="sol-table-name" :class="{ 'sol-table-name-resaltada': resaltarId === s.id }">{{ nombreCompleto(s) }}</p>
+                      <p class="sol-table-doc">
+                        {{ formatFecha(s.created_at) }} · {{ s.hora }}
+                        <span v-if="s.estado === 'pendiente'" class="sol-age-badge" :class="edadClase(s)">{{ edadTexto(s) }}</span>
+                      </p>
                     </div>
                   </div>
                 </td>
@@ -191,7 +196,6 @@
                 <td class="sol-td">
                   <span class="sol-table-status" :class="{
                     'sol-status-pending': s.estado === 'pendiente',
-                    'sol-status-accepted': s.estado === 'aceptado',
                     'sol-status-waiting': s.estado === 'en_espera',
                     'sol-status-completed': s.estado === 'completado',
                     'sol-status-rejected': s.estado === 'negado',
@@ -207,26 +211,18 @@
                         <component :is="EyeIcon" class="w-3.5 h-3.5" />
                       </el-button>
                     </el-tooltip>
-                    <el-tooltip v-if="s.estado === 'pendiente'" :key="`aceptar-${s.id}`" content="Aceptar" placement="top" :popper-options="{ strategy: 'fixed' }">
-                      <el-button type="success" circle size="small" @click="abrirAceptar(s)">
-                        <component :is="CheckIcon" class="w-3.5 h-3.5" />
+                    <el-dropdown v-if="s.estado !== 'completado'" trigger="click" placement="bottom-end" :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [8, 8] } }] }" popper-class="sol-acciones-menu" @command="(cmd: string) => manejarAccionFila(cmd, s)">
+                      <el-button circle size="small" :loading="enviandoGomedisysId === s.id || consultandoIngresoId === s.id">
+                        <component :is="MoreIcon" class="w-3.5 h-3.5" />
                       </el-button>
-                    </el-tooltip>
-                    <el-tooltip v-if="s.estado === 'aceptado'" :key="`espera-${s.id}`" content="Marcar en espera" placement="top" :popper-options="{ strategy: 'fixed' }">
-                      <el-button type="primary" circle size="small" @click="marcarEnEspera(s)">
-                        <component :is="ClockIcon" class="w-3.5 h-3.5" />
-                      </el-button>
-                    </el-tooltip>
-                    <el-tooltip v-if="s.estado === 'en_espera'" :key="`completar-${s.id}`" content="Completar" placement="top" :popper-options="{ strategy: 'fixed' }">
-                      <el-button type="primary" circle size="small" @click="marcarCompletado(s)">
-                        <component :is="CheckCircleIcon" class="w-3.5 h-3.5" />
-                      </el-button>
-                    </el-tooltip>
-                    <el-tooltip v-if="s.estado !== 'negado' && s.estado !== 'completado'" :key="`negar-${s.id}`" content="Negar" placement="top" :popper-options="{ strategy: 'fixed' }">
-                      <el-button type="danger" circle size="small" @click="abrirNegar(s)">
-                        <component :is="XIcon" class="w-3.5 h-3.5" />
-                      </el-button>
-                    </el-tooltip>
+                      <template #dropdown>
+                        <el-dropdown-menu>
+                          <el-dropdown-item v-if="s.estado === 'pendiente'" command="aceptar" :icon="CheckIcon" class="sol-accion-success">Aceptar</el-dropdown-item>
+                          <el-dropdown-item v-if="s.estado === 'pendiente'" command="negar" :icon="XIcon" class="sol-accion-danger" divided>Negar</el-dropdown-item>
+                          <el-dropdown-item v-if="s.estado === 'en_espera'" command="ingreso" :icon="SearchIcon" class="sol-accion-teal">Consultar ingreso</el-dropdown-item>
+                        </el-dropdown-menu>
+                      </template>
+                    </el-dropdown>
                   </div>
                 </td>
               </tr>
@@ -253,142 +249,162 @@
     </div>
 
     <!-- ── Modal: Detalle ── -->
-    <el-dialog v-model="modalDetalle" width="620px" class="detalle-dialog" :show-close="true" align-center>
+    <el-dialog v-model="modalDetalle" width="900px" class="detalle-dialog" :show-close="false" align-center @close="limpiarThumbnails">
       <template v-if="solicitudSeleccionada">
         <div class="detalle-content">
-          <!-- Header azul -->
+          <button type="button" class="detalle-close-btn" @click="cerrarDetalle">
+            <component :is="XIcon" class="w-4 h-4" />
+          </button>
+
+          <!-- Header claro -->
           <div class="detalle-head">
-            <div class="detalle-head-glow"></div>
+            <div class="detalle-head-pattern"></div>
             <div class="detalle-head-icon">
-              <component
-                :is="solicitudSeleccionada.estado === 'aceptado' ? CheckCircleIcon : solicitudSeleccionada.estado === 'negado' ? XCircleIcon : solicitudSeleccionada.estado === 'en_espera' ? ClockIcon : solicitudSeleccionada.estado === 'completado' ? CheckCircleIcon : ClockIcon"
-                class="w-6 h-6"
-              />
+              <component :is="ClipboardListIcon" class="w-6 h-6" />
             </div>
             <div class="detalle-head-info">
               <p class="detalle-head-title">Detalle de solicitud</p>
-              <p class="detalle-head-sub">{{ nombreCompleto(solicitudSeleccionada) }}</p>
+              <p class="detalle-head-sub">{{ idInterno(solicitudSeleccionada.id) }} · {{ formatFecha(solicitudSeleccionada.fecha) }} · {{ formatHora(solicitudSeleccionada.hora) }}</p>
             </div>
-            <div class="detalle-head-id-badge">ID #{{ solicitudSeleccionada.id }}</div>
-            <div class="detalle-head-badge" :class="'badge-' + solicitudSeleccionada.estado">
+            <span class="detalle-head-badge" :class="'estado-' + solicitudSeleccionada.estado">
               {{ estadoLabel(solicitudSeleccionada.estado) }}
+            </span>
+            <button class="detalle-head-pdf" @click="exportarPdf">
+              <component :is="FileDownIcon" class="w-3.5 h-3.5" />
+              <span>Descargar PDF</span>
+            </button>
+          </div>
+
+          <div class="detalle-body">
+            <!-- Paciente + Remisión + Diagnósticos en 3 columnas -->
+            <div class="grid grid-cols-3 gap-2 mb-1.5">
+              <div class="detalle-card">
+                <div class="detalle-card-head">
+                  <span class="detalle-card-icon detalle-card-icon-blue"><component :is="UserIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="detalle-card-title detalle-card-title-blue">Paciente</p>
+                </div>
+                <div class="card-body">
+                  <div class="data-row"><span>Nombre</span><strong>{{ nombreCompleto(solicitudSeleccionada) }}</strong></div>
+                  <div class="data-row"><span>Documento</span><strong>{{ solicitudSeleccionada.tipo_documento }} {{ solicitudSeleccionada.numero_documento }}</strong></div>
+                  <div class="data-row"><span>Edad / Género</span><strong>{{ solicitudSeleccionada.edad }} años · {{ solicitudSeleccionada.genero === 'M' ? 'Masc.' : 'Fem.' }}</strong></div>
+                  <div class="data-row"><span>EPS</span><strong>{{ solicitudSeleccionada.eps }}</strong></div>
+                  <div class="data-row"><span>Municipio</span><strong>{{ solicitudSeleccionada.municipio_capita }}</strong></div>
+                  <div class="data-row"><span>Especialidad</span><strong>{{ solicitudSeleccionada.especialidad_requerida }}</strong></div>
+                  <div class="data-row"><span>Servicio actual</span><strong>{{ solicitudSeleccionada.servicio_ubicacion_actual }}</strong></div>
+                </div>
+              </div>
+              <div class="detalle-card">
+                <div class="detalle-card-head">
+                  <span class="detalle-card-icon detalle-card-icon-amber"><component :is="BuildingIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="detalle-card-title detalle-card-title-amber">Remisión</p>
+                </div>
+                <div class="card-body">
+                  <div class="data-row"><span>Institución</span><strong>{{ solicitudSeleccionada.clinica?.nombre ?? '—' }}</strong></div>
+                  <div v-if="solicitudSeleccionada.quien_remitente" class="data-row"><span>Remite</span><strong>{{ solicitudSeleccionada.quien_remitente }}</strong></div>
+                  <div v-if="solicitudSeleccionada.telefono_contacto" class="data-row"><span>Teléfono</span><strong>{{ solicitudSeleccionada.telefono_contacto }}</strong></div>
+                  <div v-if="solicitudSeleccionada.correo_contacto" class="data-row"><span>Correo</span><strong>{{ solicitudSeleccionada.correo_contacto }}</strong></div>
+                  <div v-if="solicitudSeleccionada.codigo_aceptacion" class="data-row"><span>Código Gomedisys</span><strong class="font-mono">{{ solicitudSeleccionada.codigo_aceptacion }}</strong></div>
+                  <div v-if="solicitudSeleccionada.hora_llegada" class="data-row"><span>Llegada esperada</span><strong>{{ formatHora(solicitudSeleccionada.hora_llegada) }} · {{ solicitudSeleccionada.lugar_llegada }}</strong></div>
+                  <p v-if="!solicitudSeleccionada.quien_remitente && !solicitudSeleccionada.telefono_contacto && !solicitudSeleccionada.correo_contacto" class="text-xs text-gray-400 italic">Sin datos adicionales de remisión</p>
+                </div>
+              </div>
+              <div class="detalle-card">
+                <div class="detalle-card-head">
+                  <span class="detalle-card-icon detalle-card-icon-violet"><component :is="ClipboardListIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="detalle-card-title detalle-card-title-violet">Diagnósticos</p>
+                </div>
+                <div class="card-body">
+                  <div v-if="solicitudSeleccionada.diagnosticos?.length" class="card-dx-list">
+                    <div v-for="dx in solicitudSeleccionada.diagnosticos" :key="dx.id" class="card-dx-item">
+                      <strong class="card-dx-code">{{ dx.codigo_cie10 }}</strong>
+                      <span class="card-dx-desc">{{ descripcionSinCodigo(dx) }}</span>
+                    </div>
+                  </div>
+                  <p v-else-if="solicitudSeleccionada.diagnostico" class="card-text">{{ solicitudSeleccionada.diagnostico }}</p>
+                  <p v-else class="card-text">—</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Historia clínica a ancho completo -->
+            <div class="detalle-card mb-1.5">
+              <div class="detalle-card-head">
+                <span class="detalle-card-icon detalle-card-icon-blue"><component :is="ClipboardListIcon" class="w-3.5 h-3.5" /></span>
+                <p class="detalle-card-title detalle-card-title-blue">Historia clínica</p>
+              </div>
+              <div class="card-body">
+                <p class="card-text-sm card-text-clamp">{{ solicitudSeleccionada.resumen_historia_clinica }}</p>
+                <button
+                  v-if="(solicitudSeleccionada.resumen_historia_clinica?.length ?? 0) > 180"
+                  class="leer-mas-btn"
+                  @click="abrirHistoriaClinica"
+                >Leer más</button>
+              </div>
+            </div>
+
+            <!-- Seguimiento + Soportes en 2 columnas -->
+            <div class="grid grid-cols-2 gap-2">
+              <div class="detalle-card">
+                <div class="detalle-card-head">
+                  <span class="detalle-card-icon detalle-card-icon-slate"><component :is="ClockIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="detalle-card-title detalle-card-title-slate">Seguimiento</p>
+                </div>
+                <div class="card-body">
+                  <div v-for="(paso, i) in pasosSeguimiento" :key="i" class="timeline-item">
+                    <div class="timeline-connector">
+                      <div class="timeline-dot" :class="{ 'timeline-dot-done': paso.hecho, 'timeline-dot-negada': paso.tipo === 'negada', 'timeline-dot-revertido': paso.tipo === 'revertido' }">
+                        <component :is="ICONO_PASO[paso.tipo]" class="w-2.5 h-2.5" />
+                      </div>
+                      <div v-if="i < pasosSeguimiento.length - 1" class="timeline-line" :class="{ 'timeline-line-done': paso.hecho }"></div>
+                    </div>
+                    <div class="timeline-text">
+                      <p class="timeline-titulo" :class="{ 'timeline-titulo-pending': !paso.hecho }">{{ paso.titulo }}</p>
+                      <p class="timeline-fecha">{{ paso.fecha }}</p>
+                    </div>
+                  </div>
+                  <p v-if="solicitudSeleccionada.observaciones_respuesta" class="timeline-obs">{{ solicitudSeleccionada.observaciones_respuesta }}</p>
+                  <p v-if="solicitudSeleccionada.motivo_negacion" class="timeline-obs timeline-obs-negada">{{ solicitudSeleccionada.motivo_negacion }}</p>
+                </div>
+              </div>
+              <div class="detalle-card">
+                <div class="detalle-card-head">
+                  <span class="detalle-card-icon detalle-card-icon-rose"><component :is="PaperclipIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="detalle-card-title detalle-card-title-rose">Soportes</p>
+                </div>
+                <div class="card-body">
+                  <div v-if="solicitudSeleccionada.adjuntos?.length" class="adjunto-list">
+                    <button
+                      v-for="adj in solicitudSeleccionada.adjuntos"
+                      :key="adj.id"
+                      type="button"
+                      class="adjunto-row"
+                      @click="abrirAdjunto(adj)"
+                    >
+                      <img v-if="thumbnails.has(adj.id)" :src="thumbnails.get(adj.id)" class="adjunto-thumb" :alt="adj.nombre_original" />
+                      <span v-else class="adjunto-icon" :class="isPdf(adj) ? 'adjunto-pdf' : 'adjunto-img'">{{ isPdf(adj) ? 'PDF' : esImagenMime(adj.mime_type) ? 'IMG' : 'DOC' }}</span>
+                      <div class="adjunto-info">
+                        <p class="adjunto-name">{{ adj.nombre_original }}</p>
+                        <p class="adjunto-meta">{{ formatFileSize(adj.tamano) }}</p>
+                      </div>
+                      <component :is="isPreviewable(adj) ? EyeIcon : DownloadIcon" class="w-3.5 h-3.5 adjunto-action-icon" />
+                    </button>
+                  </div>
+                  <p v-else class="adjunto-empty">Sin archivos adjuntos</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Body con cards -->
-          <div class="detalle-body">
-            <div class="detalle-cards-grid">
-              <!-- Card: Paciente -->
-              <div class="detalle-card detalle-card-blue">
-                <div class="detalle-card-header">
-                  <component :is="FileTextIcon" class="w-4 h-4" />
-                  <span>PACIENTE</span>
-                </div>
-                <div class="detalle-card-rows">
-                  <div class="detalle-card-row"><span class="detalle-row-label">Nombre</span><span class="detalle-row-value">{{ nombreCompleto(solicitudSeleccionada) }}</span></div>
-                  <div class="detalle-card-row"><span class="detalle-row-label">Documento</span><span class="detalle-row-value font-mono">{{ solicitudSeleccionada.tipo_documento }} {{ solicitudSeleccionada.numero_documento }}</span></div>
-                  <div class="detalle-card-row"><span class="detalle-row-label">Edad / Género</span><span class="detalle-row-value">{{ solicitudSeleccionada.edad }} años · {{ solicitudSeleccionada.genero === 'M' ? 'Masc.' : 'Fem.' }}</span></div>
-                  <div class="detalle-card-row"><span class="detalle-row-label">EPS</span><span class="detalle-row-value">{{ solicitudSeleccionada.eps }}</span></div>
-                </div>
-              </div>
-
-              <!-- Card: Remisión -->
-              <div class="detalle-card detalle-card-amber">
-                <div class="detalle-card-header">
-                  <component :is="FileTextIcon" class="w-4 h-4" />
-                  <span>REMISIÓN</span>
-                </div>
-                <div class="detalle-card-rows">
-                  <div class="detalle-card-row"><span class="detalle-row-label">Institución</span><span class="detalle-row-value">{{ solicitudSeleccionada.clinica?.nombre ?? '—' }}</span></div>
-                  <div class="detalle-card-row"><span class="detalle-row-label">Especialidad</span><span class="detalle-row-value">{{ solicitudSeleccionada.especialidad_requerida }}</span></div>
-                  <div class="detalle-card-row"><span class="detalle-row-label">Municipio</span><span class="detalle-row-value">{{ solicitudSeleccionada.municipio_capita }}</span></div>
-                  <div class="detalle-card-row"><span class="detalle-row-label">Fecha</span><span class="detalle-row-value">{{ formatFecha(solicitudSeleccionada.fecha) }} · {{ solicitudSeleccionada.hora }}</span></div>
-                  <div v-if="solicitudSeleccionada.quien_remitente" class="detalle-card-row"><span class="detalle-row-label">Remite</span><span class="detalle-row-value">{{ solicitudSeleccionada.quien_remitente }}</span></div>
-                  <div v-if="solicitudSeleccionada.telefono_contacto" class="detalle-card-row"><span class="detalle-row-label">Teléfono</span><span class="detalle-row-value font-mono">{{ solicitudSeleccionada.telefono_contacto }}</span></div>
-                  <div v-if="solicitudSeleccionada.correo_contacto" class="detalle-card-row"><span class="detalle-row-label">Correo</span><span class="detalle-row-value">{{ solicitudSeleccionada.correo_contacto }}</span></div>
-                </div>
-              </div>
-
-              <!-- Card: Diagnósticos -->
-              <div class="detalle-card detalle-card-purple">
-                <div class="detalle-card-header">
-                  <component :is="FileTextIcon" class="w-4 h-4" />
-                  <span>DIAGNÓSTICOS</span>
-                </div>
-                <div v-if="solicitudSeleccionada.diagnosticos?.length" class="detalle-dx-list">
-                  <div v-for="dx in solicitudSeleccionada.diagnosticos" :key="dx.id" class="detalle-dx-item">
-                    <strong class="detalle-dx-code">{{ dx.codigo_cie10 }}</strong>
-                    <span class="detalle-dx-desc">{{ dx.descripcion }}</span>
-                  </div>
-                </div>
-                <p v-else-if="solicitudSeleccionada.diagnostico" class="detalle-card-text">{{ solicitudSeleccionada.diagnostico }}</p>
-                <p v-else class="detalle-card-text">—</p>
-              </div>
-
-              <div v-if="solicitudSeleccionada.adjuntos?.length" class="detalle-card detalle-card-blue">
-                <div class="detalle-card-header">
-                  <component :is="PaperclipIcon" class="w-4 h-4" />
-                  <span>ARCHIVOS ADJUNTOS ({{ solicitudSeleccionada.adjuntos.length }})</span>
-                </div>
-                <div class="detalle-adjuntos-list">
-                  <button
-                    v-for="adj in solicitudSeleccionada.adjuntos"
-                    :key="adj.id"
-                    type="button"
-                    class="detalle-adjunto-item"
-                    @click="abrirAdjunto(adj)"
-                  >
-                    <component :is="FileTextIcon" class="w-4 h-4 text-blue-500 flex-shrink-0" />
-                    <span class="detalle-adjunto-name">{{ adj.nombre_original }}</span>
-                    <span class="detalle-adjunto-size">{{ formatFileSize(adj.tamano) }}</span>
-                    <component :is="isPreviewable(adj) ? EyeIcon : DownloadIcon" class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="detalle-card detalle-card-cyan mt-3">
-              <div class="detalle-card-header">
-                <component :is="FileTextIcon" class="w-4 h-4" />
-                <span>HISTORIA CLÍNICA</span>
-              </div>
-              <p class="detalle-card-text detalle-historia-preview">{{ solicitudSeleccionada.resumen_historia_clinica }}</p>
-              <button
-                v-if="solicitudSeleccionada.resumen_historia_clinica?.length > 280"
-                type="button"
-                class="detalle-historia-button"
-                @click="abrirHistoriaClinica"
-              >
-                Mostrar más
-              </button>
-            </div>
-
-            <!-- Código de aceptación -->
-            <div v-if="solicitudSeleccionada.codigo_aceptacion" class="detalle-code-bar mt-3">
-              <component :is="CheckCircleIcon" class="w-4 h-4 text-emerald-600" />
-              <span class="text-xs text-emerald-700 font-semibold">Código de aceptación</span>
-              <span class="detalle-code-value">{{ solicitudSeleccionada.codigo_aceptacion }}</span>
-            </div>
-
-            <!-- Respuesta -->
-            <div v-if="solicitudSeleccionada.nombre_quien_responde" class="detalle-card detalle-card-blue mt-3">
-              <div class="detalle-card-header">
-                <component :is="CheckCircleIcon" class="w-4 h-4" />
-                <span>RESPUESTA DEL EQUIPO</span>
-              </div>
-              <p class="text-xs text-blue-700">Respondió: <strong>{{ solicitudSeleccionada.nombre_quien_responde }}</strong> · {{ solicitudSeleccionada.hora_respuesta }}</p>
-              <p v-if="solicitudSeleccionada.observaciones_respuesta" class="text-xs text-blue-600 mt-1">{{ solicitudSeleccionada.observaciones_respuesta }}</p>
-            </div>
-
-            <!-- Motivo negación -->
-            <div v-if="solicitudSeleccionada.motivo_negacion" class="detalle-card detalle-card-red mt-3">
-              <div class="detalle-card-header detalle-card-header-red">
-                <component :is="XCircleIcon" class="w-4 h-4" />
-                <span>MOTIVO DE NEGACIÓN</span>
-              </div>
-              <p class="text-xs text-red-600 mt-1">{{ solicitudSeleccionada.motivo_negacion }}</p>
-            </div>
-
+          <!-- Footer -->
+          <div class="detalle-footer">
+            <p class="detalle-footer-note">
+              <component :is="ShieldIcon" class="w-3.5 h-3.5" />
+              La información está protegida y será tratada confidencialmente.
+            </p>
+            <button type="button" class="detalle-cerrar-btn" @click="cerrarDetalle">
+              <component :is="SendIcon" class="w-3.5 h-3.5" />
+              Cerrar
+            </button>
           </div>
         </div>
       </template>
@@ -470,94 +486,303 @@
     </el-dialog>
 
     <!-- ── Modal: Aceptar ── -->
-    <el-dialog v-model="modalAceptar" width="480px" :close-on-click-modal="false" class="accion-dialog" align-center>
-      <template #header>
-        <div class="accion-head">
-          <div class="accion-head-glow"></div>
-          <div class="accion-head-icon" style="background:rgba(34,197,94,0.2); color:#4ade80;">
-            <component :is="CheckIcon" class="w-5 h-5" />
+    <el-dialog v-model="modalAceptar" width="520px" class="accion-dialog" :show-close="false" align-center>
+      <template v-if="solicitudSeleccionada">
+        <div class="detalle-content">
+          <button type="button" class="detalle-close-btn" @click="modalAceptar = false">
+            <component :is="XIcon" class="w-4 h-4" />
+          </button>
+          <div class="detalle-head">
+            <div class="detalle-head-pattern"></div>
+            <div class="detalle-head-icon accion-icon-success">
+              <component :is="CheckIcon" class="w-6 h-6" />
+            </div>
+            <div class="detalle-head-info">
+              <p class="detalle-head-title">Aceptar solicitud</p>
+              <p class="detalle-head-sub">{{ idInterno(solicitudSeleccionada.id) }} · el paciente quedará en espera de llegada</p>
+            </div>
           </div>
-          <div class="accion-head-info">
-            <p class="accion-head-title">Aceptar solicitud</p>
-            <p class="accion-head-sub">{{ solicitudSeleccionada ? nombreCompleto(solicitudSeleccionada) : '' }}</p>
+
+          <div class="detalle-body">
+            <div class="accion-patient-card">
+              <div class="accion-patient-avatar">{{ inicialesPaciente(solicitudSeleccionada) }}</div>
+              <div class="accion-patient-info">
+                <strong>{{ nombreCompleto(solicitudSeleccionada) }}</strong>
+                <span>{{ solicitudSeleccionada.tipo_documento }} {{ solicitudSeleccionada.numero_documento }} · {{ solicitudSeleccionada.edad }} años · {{ solicitudSeleccionada.especialidad_requerida }}</span>
+              </div>
+            </div>
+
+            <div class="detalle-card">
+              <div class="card-body accion-form-body">
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                  <div>
+                    <label class="accion-field-label">Fecha</label>
+                    <el-input :model-value="formAceptar.fecha_respuesta" disabled />
+                  </div>
+                  <div>
+                    <label class="accion-field-label">Hora</label>
+                    <el-input :model-value="formAceptar.hora_respuesta" disabled />
+                  </div>
+                </div>
+                <div class="mb-2">
+                  <label class="accion-field-label">Quien responde</label>
+                  <el-input :model-value="formAceptar.nombre_quien_responde" disabled />
+                </div>
+                <div class="accion-gomedisys-callout mb-2">
+                  <div class="accion-gomedisys-callout-text">
+                    <component :is="SendIcon" class="w-3.5 h-3.5 shrink-0" />
+                    <span>¿Aún no está registrado en Gomedisys? Envíalo primero para obtener el código REF.</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="accion-gomedisys-btn"
+                    :class="{ 'accion-gomedisys-btn-enviando': enviandoGomedisysId === solicitudSeleccionada.id }"
+                    @click="abrirGomedisys(solicitudSeleccionada)"
+                  >
+                    <component :is="enviandoGomedisysId === solicitudSeleccionada.id ? Loader2Icon : SendIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': enviandoGomedisysId === solicitudSeleccionada.id }" />
+                    Enviar a Gomedisys
+                  </button>
+                </div>
+                <div class="mb-2">
+                  <label class="accion-field-label">Código Gomedisys (REF) <span class="accion-required">*</span></label>
+                  <el-input v-model="formAceptar.codigo_aceptacion" placeholder="Ej: REF00045821" />
+                  <p class="accion-field-hint">El código real que generó Gomedisys al registrar al paciente allá — no se inventa acá.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                  <div>
+                    <label class="accion-field-label">Hora de llegada <span class="accion-required">*</span></label>
+                    <el-time-select v-model="formAceptar.hora_llegada" placeholder="Seleccione" start="00:00" step="00:15" end="23:45" class="w-full" />
+                  </div>
+                  <div>
+                    <label class="accion-field-label">Lugar <span class="accion-required">*</span></label>
+                    <el-input v-model="formAceptar.lugar_llegada" placeholder="Ej: Urgencias" />
+                  </div>
+                </div>
+                <div>
+                  <label class="accion-field-label">Observaciones</label>
+                  <el-input v-model="formAceptar.observaciones_respuesta" type="textarea" :rows="3" placeholder="Opcional" />
+                </div>
+              </div>
+            </div>
           </div>
-          <div v-if="solicitudSeleccionada" class="detalle-head-id-badge">ID #{{ solicitudSeleccionada.id }}</div>
-        </div>
-      </template>
-      <div class="space-y-3 px-4 py-4">
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Fecha</label>
-            <el-input :model-value="formAceptar.fecha_respuesta" disabled />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Hora</label>
-            <el-input :model-value="formAceptar.hora_respuesta" disabled />
+
+          <div class="detalle-footer">
+            <button type="button" class="accion-cancelar-btn" @click="modalAceptar = false">Cancelar</button>
+            <button type="button" class="accion-confirmar-btn accion-confirmar-success" :disabled="procesando" @click="aceptar">
+              <component :is="procesando ? Loader2Icon : CheckIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': procesando }" />
+              Confirmar aceptación
+            </button>
           </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Nombre de quien responde</label>
-          <el-input :model-value="formAceptar.nombre_quien_responde" disabled />
-        </div>
-        <div>
-          <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Observaciones</label>
-          <el-input v-model="formAceptar.observaciones_respuesta" type="textarea" :rows="3" placeholder="Opcional" />
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="modalAceptar = false">Cancelar</el-button>
-        <el-button type="success" :loading="procesando" @click="aceptar">
-          <component :is="CheckIcon" class="w-3.5 h-3.5 mr-1" />
-          Confirmar
-        </el-button>
       </template>
     </el-dialog>
 
     <!-- ── Modal: Negar ── -->
-    <el-dialog v-model="modalNegar" width="480px" :close-on-click-modal="false" class="accion-dialog" align-center>
-      <template #header>
-        <div class="accion-head">
-          <div class="accion-head-glow"></div>
-          <div class="accion-head-icon" style="background:rgba(239,68,68,0.2); color:#f87171;">
-            <component :is="XIcon" class="w-5 h-5" />
+    <el-dialog v-model="modalNegar" width="520px" class="accion-dialog" :show-close="false" align-center>
+      <template v-if="solicitudSeleccionada">
+        <div class="detalle-content">
+          <button type="button" class="detalle-close-btn" @click="modalNegar = false">
+            <component :is="XIcon" class="w-4 h-4" />
+          </button>
+          <div class="detalle-head">
+            <div class="detalle-head-pattern"></div>
+            <div class="detalle-head-icon accion-icon-danger">
+              <component :is="XIcon" class="w-6 h-6" />
+            </div>
+            <div class="detalle-head-info">
+              <p class="detalle-head-title">Negar solicitud</p>
+              <p class="detalle-head-sub">ID #{{ solicitudSeleccionada.id }} · indica el motivo de la negación</p>
+            </div>
           </div>
-          <div class="accion-head-info">
-            <p class="accion-head-title">Negar solicitud</p>
-            <p class="accion-head-sub">{{ solicitudSeleccionada ? nombreCompleto(solicitudSeleccionada) : '' }}</p>
+
+          <div class="detalle-body">
+            <div class="accion-patient-card">
+              <div class="accion-patient-avatar">{{ inicialesPaciente(solicitudSeleccionada) }}</div>
+              <div class="accion-patient-info">
+                <strong>{{ nombreCompleto(solicitudSeleccionada) }}</strong>
+                <span>{{ solicitudSeleccionada.tipo_documento }} {{ solicitudSeleccionada.numero_documento }} · {{ solicitudSeleccionada.edad }} años · {{ solicitudSeleccionada.especialidad_requerida }}</span>
+              </div>
+            </div>
+
+            <div class="detalle-card">
+              <div class="card-body accion-form-body">
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                  <div>
+                    <label class="accion-field-label">Fecha</label>
+                    <el-input :model-value="formNegar.fecha_respuesta" disabled />
+                  </div>
+                  <div>
+                    <label class="accion-field-label">Hora</label>
+                    <el-input :model-value="formNegar.hora_respuesta" disabled />
+                  </div>
+                </div>
+                <div class="mb-2">
+                  <label class="accion-field-label">Quien responde</label>
+                  <el-input :model-value="formNegar.nombre_quien_responde" disabled />
+                </div>
+                <div class="mb-2">
+                  <label class="accion-field-label">Motivo de negación <span class="accion-required">*</span></label>
+                  <el-input v-model="formNegar.motivo_negacion" type="textarea" :rows="3" placeholder="Indique el motivo..." />
+                </div>
+                <div>
+                  <label class="accion-field-label">Observaciones adicionales</label>
+                  <el-input v-model="formNegar.observaciones_respuesta" type="textarea" :rows="2" placeholder="Opcional" />
+                </div>
+              </div>
+            </div>
           </div>
-          <div v-if="solicitudSeleccionada" class="detalle-head-id-badge">ID #{{ solicitudSeleccionada.id }}</div>
+
+          <div class="detalle-footer">
+            <button type="button" class="accion-cancelar-btn" @click="modalNegar = false">Cancelar</button>
+            <button type="button" class="accion-confirmar-btn accion-confirmar-danger" :disabled="procesando" @click="negar">
+              <component :is="procesando ? Loader2Icon : XIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': procesando }" />
+              Confirmar negación
+            </button>
+          </div>
         </div>
       </template>
-      <div class="space-y-3 px-4 py-4">
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Fecha</label>
-            <el-input :model-value="formNegar.fecha_respuesta" disabled />
+    </el-dialog>
+
+    <!-- ── Modal: Negar en lote ── -->
+    <el-dialog v-model="modalNegarLote" width="480px" class="accion-dialog" :show-close="false" align-center>
+      <div class="detalle-content">
+        <button type="button" class="detalle-close-btn" @click="modalNegarLote = false">
+          <component :is="XIcon" class="w-4 h-4" />
+        </button>
+        <div class="detalle-head">
+          <div class="detalle-head-pattern"></div>
+          <div class="detalle-head-icon accion-icon-danger">
+            <component :is="XIcon" class="w-6 h-6" />
           </div>
-          <div>
-            <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Hora</label>
-            <el-input :model-value="formNegar.hora_respuesta" disabled />
+          <div class="detalle-head-info">
+            <p class="detalle-head-title">Negar {{ seleccionadas.size }} solicitud(es)</p>
+            <p class="detalle-head-sub">El motivo se aplica a todas las seleccionadas</p>
           </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Nombre de quien responde</label>
-          <el-input :model-value="formNegar.nombre_quien_responde" disabled />
+
+        <div class="detalle-body">
+          <div class="detalle-card">
+            <div class="card-body accion-form-body">
+              <div>
+                <label class="accion-field-label">Motivo de negación <span class="accion-required">*</span></label>
+                <el-input v-model="formNegarLote.motivo_negacion" type="textarea" :rows="3" placeholder="Indique el motivo, aplica a todas las solicitudes seleccionadas..." />
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Motivo de negación <span class="text-red-400">*</span></label>
-          <el-input v-model="formNegar.motivo_negacion" type="textarea" :rows="3" placeholder="Indique el motivo..." />
-        </div>
-        <div>
-          <label class="block text-xs font-semibold mb-1" style="color:#334e70;">Observaciones adicionales</label>
-          <el-input v-model="formNegar.observaciones_respuesta" type="textarea" :rows="2" placeholder="Opcional" />
+
+        <div class="detalle-footer">
+          <button type="button" class="accion-cancelar-btn" @click="modalNegarLote = false">Cancelar</button>
+          <button type="button" class="accion-confirmar-btn accion-confirmar-danger" :disabled="procesandoLote" @click="confirmarNegarLote">
+            <component :is="procesandoLote ? Loader2Icon : XIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': procesandoLote }" />
+            Confirmar negación en lote
+          </button>
         </div>
       </div>
-      <template #footer>
-        <el-button @click="modalNegar = false">Cancelar</el-button>
-        <el-button type="danger" :loading="procesando" @click="negar">
-          <component :is="XIcon" class="w-3.5 h-3.5 mr-1" />
-          Confirmar
-        </el-button>
+    </el-dialog>
+
+    <!-- ── Modal: Resultado de enviar a Gomedisys ── -->
+    <el-dialog v-model="modalResultadoGomedisys" width="480px" class="accion-dialog" :show-close="false" align-center>
+      <template v-if="solicitudSeleccionada">
+        <div class="detalle-content">
+          <button type="button" class="detalle-close-btn" @click="modalResultadoGomedisys = false">
+            <component :is="XIcon" class="w-4 h-4" />
+          </button>
+          <div class="detalle-head">
+            <div class="detalle-head-pattern"></div>
+            <div class="detalle-head-icon" :class="resultadoGomedisysOk ? 'accion-icon-success' : 'accion-icon-danger'">
+              <component :is="resultadoGomedisysOk ? CheckCircleIcon : XCircleIcon" class="w-6 h-6" />
+            </div>
+            <div class="detalle-head-info">
+              <p class="detalle-head-title">{{ resultadoGomedisysOk ? 'Enviado a Gomedisys' : 'No se pudo enviar' }}</p>
+              <p class="detalle-head-sub">ID #{{ solicitudSeleccionada.id }} · {{ resultadoGomedisysOk ? 'diligenciado, sin guardar' : 'revisa el detalle abajo' }}</p>
+            </div>
+          </div>
+
+          <div class="detalle-body">
+            <div class="accion-patient-card">
+              <div class="accion-patient-avatar">{{ inicialesPaciente(solicitudSeleccionada) }}</div>
+              <div class="accion-patient-info">
+                <strong>{{ nombreCompleto(solicitudSeleccionada) }}</strong>
+                <span>{{ solicitudSeleccionada.tipo_documento }} {{ solicitudSeleccionada.numero_documento }} · {{ solicitudSeleccionada.edad }} años · {{ solicitudSeleccionada.especialidad_requerida }}</span>
+              </div>
+            </div>
+
+            <p class="resultado-gomedisys-mensaje">{{ resultadoGomedisysMensaje }}</p>
+          </div>
+
+          <div class="detalle-footer">
+            <button
+              type="button"
+              class="accion-confirmar-btn"
+              :class="resultadoGomedisysOk ? 'accion-confirmar-success' : 'accion-confirmar-danger'"
+              @click="modalResultadoGomedisys = false"
+            >
+              <component :is="resultadoGomedisysOk ? CheckIcon : XIcon" class="w-3.5 h-3.5" />
+              Entendido
+            </button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- ── Modal: Confirmar ingreso encontrado en Gomedisys ── -->
+    <el-dialog v-model="modalConfirmarIngreso" width="560px" class="accion-dialog" :show-close="false" align-center>
+      <template v-if="solicitudSeleccionada && datosIngresoGomedisys">
+        <div class="detalle-content">
+          <button type="button" class="detalle-close-btn" @click="modalConfirmarIngreso = false">
+            <component :is="XIcon" class="w-4 h-4" />
+          </button>
+          <div class="detalle-head">
+            <div class="detalle-head-pattern"></div>
+            <div class="detalle-head-icon accion-icon-teal">
+              <component :is="SearchIcon" class="w-6 h-6" />
+            </div>
+            <div class="detalle-head-info">
+              <p class="detalle-head-title">Confirmar ingreso</p>
+              <p class="detalle-head-sub">ID #{{ solicitudSeleccionada.id }} · verifica que sea el paciente correcto antes de completar</p>
+            </div>
+          </div>
+
+          <div class="detalle-body">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="detalle-card">
+                <div class="detalle-card-head">
+                  <span class="detalle-card-icon detalle-card-icon-blue"><component :is="UserIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="detalle-card-title detalle-card-title-blue">Datos de la solicitud</p>
+                </div>
+                <div class="card-body">
+                  <div class="data-row"><span>Nombre</span><strong>{{ nombreCompleto(solicitudSeleccionada) }}</strong></div>
+                  <div class="data-row"><span>Documento</span><strong>{{ solicitudSeleccionada.tipo_documento }} {{ solicitudSeleccionada.numero_documento }}</strong></div>
+                  <div class="data-row"><span>Edad</span><strong>{{ solicitudSeleccionada.edad }} años</strong></div>
+                  <div class="data-row"><span>Género</span><strong>{{ solicitudSeleccionada.genero === 'M' ? 'Masc.' : 'Fem.' }}</strong></div>
+                </div>
+              </div>
+              <div class="detalle-card">
+                <div class="detalle-card-head">
+                  <span class="detalle-card-icon detalle-card-icon-violet"><component :is="SearchIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="detalle-card-title detalle-card-title-violet">Encontrado en Gomedisys</p>
+                </div>
+                <div class="card-body">
+                  <div class="data-row"><span>Nombre</span><strong>{{ datosIngresoGomedisys.fullname }}</strong></div>
+                  <div class="data-row"><span>Documento</span><strong>{{ datosIngresoGomedisys.document_type }} {{ datosIngresoGomedisys.identification_number }}</strong></div>
+                  <div class="data-row"><span>Nacimiento</span><strong>{{ datosIngresoGomedisys.birthdate || '—' }}</strong></div>
+                  <div class="data-row"><span>Sexo</span><strong>{{ datosIngresoGomedisys.sex || '—' }}</strong></div>
+                  <div class="data-row"><span>N.° de ingreso</span><strong>{{ datosIngresoGomedisys.admission_number }}</strong></div>
+                  <div class="data-row"><span>Fecha de ingreso</span><strong>{{ datosIngresoGomedisys.admission_date || '—' }}</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detalle-footer">
+            <button type="button" class="accion-cancelar-btn" @click="modalConfirmarIngreso = false">Cancelar</button>
+            <button type="button" class="accion-confirmar-btn accion-confirmar-violet" :disabled="procesandoIngreso" @click="confirmarIngresoPaciente">
+              <component :is="procesandoIngreso ? Loader2Icon : CheckIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': procesandoIngreso }" />
+              Sí, es el paciente — completar
+            </button>
+          </div>
+        </div>
       </template>
     </el-dialog>
 
@@ -565,10 +790,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { usePolling } from '@/lib/usePolling';
+import { actualizarSiCambio } from '@/lib/silentRefresh';
 import { useStorage, useDebounceFn } from '@vueuse/core';
 import { ElMessageBox } from 'element-plus';
 import notify from '@/plugins/toast';
+import { exportarSolicitudPdf } from '@/lib/exportarSolicitudPdf';
 import {
   Search as SearchIcon,
   RefreshCw as RefreshIcon,
@@ -593,11 +822,24 @@ import {
   ArrowUp as ArrowUpIcon,
   ArrowDown as ArrowDownIcon,
   ArrowUpDown as ArrowUpDownIcon,
+  Send as SendIcon,
+  Shield as ShieldIcon,
+  User as UserIcon,
+  Building2 as BuildingIcon,
+  Hourglass as HourglassIcon,
+  Loader2 as Loader2Icon,
+  FileDown as FileDownIcon,
+  RotateCcw as RotateCcwIcon,
+  MoreVertical as MoreIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
+import StatCard from '@/components/ui/StatCard.vue';
+import { autocompletarEnGomedisys } from '@/lib/gomedisys';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
+const route = useRoute();
+const router = useRouter();
 
 interface Clinica {
   id: number;
@@ -622,6 +864,8 @@ interface Solicitud {
   diagnostico: string;
   diagnosticos?: { id: number; codigo_cie10: string; descripcion: string }[];
   municipio_capita: string;
+  direccion_paciente?: string;
+  telefono_paciente?: string;
   especialidad_requerida: string;
   servicio_ubicacion_actual: string;
   servicio_remision?: string;
@@ -633,14 +877,17 @@ interface Solicitud {
   gestante?: boolean;
   condicion_especial?: string;
   observaciones?: string;
-  estado: 'pendiente' | 'aceptado' | 'en_espera' | 'completado' | 'negado';
+  estado: 'pendiente' | 'en_espera' | 'completado' | 'negado';
   codigo_aceptacion?: string;
   hora_respuesta?: string;
+  hora_llegada?: string;
+  lugar_llegada?: string;
   motivo_negacion?: string;
   numero_ingreso?: number;
   nombre_quien_responde?: string;
   observaciones_respuesta?: string;
   adjuntos?: { id: number; nombre_original: string; mime_type: string; tamano: number }[];
+  eventos?: { id: number; tipo: string; titulo: string; created_at: string }[];
   created_at: string;
 }
 
@@ -651,11 +898,21 @@ const filtro = useStorage('sol-filtro', { buscar: '' });
 const buscarDebounced = ref(filtro.value.buscar);
 const updateBuscarDebounced = useDebounceFn((val: string) => { buscarDebounced.value = val; }, 300);
 watch(() => filtro.value.buscar, (val) => updateBuscarDebounced(val));
-const tabActiva = useStorage<'todas' | 'pendiente' | 'aceptado' | 'en_espera' | 'completado' | 'negado'>('sol-tab', 'todas');
+const tabActiva = useStorage<'todas' | 'pendiente' | 'en_espera'>('sol-tab', 'todas');
+// 'completado'/'negado' ya no viven aquí — si quedó guardado un tab así de
+// antes de mover esos estados al histórico, se reinicia para no mostrar una
+// tabla vacía sin explicación.
+if (tabActiva.value !== 'todas' && tabActiva.value !== 'pendiente' && tabActiva.value !== 'en_espera') {
+  tabActiva.value = 'todas';
+}
 
 const seleccionadas = ref<Set<number>>(new Set());
-const sortKey = ref<'paciente' | 'clinica' | 'especialidad'>('paciente');
-const sortDir = ref<'asc' | 'desc'>('asc');
+const sortKey = ref<'paciente' | 'clinica' | 'especialidad' | 'fecha'>('fecha');
+// Más reciente arriba por defecto, igual que en Histórico (a propósito,
+// pidió explícitamente invertir el orden que se dejó ascendente antes).
+const sortDir = ref<'asc' | 'desc'>('desc');
+const resaltarId = ref<number | null>(null);
+const idsActualizados = ref<Set<number>>(new Set());
 const paginaActual = ref(1);
 const itemsPorPagina = 15;
 
@@ -665,37 +922,68 @@ const modalAceptar = ref(false);
 const modalNegar = ref(false);
 const modalPdf = ref(false);
 const solicitudSeleccionada = ref<Solicitud | null>(null);
+const enviandoGomedisysId = ref<number | null>(null);
+const consultandoIngresoId = ref<number | null>(null);
+const modalResultadoGomedisys = ref(false);
+const resultadoGomedisysOk = ref(false);
+const resultadoGomedisysMensaje = ref('');
 const adjuntoActivo = ref<{ id: number; nombre_original: string; mime_type: string; tamano: number } | null>(null);
 
-const formAceptar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', observaciones_respuesta: '' });
+const formAceptar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', observaciones_respuesta: '' });
 const formNegar = ref({ fecha_respuesta: '', hora_respuesta: '', motivo_negacion: '', nombre_quien_responde: '', observaciones_respuesta: '' });
+
+const modalNegarLote = ref(false);
+const formNegarLote = ref({ motivo_negacion: '' });
+const procesandoLote = ref(false);
+
+interface PacienteGomedisys {
+  fullname: string;
+  identification_number: string;
+  document_type: string;
+  sex: string;
+  birthdate: string;
+  admission_number: number;
+  admission_date: string | null;
+}
+const modalConfirmarIngreso = ref(false);
+const datosIngresoGomedisys = ref<PacienteGomedisys | null>(null);
+const procesandoIngreso = ref(false);
 
 const resumen = computed(() => ({
   total: solicitudes.value.length,
   pendientes: solicitudes.value.filter(s => s.estado === 'pendiente').length,
-  aceptadas: solicitudes.value.filter(s => s.estado === 'aceptado').length,
   enEspera: solicitudes.value.filter(s => s.estado === 'en_espera').length,
-  completadas: solicitudes.value.filter(s => s.estado === 'completado').length,
-  negadas: solicitudes.value.filter(s => s.estado === 'negado').length,
 }));
 
-const tabs = computed(() => [
+const solicitudesEnEspera = computed(() => solicitudes.value.filter(s => s.estado === 'en_espera'));
+
+const tabs = computed<{ label: string; value: 'todas' | 'pendiente' | 'en_espera'; count: number }[]>(() => [
   { label: 'Todas', value: 'todas', count: resumen.value.total },
   { label: 'Pendientes', value: 'pendiente', count: resumen.value.pendientes },
-  { label: 'Aceptadas', value: 'aceptado', count: resumen.value.aceptadas },
   { label: 'En espera', value: 'en_espera', count: resumen.value.enEspera },
-  { label: 'Completadas', value: 'completado', count: resumen.value.completadas },
-  { label: 'Negadas', value: 'negado', count: resumen.value.negadas },
 ]);
 
-const statCards = [
-  { iconBackground: '#dbeafe', color: '#2563eb', icon: ClipboardListIcon, label: 'Solicitudes', sub: (n: number) => n ? `${n} registradas` : 'sin registros' },
-  { iconBackground: '#fef3c7', color: '#d97706', icon: ClockIcon, label: 'Pendientes', sub: (n: number) => n ? `${n} en espera` : 'sin pendientes' },
-  { iconBackground: '#dcfce7', color: '#16a34a', icon: CheckCircleIcon, label: 'Aceptadas', sub: (n: number) => n ? `${n} aprobadas` : 'sin aprobadas' },
-  { iconBackground: '#fee2e2', color: '#dc2626', icon: XCircleIcon, label: 'Negadas', sub: (n: number) => n ? `${n} rechazadas` : 'sin rechazos' },
-];
+/** Crecimiento real de solicitudes: conteo acumulado por corte de tiempo desde la primera registrada. */
+const crecimientoSolicitudes = computed(() => {
+  if (!solicitudes.value.length) return [];
+  const fechas = solicitudes.value
+    .map(s => s.created_at?.slice(0, 10))
+    .filter((f): f is string => !!f)
+    .sort();
+  if (!fechas.length) return [];
 
-const displayStats = ref([0, 0, 0, 0]);
+  const desde = new Date(fechas[0]);
+  const hasta = new Date();
+  const dias = Math.max(1, Math.round((hasta.getTime() - desde.getTime()) / (1000 * 60 * 60 * 24)));
+  const puntos = Math.min(14, dias + 1);
+
+  return Array.from({ length: puntos }, (_, i) => {
+    const corte = new Date(desde.getTime() + (dias * i) / (puntos - 1 || 1) * 24 * 60 * 60 * 1000);
+    return fechas.filter(f => new Date(f) <= corte).length;
+  });
+});
+
+const displayStats = ref([0, 0, 0]);
 
 function animateCounters(targets: number[]) {
   const duration = 900;
@@ -714,23 +1002,6 @@ function animateCounters(targets: number[]) {
   }, interval);
 }
 
-function cardValue(i: number): number {
-  if (i === 0) return resumen.value.total;
-  if (i === 1) return resumen.value.pendientes;
-  if (i === 2) return resumen.value.aceptadas;
-  return resumen.value.negadas;
-}
-
-const statPercents = computed(() => {
-  const total = Math.max(1, resumen.value.total);
-  return [
-    100,
-    Math.round((resumen.value.pendientes / total) * 100),
-    Math.round((resumen.value.aceptadas / total) * 100),
-    Math.round((resumen.value.negadas / total) * 100),
-  ];
-});
-
 const solicitudesFiltradas = computed(() => {
   let result = solicitudes.value.filter(s => {
     if (tabActiva.value !== 'todas' && s.estado !== tabActiva.value) return false;
@@ -748,7 +1019,8 @@ const solicitudesFiltradas = computed(() => {
     let va = '', vb = '';
     if (sortKey.value === 'paciente') { va = nombreCompleto(a).toLowerCase(); vb = nombreCompleto(b).toLowerCase(); }
     else if (sortKey.value === 'clinica') { va = (a.clinica?.nombre ?? '').toLowerCase(); vb = (b.clinica?.nombre ?? '').toLowerCase(); }
-    else { va = (a.especialidad_requerida ?? '').toLowerCase(); vb = (b.especialidad_requerida ?? '').toLowerCase(); }
+    else if (sortKey.value === 'especialidad') { va = (a.especialidad_requerida ?? '').toLowerCase(); vb = (b.especialidad_requerida ?? '').toLowerCase(); }
+    else { va = a.created_at; vb = b.created_at; }
     return va < vb ? -dir : va > vb ? dir : 0;
   });
   return result;
@@ -779,7 +1051,7 @@ function sortIcon(key: string) {
   return sortDir.value === 'asc' ? ArrowUpIcon : ArrowDownIcon;
 }
 
-function cambiarTab(tab: 'todas' | 'pendiente' | 'aceptado' | 'en_espera' | 'completado' | 'negado') {
+function cambiarTab(tab: 'todas' | 'pendiente' | 'en_espera') {
   tabActiva.value = tab;
   paginaActual.value = 1;
 }
@@ -801,54 +1073,49 @@ function toggleSeleccionTodas() {
   seleccionadas.value = s;
 }
 
-async function aceptarLote() {
-  const ids = [...seleccionadas.value];
-  const lote = solicitudes.value.filter(s => ids.includes(s.id) && s.estado === 'pendiente');
-  if (lote.length === 0) {
-    notify.warning('No hay solicitudes pendientes para aceptar');
-    return;
-  }
-  try {
-    await ElMessageBox.confirm(`¿Aceptar ${lote.length} solicitud(es)?`, 'Confirmar', { confirmButtonText: 'Aceptar', cancelButtonText: 'Cancelar', type: 'success' });
-    for (const s of lote) {
-      await http.post(`/api/solicitudes-referencia/${s.id}/aceptar`, {
-        fecha_respuesta: fechaActual(),
-        hora_respuesta: horaActual(),
-        nombre_quien_responde: authStore.user?.full_name ?? '',
-        observaciones_respuesta: 'Aceptación masiva',
-      });
-    }
-    notify.success(`${lote.length} solicitud(es) aceptada(s)`);
-    seleccionadas.value = new Set();
-    await cargar();
-  } catch (e: any) {
-    if (e !== 'cancel') notify.error('Error al aceptar en lote');
-  }
+/** Reporta cuántos del lote quedaron bien y cuántos fallaron, en vez de abortar todo en el primer error. */
+function reportarLote(resultados: PromiseSettledResult<unknown>[], verbo: string): number {
+  const ok = resultados.filter(r => r.status === 'fulfilled').length;
+  const fallidas = resultados.length - ok;
+  if (ok > 0) notify.success(`${ok} solicitud(es) ${verbo}`);
+  if (fallidas > 0) notify.error(`${fallidas} solicitud(es) no se pudieron ${verbo === 'aceptadas' ? 'aceptar' : 'negar'}`);
+  return ok;
 }
 
-async function negarLote() {
+function abrirNegarLote() {
   const ids = [...seleccionadas.value];
   const lote = solicitudes.value.filter(s => ids.includes(s.id) && s.estado !== 'negado' && s.estado !== 'completado');
   if (lote.length === 0) {
     notify.warning('No hay solicitudes para negar');
     return;
   }
+  formNegarLote.value = { motivo_negacion: '' };
+  modalNegarLote.value = true;
+}
+
+async function confirmarNegarLote() {
+  if (!formNegarLote.value.motivo_negacion.trim()) {
+    notify.warning('Indique el motivo de la negación');
+    return;
+  }
+  const ids = [...seleccionadas.value];
+  const lote = solicitudes.value.filter(s => ids.includes(s.id) && s.estado !== 'negado' && s.estado !== 'completado');
+
+  procesandoLote.value = true;
   try {
-    await ElMessageBox.confirm(`¿Negar ${lote.length} solicitud(es)?`, 'Confirmar', { confirmButtonText: 'Negar', cancelButtonText: 'Cancelar', type: 'warning' });
-    for (const s of lote) {
-      await http.post(`/api/solicitudes-referencia/${s.id}/negar`, {
-        fecha_respuesta: fechaActual(),
-        hora_respuesta: horaActual(),
-        motivo_negacion: 'Negación masiva',
-        nombre_quien_responde: authStore.user?.full_name ?? '',
-        observaciones_respuesta: '',
-      });
-    }
-    notify.success(`${lote.length} solicitud(es) negada(s)`);
+    const resultados = await Promise.allSettled(lote.map(s => http.post(`/api/solicitudes-referencia/${s.id}/negar`, {
+      fecha_respuesta: fechaActual(),
+      hora_respuesta: horaActual(),
+      motivo_negacion: formNegarLote.value.motivo_negacion,
+      nombre_quien_responde: authStore.user?.full_name ?? '',
+      observaciones_respuesta: '',
+    })));
+    reportarLote(resultados, 'negadas');
     seleccionadas.value = new Set();
+    modalNegarLote.value = false;
     await cargar();
-  } catch (e: any) {
-    if (e !== 'cancel') notify.error('Error al negar en lote');
+  } finally {
+    procesandoLote.value = false;
   }
 }
 
@@ -886,8 +1153,39 @@ function nombreCompleto(s: Solicitud) {
     .filter(Boolean).join(' ');
 }
 
+// El código ya puede venir incluido al inicio de dx.descripcion (diagnósticos
+// elegidos del catálogo en Nueva Solicitud) — se le quita antes de mostrarlo
+// junto al badge del código, para no repetirlo dos veces.
+function descripcionSinCodigo(dx: { codigo_cie10: string; descripcion: string }) {
+  if (dx.codigo_cie10 && dx.descripcion.startsWith(dx.codigo_cie10)) {
+    return dx.descripcion.slice(dx.codigo_cie10.length).replace(/^\s*—\s*/, '');
+  }
+  return dx.descripcion;
+}
+
 function estadoLabel(estado: string) {
-  return { pendiente: 'Pendiente', aceptado: 'Aceptado', en_espera: 'En espera', completado: 'Completado', negado: 'Negado' }[estado] ?? estado;
+  return { pendiente: 'Pendiente', en_espera: 'En espera', completado: 'Completado', negado: 'Negado' }[estado] ?? estado;
+}
+
+/** ID interno de la app (distinto del código REF que emite Gomedisys). */
+function idInterno(id: number): string {
+  return 'ID' + String(id).padStart(6, '0');
+}
+
+function horasDesde(fechaIso: string): number {
+  return Math.abs(Date.now() - new Date(fechaIso).getTime()) / 3_600_000;
+}
+
+function edadTexto(s: Solicitud): string {
+  const horas = horasDesde(s.created_at);
+  if (horas < 1) return 'hace instantes';
+  if (horas < 24) return `hace ${Math.floor(horas)} h`;
+  return `hace ${Math.floor(horas / 24)} día(s)`;
+}
+
+function edadClase(s: Solicitud): string {
+  const horas = horasDesde(s.created_at);
+  return horas > 6 ? 'sol-age-danger' : horas > 2 ? 'sol-age-warning' : 'sol-age-ok';
 }
 
 function formatFecha(fecha: string) {
@@ -895,6 +1193,109 @@ function formatFecha(fecha: string) {
   const d = new Date(fecha.includes('T') ? fecha : fecha + 'T00:00:00');
   if (isNaN(d.getTime())) return fecha;
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatHora(hora?: string): string {
+  if (!hora) return '';
+  const [h, m] = hora.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hora;
+  const ampm = h >= 12 ? 'p. m.' : 'a. m.';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function horaDeFecha(fecha: string): string {
+  return new Date(fecha).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+interface PasoSeguimiento {
+  titulo: string;
+  fecha: string;
+  hecho: boolean;
+  tipo: 'enviada' | 'revision' | 'aceptada' | 'negada' | 'espera' | 'completado' | 'revertido';
+}
+
+/** Línea de tiempo real de la solicitud: siempre hay un envío; el resto depende del estado y de los eventos registrados. */
+const pasosSeguimiento = computed<PasoSeguimiento[]>(() => {
+  const s = solicitudSeleccionada.value;
+  if (!s) return [];
+
+  const pasos: PasoSeguimiento[] = [{
+    titulo: 'Solicitud enviada',
+    fecha: `${formatFecha(s.fecha)} · ${formatHora(s.hora)}`,
+    hecho: true,
+    tipo: 'enviada',
+  }];
+
+  if (s.estado === 'pendiente') {
+    // Si ya se había aceptado/negado antes y alguien lo deshizo, esa
+    // decisión anterior no debe desaparecer de la vista — se muestra la
+    // última reversión antes de "En revisión".
+    const eventoRevertido = [...(s.eventos ?? [])].reverse().find(e => e.tipo === 'revertido');
+    if (eventoRevertido) {
+      pasos.push({
+        titulo: 'Devuelta a pendiente',
+        fecha: `${formatFecha(eventoRevertido.created_at)} · ${horaDeFecha(eventoRevertido.created_at)}`,
+        hecho: true,
+        tipo: 'revertido',
+      });
+    }
+    pasos.push({ titulo: 'En revisión', fecha: '—', hecho: false, tipo: 'revision' });
+    return pasos;
+  }
+
+  const respuestaFecha = s.hora_respuesta
+    ? `${formatHora(s.hora_respuesta)}${s.nombre_quien_responde ? ' · ' + s.nombre_quien_responde : ''}`
+    : '—';
+
+  if (s.estado === 'negado') {
+    pasos.push({ titulo: 'Solicitud negada', fecha: respuestaFecha, hecho: true, tipo: 'negada' });
+    return pasos;
+  }
+
+  pasos.push({ titulo: 'Solicitud aceptada', fecha: respuestaFecha, hecho: true, tipo: 'aceptada' });
+
+  const eventoEspera = s.eventos?.find(e => e.tipo === 'en_espera');
+  if (eventoEspera || s.estado === 'en_espera' || s.estado === 'completado') {
+    pasos.push({
+      titulo: 'Paciente en espera',
+      fecha: eventoEspera ? `${formatFecha(eventoEspera.created_at)} · ${horaDeFecha(eventoEspera.created_at)}` : '—',
+      hecho: !!eventoEspera,
+      tipo: 'espera',
+    });
+  }
+
+  const eventoCompletado = s.eventos?.find(e => e.tipo === 'completado');
+  if (eventoCompletado || s.estado === 'completado') {
+    pasos.push({
+      titulo: 'Paciente atendido',
+      fecha: eventoCompletado ? `${formatFecha(eventoCompletado.created_at)} · ${horaDeFecha(eventoCompletado.created_at)}` : '—',
+      hecho: !!eventoCompletado,
+      tipo: 'completado',
+    });
+  }
+
+  return pasos;
+});
+
+const ICONO_PASO: Record<PasoSeguimiento['tipo'], any> = {
+  enviada: SendIcon,
+  revision: HourglassIcon,
+  aceptada: CheckCircleIcon,
+  negada: XCircleIcon,
+  espera: ClockIcon,
+  completado: CheckCircleIcon,
+  revertido: RotateCcwIcon,
+};
+
+async function exportarPdf() {
+  const s = solicitudSeleccionada.value;
+  if (!s) return;
+  try {
+    await exportarSolicitudPdf(s);
+  } catch {
+    notify.error('No se pudo generar el PDF. Intente de nuevo.');
+  }
 }
 
 function formatFileSize(bytes: number): string {
@@ -934,7 +1335,7 @@ const zoomLevel = ref(1);
 const pantallaCompleta = ref(false);
 
 const pdfZoomUrl = computed(() => {
-  if (!pdfBlobUrl.value) return null;
+  if (!pdfBlobUrl.value) return undefined;
   return `${pdfBlobUrl.value}#zoom=${Math.round(zoomLevel.value * 100)}`;
 });
 
@@ -982,12 +1383,30 @@ function limpiarFiltros() {
   tabActiva.value = 'todas';
 }
 
+/** Resalta y hace scroll hasta la solicitud referenciada por la notificación de la campana (?resaltar=ID). */
+async function aplicarResaltado() {
+  const id = Number(route.query.resaltar);
+  if (!id) return;
+
+  resaltarId.value = id;
+  tabActiva.value = 'todas';
+  filtro.value.buscar = '';
+  buscarDebounced.value = '';
+  paginaActual.value = 1;
+
+  await nextTick();
+  document.getElementById(`sol-row-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  const { resaltar: _resaltar, ...resto } = route.query;
+  router.replace({ query: resto });
+}
+
 async function cargar() {
   try {
     cargando.value = true;
     const { data } = await http.get('/api/solicitudes-referencia');
     solicitudes.value = data.data;
-    animateCounters([resumen.value.total, resumen.value.pendientes, resumen.value.aceptadas, resumen.value.negadas]);
+    animateCounters([resumen.value.total, resumen.value.pendientes, resumen.value.enEspera]);
   } catch {
     notify.error('Error al cargar las solicitudes');
   } finally {
@@ -995,7 +1414,53 @@ async function cargar() {
   }
 }
 
+/** Refresco automático de fondo: no muestra el esqueleto de carga ni toca
+ * nada si el servidor devuelve exactamente lo mismo. Si algo cambió, resalta
+ * solo esas filas en vez de refrescar toda la tabla. */
+async function cargarSilencioso() {
+  try {
+    const statsAntes = JSON.stringify(resumen.value);
+    const { data } = await http.get('/api/solicitudes-referencia');
+    const cambiados = actualizarSiCambio(solicitudes, data.data);
+    if (cambiados.length === 0) return;
+
+    idsActualizados.value = new Set(cambiados);
+    setTimeout(() => { idsActualizados.value = new Set(); }, 3000);
+
+    if (JSON.stringify(resumen.value) !== statsAntes) {
+      animateCounters([resumen.value.total, resumen.value.pendientes, resumen.value.enEspera]);
+    }
+  } catch {
+    // Refresco de fondo: si falla, se reintenta en el siguiente ciclo sin interrumpir al usuario.
+  }
+}
+
+const thumbnails = ref<Map<number, string>>(new Map());
+
+function esImagenMime(mime?: string): boolean {
+  return !!mime && mime.startsWith('image/');
+}
+
+function limpiarThumbnails() {
+  thumbnails.value.forEach(url => URL.revokeObjectURL(url));
+  thumbnails.value = new Map();
+}
+
+async function cargarThumbnails(s: Solicitud) {
+  const imagenes = (s.adjuntos ?? []).filter(a => esImagenMime(a.mime_type));
+  for (const adj of imagenes) {
+    try {
+      const { data } = await http.get(adjuntoUrl(adj), { responseType: 'blob' });
+      thumbnails.value.set(adj.id, URL.createObjectURL(data));
+      thumbnails.value = new Map(thumbnails.value);
+    } catch {
+      // Si falla la miniatura, se muestra solo la insignia de tipo — no es crítico.
+    }
+  }
+}
+
 function verDetalle(s: Solicitud) {
+  limpiarThumbnails();
   solicitudSeleccionada.value = s;
   adjuntoActivo.value = null;
   if (pdfBlobUrl.value) {
@@ -1004,6 +1469,12 @@ function verDetalle(s: Solicitud) {
   }
   modalHistoriaClinica.value = false;
   modalDetalle.value = true;
+  cargarThumbnails(s);
+}
+
+function cerrarDetalle() {
+  modalDetalle.value = false;
+  limpiarThumbnails();
 }
 
 function abrirHistoriaClinica() {
@@ -1025,15 +1496,118 @@ function horaActual(): string {
   return `${h}:${m}`;
 }
 
+function manejarAccionFila(comando: string, s: Solicitud) {
+  const acciones: Record<string, (s: Solicitud) => void> = {
+    aceptar: abrirAceptar,
+    ingreso: consultarIngreso,
+    negar: abrirNegar,
+  };
+  acciones[comando]?.(s);
+}
+
+async function consultarIngreso(s: Solicitud) {
+  if (consultandoIngresoId.value !== null) return;
+  consultandoIngresoId.value = s.id;
+  try {
+    const { data } = await http.post(`/api/solicitudes-referencia/${s.id}/consultar-ingreso`);
+    if (data.ingreso) {
+      solicitudSeleccionada.value = s;
+      datosIngresoGomedisys.value = data.paciente;
+      modalConfirmarIngreso.value = true;
+    } else {
+      notify.info(data.message);
+    }
+  } catch (e: any) {
+    notify.error(e.response?.data?.message || 'No se pudo consultar el ingreso en Gomedisys');
+  } finally {
+    consultandoIngresoId.value = null;
+  }
+}
+
+/** Confirma que el paciente encontrado en Gomedisys es el correcto y completa la solicitud con ese número de ingreso. */
+async function confirmarIngresoPaciente() {
+  const s = solicitudSeleccionada.value;
+  const datos = datosIngresoGomedisys.value;
+  if (!s || !datos) return;
+  try {
+    procesandoIngreso.value = true;
+    const { data } = await http.post(`/api/solicitudes-referencia/${s.id}/completado`, {
+      numero_ingreso: datos.admission_number,
+    });
+    notify.success('Solicitud completada');
+    const idx = solicitudes.value.findIndex(x => x.id === s.id);
+    if (idx !== -1) solicitudes.value[idx] = data.data;
+    modalConfirmarIngreso.value = false;
+    datosIngresoGomedisys.value = null;
+  } catch (e: any) {
+    notify.error(e.response?.data?.message || 'Error al completar la solicitud');
+  } finally {
+    procesandoIngreso.value = false;
+  }
+}
+
+const verificandoTodosIngresos = ref(false);
+
+/** Revisa el ingreso en Gomedisys de todas las solicitudes en espera de una vez, en vez de una por una. */
+async function verificarTodosIngresos() {
+  if (verificandoTodosIngresos.value) return;
+  const lote = solicitudesEnEspera.value;
+  if (lote.length === 0) return;
+
+  verificandoTodosIngresos.value = true;
+  try {
+    const resultados = await Promise.allSettled(
+      lote.map(s => http.post(`/api/solicitudes-referencia/${s.id}/consultar-ingreso`)),
+    );
+    const ingresaron = resultados.filter(r => r.status === 'fulfilled' && r.value.data.ingreso).length;
+    const fallidas = resultados.filter(r => r.status === 'rejected').length;
+
+    if (ingresaron > 0) {
+      notify.success(`${ingresaron} paciente(s) ingresaron y se marcaron como completadas`);
+    } else {
+      notify.info('Ningún paciente en espera tiene ingreso registrado todavía en Gomedisys');
+    }
+    if (fallidas > 0) {
+      notify.error(`${fallidas} consulta(s) fallaron y no se pudieron verificar`);
+    }
+    await cargar();
+  } finally {
+    verificandoTodosIngresos.value = false;
+  }
+}
+
 function abrirAceptar(s: Solicitud) {
   solicitudSeleccionada.value = s;
   formAceptar.value = {
     fecha_respuesta: fechaActual(),
     hora_respuesta: horaActual(),
     nombre_quien_responde: authStore.user?.full_name ?? '',
+    codigo_aceptacion: '',
+    hora_llegada: '',
+    lugar_llegada: '',
     observaciones_respuesta: '',
   };
   modalAceptar.value = true;
+}
+
+async function abrirGomedisys(s: Solicitud) {
+  // Seguro extra además del :loading del botón — si por algo llega un
+  // segundo clic mientras el primero sigue en curso (doble clic rápido,
+  // otra fila), se ignora en vez de mandar un segundo intento que choque
+  // con el primero en la misma pestaña de Gomedisys.
+  if (enviandoGomedisysId.value !== null) return;
+  enviandoGomedisysId.value = s.id;
+  solicitudSeleccionada.value = s;
+  try {
+    const resultado = await autocompletarEnGomedisys(s);
+    resultadoGomedisysOk.value = resultado.ok;
+    resultadoGomedisysMensaje.value = resultado.ok
+      ? 'El formulario quedó diligenciado en Gomedisys, sin guardar. Revisa esa pestaña, completa lo que falte y decide tú si guardar.'
+      : (resultado.error || 'No se pudo diligenciar el formulario en Gomedisys.');
+    modalResultadoGomedisys.value = true;
+  } finally {
+    enviandoGomedisysId.value = null;
+  }
 }
 
 function abrirNegar(s: Solicitud) {
@@ -1049,19 +1623,20 @@ function abrirNegar(s: Solicitud) {
 }
 
 async function aceptar() {
-  if (!formAceptar.value.hora_respuesta || !formAceptar.value.nombre_quien_responde.trim()) {
+  if (!formAceptar.value.hora_respuesta || !formAceptar.value.nombre_quien_responde.trim()
+    || !formAceptar.value.codigo_aceptacion.trim() || !formAceptar.value.hora_llegada || !formAceptar.value.lugar_llegada.trim()) {
     notify.warning('Complete los campos obligatorios');
     return;
   }
   try {
     procesando.value = true;
     const { data } = await http.post(`/api/solicitudes-referencia/${solicitudSeleccionada.value!.id}/aceptar`, formAceptar.value);
-    notify.success('Solicitud aceptada correctamente');
+    notify.success('Solicitud aceptada: el paciente quedó en espera de llegada');
     const idx = solicitudes.value.findIndex(s => s.id === solicitudSeleccionada.value!.id);
     if (idx !== -1) solicitudes.value[idx] = data.data;
     modalAceptar.value = false;
-  } catch {
-    notify.error('Error al aceptar la solicitud');
+  } catch (e: any) {
+    notify.error(e.response?.data?.message || 'Error al aceptar la solicitud');
   } finally {
     procesando.value = false;
   }
@@ -1079,53 +1654,30 @@ async function negar() {
     const idx = solicitudes.value.findIndex(s => s.id === solicitudSeleccionada.value!.id);
     if (idx !== -1) solicitudes.value[idx] = data.data;
     modalNegar.value = false;
-  } catch {
-    notify.error('Error al negar la solicitud');
+  } catch (e: any) {
+    notify.error(e.response?.data?.message || 'Error al negar la solicitud');
   } finally {
     procesando.value = false;
   }
 }
 
-async function marcarEnEspera(s: Solicitud) {
-  try {
-    procesando.value = true;
-    const { data } = await http.post(`/api/solicitudes-referencia/${s.id}/en-espera`, {});
-    notify.success('Solicitud marcada en espera de llegada del paciente');
-    const idx = solicitudes.value.findIndex(x => x.id === s.id);
-    if (idx !== -1) solicitudes.value[idx] = data.data;
-  } catch {
-    notify.error('Error al marcar en espera');
-  } finally {
-    procesando.value = false;
-  }
-}
 
-async function marcarCompletado(s: Solicitud) {
-  try {
-    procesando.value = true;
-    const { data } = await http.post(`/api/solicitudes-referencia/${s.id}/completado`, {});
-    notify.success('Solicitud completada');
-    const idx = solicitudes.value.findIndex(x => x.id === s.id);
-    if (idx !== -1) solicitudes.value[idx] = data.data;
-  } catch {
-    notify.error('Error al completar la solicitud');
-  } finally {
-    procesando.value = false;
-  }
-}
-
-onMounted(cargar);
-
-let pollTimer: ReturnType<typeof setInterval> | null = null;
-onMounted(() => {
-  pollTimer = setInterval(() => {
-    if (!cargando.value && !modalDetalle.value && !modalAceptar.value && !modalNegar.value && !modalPdf.value && !modalHistoriaClinica.value) cargar();
-  }, 30000);
+onMounted(async () => {
+  await cargar();
+  await aplicarResaltado();
 });
 
-onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer);
+// Re-aplica el resaltado cada vez que llega un nuevo ?resaltar=ID por la
+// campana de notificaciones, aunque ya estemos en esta misma ruta (un
+// cambio de query no vuelve a montar el componente, así que onMounted solo
+// no alcanza para notificaciones repetidas).
+watch(() => route.query.resaltar, (nuevo) => {
+  if (nuevo) aplicarResaltado();
 });
+
+usePolling(() => {
+  if (!cargando.value && !modalDetalle.value && !modalAceptar.value && !modalNegar.value && !modalNegarLote.value && !modalPdf.value && !modalHistoriaClinica.value && !modalResultadoGomedisys.value && !modalConfirmarIngreso.value) cargarSilencioso();
+}, 30000);
 </script>
 
 <style scoped>
@@ -1136,73 +1688,11 @@ onUnmounted(() => {
 /* ── Stat cards ── */
 .sol-stats-bar {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: .5rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .75rem;
 }
-.sol-stat-card {
-  display: flex;
-  align-items: center;
-  gap: .6rem;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: .65rem .8rem;
-  position: relative;
-  overflow: hidden;
-  transition: transform .2s ease, box-shadow .2s ease;
-}
-.sol-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(13,45,107,.08);
-}
-.sol-stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--stat-color);
-  opacity: .8;
-}
-.sol-stat-icon {
-  width: 2.2rem; height: 2.2rem;
-  border-radius: 10px;
-  display: grid; place-items: center;
-  flex-shrink: 0;
-}
-.sol-stat-body { flex: 1; min-width: 0; }
-.sol-stat-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: .03em;
-  margin: 0;
-}
-.sol-stat-value {
-  font-size: 1.3rem;
-  font-weight: 800;
-  line-height: 1.1;
-  margin: 0;
-}
-.sol-stat-bar-track {
-  height: 3px;
-  border-radius: 2px;
-  background: #f1f5f9;
-  margin-top: .25rem;
-  overflow: hidden;
-}
-.sol-stat-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width .4s ease;
-}
-.sol-stat-delta {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 6px;
-  white-space: nowrap;
-  flex-shrink: 0;
+@media (max-width: 640px) {
+  .sol-stats-bar { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ── Tab dots ── */
@@ -1213,9 +1703,8 @@ onUnmounted(() => {
   margin-right: .3rem;
 }
 .sol-tab-dot--pendiente { background: #f59e0b; }
-.sol-tab-dot--aceptado { background: #22c55e; }
 .sol-tab-dot--en_espera { background: #3b82f6; }
-.sol-tab-dot--completado { background: #6366f1; }
+.sol-tab-dot--completado { background: #22c55e; }
 .sol-tab-dot--negado { background: #ef4444; }
 
 /* ── Bulk actions bar ── */
@@ -1258,6 +1747,22 @@ onUnmounted(() => {
 /* ── Selected row ── */
 .sol-table-row-selected {
   background: rgba(22,70,142,.04) !important;
+}
+
+/* ── Fila resaltada (llegó desde una notificación) ── */
+.sol-table-row-resaltada {
+  animation: sol-row-glow 2.2s ease-in-out 2;
+  box-shadow: inset 3px 0 0 #D97706;
+}
+@keyframes sol-row-glow {
+  0%, 100% { background: transparent; }
+  50% { background: rgba(217, 119, 6, .12); }
+}
+.sol-table-name-resaltada {
+  text-decoration: underline;
+  text-decoration-color: #D97706;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
 
 /* ── Row transitions ── */
@@ -1540,33 +2045,21 @@ onUnmounted(() => {
 /* ── Header ── */
 .sol-header {
   display: flex; align-items: center; gap: .75rem;
-  padding: .75rem 1rem;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #0D2D6B 0%, #16468E 60%, #1e3a7a 100%);
-  box-shadow: 0 6px 24px rgba(13, 45, 107, .25), inset 0 1px 0 rgba(255,255,255,0.08);
-  position: relative; overflow: hidden;
-}
-.sol-header::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, #2563eb, #60a5fa, #2563eb);
-  background-size: 200% 100%;
-  animation: solHeaderShimmer 3s linear infinite;
-}
-@keyframes solHeaderShimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  padding: .25rem 0;
 }
 .sol-header-icon {
   width: 36px; height: 36px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
-  color: #fff; flex-shrink: 0;
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  color: var(--rf-primary);
+  flex-shrink: 0;
 }
+.dark .sol-header-icon { background: rgba(99,102,241,0.15); color: #a5b4fc; }
 .sol-header-title {
-  font-size: 16px; font-weight: 800; color: #fff;
+  font-size: 16px; font-weight: 800; color: #1e293b;
   letter-spacing: 0.01em; white-space: nowrap;
 }
+.dark .sol-header-title { color: #e2e8f0; }
 .sol-header-spacer { flex: 1; }
 
 /* ── Filter bar ── */
@@ -1675,8 +2168,9 @@ onUnmounted(() => {
   vertical-align: middle;
   white-space: nowrap;
 }
-.sol-table-row { transition: background .15s ease; }
-.sol-table-row:hover { background: #f8fafc; }
+.sol-table-row { transition: background .15s ease, box-shadow .15s ease; }
+.sol-table-row:hover { background: #f8fafc; box-shadow: inset 3px 0 0 var(--rf-primary); }
+.sol-table-row:hover .sol-table-status { transform: scale(1.06); }
 .sol-table-row:last-child td { border-bottom: none; }
 .sol-th-paciente { min-width: 220px; }
 .sol-th-actions { text-align: right; }
@@ -1698,20 +2192,30 @@ onUnmounted(() => {
 .sol-table-remitente { font-size: 10px; color: #94a3b8; margin: 2px 0 0; }
 .sol-table-doc { font-size: 10px; color: #94a3b8; margin: 1px 0 0; }
 .sol-table-doc-inline { font-size: 10px; color: #94a3b8; font-weight: 400; }
+.sol-age-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+}
+.sol-age-ok { background: #f0fdf4; color: #15803d; }
+.sol-age-warning { background: #fffbeb; color: #b45309; }
+.sol-age-danger { background: #fef2f2; color: #b91c1c; }
 .sol-table-status {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 10px; border-radius: 999px;
   font-size: 10px; font-weight: 700;
+  transition: transform .2s ease;
 }
 .sol-status-dot { width: 5px; height: 5px; border-radius: 50%; }
 .sol-status-pending { background: #fef3c7; color: #d97706; }
 .sol-status-pending .sol-status-dot { background: #fbbf24; }
-.sol-status-accepted { background: #dcfce7; color: #15966a; }
-.sol-status-accepted .sol-status-dot { background: #22c55e; }
 .sol-status-waiting { background: #dbeafe; color: #1d4ed8; }
 .sol-status-waiting .sol-status-dot { background: #3b82f6; }
-.sol-status-completed { background: #e0e7ff; color: #4338ca; }
-.sol-status-completed .sol-status-dot { background: #6366f1; }
+.sol-status-completed { background: #dcfce7; color: #16a34a; }
+.sol-status-completed .sol-status-dot { background: #22c55e; }
 .sol-status-rejected { background: #fee2e2; color: #dc2626; }
 .sol-status-rejected .sol-status-dot { background: #ef4444; }
 .sol-table-actions { display: flex; justify-content: flex-end; gap: 6px; }
@@ -1772,141 +2276,175 @@ onUnmounted(() => {
 @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
 /* ── Modal Detalle ── */
-:deep(.detalle-dialog) { border-radius: 22px; overflow: hidden; box-shadow: 0 32px 80px rgba(11,35,73,.4), 0 0 0 1px rgba(255,255,255,.08); }
-:deep(.detalle-dialog .el-dialog__header) { position: absolute; top: 0; right: 0; z-index: 30; padding: 0; margin: 0; background: transparent; border: none; }
-:deep(.detalle-dialog .el-dialog__title) { display: none; }
-:deep(.detalle-dialog .el-dialog__body) { padding: 0; }
-:deep(.detalle-dialog .el-dialog__headerbtn) { position: relative; top: auto; right: auto; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
-:deep(.detalle-dialog .el-dialog__headerbtn .el-dialog__close) { color: #fff; font-size: 1.4rem; font-weight: 700; }
-:deep(.detalle-dialog .el-dialog__headerbtn:hover .el-dialog__close) { color: #e1f7ff; }
-:deep(.el-overlay) { background-color: rgba(8,27,58,.56); backdrop-filter: blur(4px); }
+:deep(.detalle-dialog) {
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(11, 35, 73, .4), 0 0 0 1px rgba(255,255,255,.08);
+}
+:deep(.detalle-dialog .el-dialog__header) { display: none; }
+:deep(.detalle-dialog .el-dialog__body) {
+  padding: 0;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar { width: 5px; }
+:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
+:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar-track { background: transparent; }
+:deep(.el-overlay) { background-color: rgba(8, 27, 58, .56); backdrop-filter: blur(4px); }
 
-.detalle-content { overflow: hidden; }
+.detalle-content { padding: 0; position: relative; background: #F8FAFC; }
 
-/* Header */
+.detalle-close-btn {
+  position: absolute;
+  top: .8rem; right: .9rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 1px solid #E2E8F0;
+  background: #fff;
+  color: #94A3B8;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.detalle-close-btn:hover { color: #DC2626; border-color: #FCA5A5; background: #FEF2F2; }
+
+/* Header claro */
 .detalle-head {
   position: relative;
-  background: linear-gradient(135deg, #0a1f4d 0%, #0D2D6B 48%, #16468E 100%);
-  padding: 22px 24px;
-  display: flex; align-items: center; gap: 14px;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .7rem 3.5rem .7rem 1.1rem;
+  background: #fff;
+  border-bottom: 1px solid #EEF2F9;
 }
-.detalle-head-glow {
-  position: absolute; top: -30px; right: -30px;
-  width: 120px; height: 120px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(126,179,255,0.2), transparent 70%);
+.detalle-head-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(79,70,229,.06) 1.4px, transparent 1.4px);
+  background-size: 15px 15px;
+  -webkit-mask-image: linear-gradient(115deg, rgba(0,0,0,.9), transparent 70%);
+  mask-image: linear-gradient(115deg, rgba(0,0,0,.9), transparent 70%);
   pointer-events: none;
 }
 .detalle-head-icon {
-  width: 44px; height: 44px; border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; z-index: 10;
-  background: rgba(255,255,255,0.12); color: #fff;
-  border: 1px solid rgba(255,255,255,0.15);
-}
-.detalle-head-info { flex: 1; z-index: 10; }
-.detalle-head-title { margin: 0; color: #fff; font-size: 17px; font-weight: 800; }
-.detalle-head-sub {
-  margin: 2px 0 0; color: rgba(255,255,255,0.55); font-size: 11px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.detalle-head-id-badge {
-  flex-shrink: 0; z-index: 10;
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.25);
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px; font-weight: 800;
+  position: relative; z-index: 1;
+  width: 36px; height: 36px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  display: grid; place-items: center;
   color: #fff;
-  letter-spacing: 0.03em;
-  font-family: monospace;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, .3);
 }
+.detalle-head-info { position: relative; z-index: 1; flex: 1; min-width: 0; }
+.detalle-head-title { margin: 0; color: #0F172A; font-size: 1rem; font-weight: 800; }
+.detalle-head-sub { margin: .15rem 0 0; color: #64748b; font-size: .7rem; }
+
 .detalle-head-badge {
-  padding: 5px 14px; border-radius: 999px;
-  font-size: 11px; font-weight: 700; flex-shrink: 0; z-index: 10;
+  position: relative; z-index: 1;
+  padding: .3rem .7rem;
+  border-radius: 999px;
+  font-size: .65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: .3rem;
 }
-.badge-pendiente { background: #f59e0b; color: #fff; }
-.badge-aceptado { background: #22c55e; color: #fff; }
-.badge-en_espera { background: #3b82f6; color: #fff; }
-.badge-completado { background: #6366f1; color: #fff; }
-.badge-negado { background: #ef4444; color: #fff; }
+.detalle-head-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.detalle-head-badge.estado-pendiente { background: #fef3c7; color: #b45309; }
+.detalle-head-badge.estado-en_espera { background: #dbeafe; color: #1d4ed8; }
+.detalle-head-badge.estado-completado { background: #dcfce7; color: #16a34a; }
+.detalle-head-badge.estado-negado { background: #fee2e2; color: #b91c1c; }
 
-/* Body */
-.detalle-body { padding: 20px 24px; background: #f1f5f9; }
-.detalle-cards-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-
-/* Card base */
-.detalle-card {
-  min-width: 0;
+.detalle-head-pdf {
+  position: relative; z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .4rem .75rem;
+  border-radius: 9px;
   background: #fff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #dce7f2;
+  color: #16468e;
+  font-size: .68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s ease;
+  flex-shrink: 0;
+}
+.detalle-head-pdf:hover { background: #eff6ff; border-color: #86b4e8; }
+
+.detalle-body {
+  padding: .7rem 1.1rem;
+}
+
+/* Cards */
+.detalle-card {
+  background: #fff;
+  border: 1px solid #d4deea;
   border-radius: 14px;
-  padding: 14px 16px;
-  border-left: 4px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(22,70,142,.05);
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(22,70,142,.07);
+  transition: box-shadow .25s ease, border-color .25s ease, transform .25s ease;
+  position: relative;
 }
-.detalle-card-blue { border-left-color: #3b82f6; }
-.detalle-card-amber { border-left-color: #f59e0b; }
-.detalle-card-purple { border-left-color: #8b5cf6; }
-.detalle-card-cyan { border-left-color: #06b6d4; }
-.detalle-card-red { border-left-color: #ef4444; background: #fef2f2; border-color: #fecaca; }
+.detalle-card:hover {
+  box-shadow: 0 10px 28px rgba(22,70,142,.14);
+  border-color: #b8c8de;
+  transform: translateY(-1px);
+}
+.detalle-card-head {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .45rem .6rem .25rem;
+}
+.detalle-card-icon {
+  width: 1.6rem; height: 1.6rem;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.detalle-card-icon-blue { background: #dbeafe; color: #2563eb; }
+.detalle-card-icon-amber { background: #fef3c7; color: #d97706; }
+.detalle-card-icon-violet { background: #ede9fe; color: #7c3aed; }
+.detalle-card-icon-slate { background: #f1f5f9; color: #475569; }
+.detalle-card-icon-rose { background: #fee2e2; color: #dc2626; }
+.detalle-card-title {
+  margin: 0;
+  font-size: .74rem;
+  font-weight: 800;
+}
+.detalle-card-title-blue { color: #1e40af; }
+.detalle-card-title-amber { color: #b45309; }
+.detalle-card-title-violet { color: #6d28d9; }
+.detalle-card-title-slate { color: #334155; }
+.detalle-card-title-rose { color: #b91c1c; }
 
-.detalle-card-header {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 800; color: #1e2d55;
-  letter-spacing: .04em; margin-bottom: 10px;
-}
-.detalle-card-header svg { color: #3b82f6; }
-.detalle-card-blue .detalle-card-header svg { color: #3b82f6; }
-.detalle-card-amber .detalle-card-header svg { color: #f59e0b; }
-.detalle-card-purple .detalle-card-header svg { color: #8b5cf6; }
-.detalle-card-cyan .detalle-card-header svg { color: #06b6d4; }
-.detalle-card-header-red svg { color: #ef4444; }
-.detalle-card-header-red { color: #dc2626; }
-
-.detalle-card-rows { display: flex; flex-direction: column; gap: 6px; }
-.detalle-card-row {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
-}
-.detalle-row-label { font-size: 11px; color: #94a3b8; flex-shrink: 0; }
-.detalle-row-value {
-  min-width: 0;
-  font-size: 12px; font-weight: 700; color: #1e293b;
-  text-align: right; overflow-wrap: break-word;
-}
-.detalle-card-text {
-  font-size: 12px; color: #475569; line-height: 1.5; margin: 0;
-  word-break: break-word; white-space: normal;
-}
-.detalle-dx-list { display: flex; flex-direction: column; gap: 6px; }
-.detalle-dx-item {
-  display: flex; align-items: baseline; gap: 8px;
-  padding: 6px 10px; border-radius: 8px;
-  background: #f5f3ff;
-}
-.detalle-dx-code {
-  font-size: 12px; font-weight: 800; color: #7c3aed;
-  font-family: monospace; flex-shrink: 0;
-}
-.detalle-dx-desc { font-size: 12px; color: #334155; }
-.detalle-historia-preview {
+.card-body { padding: 0 .6rem .45rem; }
+.card-text { font-size: .72rem; color: #334e70; line-height: 1.5; margin: 0; }
+.card-text-sm { font-size: .66rem; color: #64748b; line-height: 1.45; margin: 0; }
+.card-text-clamp {
   display: -webkit-box;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
   overflow: hidden;
 }
-.detalle-historia-button {
-  margin-top: .55rem;
-  padding: 0;
-  color: #0284c7;
-  font-size: 11px;
+.leer-mas-btn {
+  margin-top: .3rem;
+  font-size: .62rem;
   font-weight: 700;
-  background: transparent;
-  border: 0;
+  color: #2563eb;
+  background: none;
+  border: none;
   cursor: pointer;
+  padding: 0;
 }
-.detalle-historia-button:hover { color: #0369a1; text-decoration: underline; }
+.leer-mas-btn:hover { text-decoration: underline; }
 
 :deep(.historia-dialog) { border-radius: 18px; overflow: hidden; box-shadow: 0 32px 80px rgba(11,35,73,.35); }
 :deep(.historia-dialog .el-dialog__header) { margin: 0; padding: 1rem 1.25rem; background: linear-gradient(135deg, #0D2D6B, #16468E); }
@@ -1919,57 +2457,376 @@ onUnmounted(() => {
 .historia-dialog-header span { display: block; margin-top: 2px; color: rgba(255,255,255,.65); font-size: 11px; }
 .historia-dialog-text { max-height: min(55vh, 520px); margin: 0; overflow-y: auto; white-space: pre-wrap; word-break: break-word; color: #334155; font-size: 13px; line-height: 1.7; }
 
-.detalle-code-bar {
-  display: flex; align-items: center; gap: .5rem;
-  background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1px solid #a7f3d0;
-  border-radius: 12px; padding: .55rem .8rem;
+.card-dx-list { display: flex; flex-direction: column; gap: 5px; }
+.card-dx-item {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 5px 8px; border-radius: 8px;
+  background: #f5f3ff;
 }
-.detalle-code-value { margin-left: auto; font-family: monospace; font-size: .9rem; font-weight: 800; color: #166534; background: #fff; padding: .2rem .6rem; border-radius: 6px; border: 1px solid #86efac; }
+.card-dx-code {
+  font-size: 11px; font-weight: 800; color: #7c3aed;
+  font-family: monospace; flex-shrink: 0;
+}
+.card-dx-desc { font-size: 11px; color: #334155; }
 
-.detalle-actions-bar {
-  display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center;
-  padding: 1rem 1.25rem; border-top: 1px solid #e2e8f0;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .4rem;
+  padding: .12rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.data-row:last-child { border-bottom: none; }
+.data-row span { font-size: .62rem; color: #94a3b8; white-space: nowrap; }
+.data-row strong { font-size: .68rem; color: #1e293b; font-weight: 600; text-align: right; }
+
+/* Timeline (Seguimiento) */
+.timeline-item {
+  display: flex;
+  gap: .5rem;
+  align-items: flex-start;
+}
+.timeline-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+.timeline-dot {
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: #f1f5f9;
+  color: #94a3b8;
+  border: 2px solid #e2e8f0;
+  transition: all .2s ease;
+}
+.timeline-dot-done {
+  background: #dbeafe;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+.timeline-dot-negada {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+.timeline-dot-revertido {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fde68a;
+}
+.timeline-line {
+  width: 2px;
+  flex: 1;
+  min-height: 10px;
+  background: #e2e8f0;
+  margin: 1px 0;
+}
+.timeline-line-done { background: #bfdbfe; }
+.timeline-text { padding-bottom: .4rem; padding-top: 0; min-width: 0; }
+.timeline-titulo { font-size: .68rem; font-weight: 700; color: #1e293b; margin: 0; line-height: 1.2; }
+.timeline-titulo-pending { color: #94a3b8; }
+.timeline-fecha { font-size: .58rem; color: #94a3b8; margin: .05rem 0 0; }
+.timeline-obs {
+  font-size: .62rem; color: #475569; line-height: 1.4;
+  margin: .2rem 0 0 1.55rem;
+  background: #f8fafc; border-radius: 6px; padding: .3rem .5rem;
+}
+.timeline-obs-negada { background: #fef2f2; color: #b91c1c; }
+
+/* Adjuntos (Soportes) */
+.adjunto-list { display: flex; flex-direction: column; gap: .3rem; }
+.adjunto-row {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .25rem;
+  border-radius: 10px;
+  transition: background .15s ease;
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.adjunto-row:hover { background: #f8fafc; }
+.adjunto-thumb {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #e2e8f0;
+}
+.adjunto-icon {
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  font-size: .5rem;
+  font-weight: 800;
+  color: #fff;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.adjunto-pdf { background: #dc2626; }
+.adjunto-img { background: #2563eb; }
+.adjunto-info { min-width: 0; flex: 1; }
+.adjunto-name {
+  font-size: .68rem;
+  color: #334e70;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adjunto-meta { font-size: .58rem; color: #94a3b8; margin: .05rem 0 0; }
+.adjunto-action-icon { color: #94a3b8; flex-shrink: 0; }
+.adjunto-row:hover .adjunto-action-icon { color: #16468e; }
+.adjunto-empty {
+  font-size: .66rem;
+  color: #cbd5e1;
+  font-style: italic;
+  margin: 0;
+  padding: .3rem 0;
 }
 
-.detalle-footer-actions {
-  display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center;
+/* Footer */
+.detalle-footer {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .6rem 1.1rem;
+  background: #fff;
+  border-top: 1px solid #F1F5F9;
+}
+.detalle-footer-note {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  margin: 0;
+  font-size: .66rem;
+  font-weight: 500;
+  color: #94A3B8;
+}
+.detalle-cerrar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .55rem 1.1rem;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, .3);
+  transition: all .2s ease;
+  flex-shrink: 0;
+}
+.detalle-cerrar-btn:hover {
+  background: linear-gradient(135deg, #5B52F0, #8B47E8);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, .4);
 }
 
-.detalle-adjuntos-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.detalle-adjunto-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 12px; border-radius: 8px;
-  background: #f8fafc; border: 1px solid #e2e8f0;
-  text-decoration: none; transition: all .2s;
+/* ── Modales de acción (Aceptar/Negar/En espera/Completar) ── */
+:deep(.accion-dialog) {
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(11, 35, 73, .4), 0 0 0 1px rgba(255,255,255,.08);
 }
-.detalle-adjunto-item:hover { background: #eff6ff; border-color: #bfdbfe; }
-.detalle-adjunto-name { flex: 1; font-size: 12px; font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.detalle-adjunto-size { font-size: 11px; color: #94a3b8; flex-shrink: 0; }
+:deep(.accion-dialog .el-dialog__header) { display: none; }
+:deep(.accion-dialog .el-dialog__body) { padding: 0; overflow: hidden; }
 
-/* ── Modal Acción (Aceptar/Negar) ── */
-:deep(.accion-dialog) { border-radius: 22px; overflow: hidden; box-shadow: 0 32px 80px rgba(11,35,73,.4); }
-:deep(.accion-dialog .el-dialog__header) { padding: 0; margin: 0; }
-:deep(.accion-dialog .el-dialog__body) { padding: 0; }
-:deep(.accion-dialog .el-dialog__headerbtn) { z-index: 10; top: 14px; right: 14px; }
-:deep(.accion-dialog .el-dialog__headerbtn .el-dialog__close) { color: #fff; font-size: 1.1rem; }
-:deep(.accion-dialog .el-dialog__headerbtn:hover .el-dialog__close) { color: #e1f7ff; }
-:deep(.accion-dialog .el-input__wrapper),
-:deep(.accion-dialog .el-select__wrapper) { box-shadow: 0 0 0 1px #dce7f2 inset; border-radius: 10px; background: #fff; }
-:deep(.accion-dialog .el-input__wrapper:hover),
-:deep(.accion-dialog .el-select__wrapper:hover) { box-shadow: 0 0 0 1px #86b4e8 inset; }
+.accion-icon-success { background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 0 6px 16px rgba(22,163,74,.3); }
+.accion-icon-danger { background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 6px 16px rgba(220,38,38,.3); }
+.accion-icon-info { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 6px 16px rgba(37,99,235,.3); }
+.accion-icon-violet { background: linear-gradient(135deg, #818cf8, #6366f1); box-shadow: 0 6px 16px rgba(99,102,241,.3); }
+.accion-icon-amber { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 6px 16px rgba(217,119,6,.3); }
+.accion-icon-teal { background: linear-gradient(135deg, #2dd4bf, #0d9488); box-shadow: 0 6px 16px rgba(13,148,136,.3); }
 
-.accion-head {
-  position: relative; background: linear-gradient(125deg, #0d2d6b 0%, #16468e 50%, #1a3d8a 100%);
-  padding: 1.1rem 1.3rem; display: flex; align-items: center; gap: .8rem; overflow: hidden;
+.accion-patient-card {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .65rem .8rem;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #0D2D6B 0%, #16468E 100%);
+  box-shadow: 0 6px 16px rgba(13,45,107,.22);
+  margin-bottom: .6rem;
 }
-.accion-head-glow { position: absolute; top: -40px; right: -30px; width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,.06); }
-.accion-head-icon {
-  width: 2.4rem; height: 2.4rem; border-radius: 12px;
-  display: grid; place-items: center; flex-shrink: 0; z-index: 1;
-  border: 1px solid rgba(255,255,255,.2);
+.accion-patient-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 800;
 }
-.accion-head-info { flex: 1; z-index: 1; }
-.accion-head-title { margin: 0; color: #fff; font-size: .9rem; font-weight: 800; }
-.accion-head-sub { margin: .1rem 0 0; color: rgba(255,255,255,.55); font-size: .65rem; }
+.accion-patient-info { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+.accion-patient-info strong { font-size: .82rem; font-weight: 800; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.accion-patient-info span { font-size: .66rem; color: rgba(255,255,255,.75); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.accion-form-body { padding: .7rem .7rem .6rem; }
+.accion-field-label {
+  display: block;
+  font-size: .66rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: .3rem;
+}
+.accion-required { color: #dc2626; }
+.accion-field-hint { font-size: .62rem; color: #94a3b8; margin: .25rem 0 0; line-height: 1.4; }
+.accion-gomedisys-callout {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .55rem .65rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  border: 1px solid #ddd6fe;
+}
+.accion-gomedisys-callout-text {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex: 1;
+  font-size: .66rem;
+  font-weight: 600;
+  color: #6d28d9;
+  line-height: 1.35;
+}
+.accion-gomedisys-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .4rem .7rem;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: all .2s ease;
+  box-shadow: 0 3px 10px rgba(124,58,237,.3);
+}
+.accion-gomedisys-btn:hover:not(.accion-gomedisys-btn-enviando) { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(124,58,237,.4); }
+/* No se usa :disabled a propósito — un botón enfocado que se deshabilita
+   pierde el foco de golpe, y eso hacía que la página saltara de scroll al
+   dar clic en "Enviar a Gomedisys". Este estado se ve igual mientras envía,
+   pero sin quitarlo de verdad del flujo de foco (el doble clic ya está
+   bloqueado aparte, en abrirGomedisys). */
+.accion-gomedisys-btn-enviando { opacity: .6; cursor: default; pointer-events: none; }
+.accion-confirm-text {
+  font-size: .78rem;
+  color: #475569;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0 .1rem;
+}
+
+.accion-cancelar-btn {
+  padding: .55rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid #dce7f2;
+  background: #fff;
+  color: #475569;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.accion-cancelar-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+
+.accion-confirmar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .55rem 1.1rem;
+  border-radius: 10px;
+  border: none;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s ease;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.accion-confirmar-btn:disabled { opacity: .65; cursor: default; }
+.accion-confirmar-success { background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 0 4px 14px rgba(22,163,74,.3); }
+.accion-confirmar-success:hover:not(:disabled) { background: linear-gradient(135deg, #34d399, #22c55e); box-shadow: 0 6px 20px rgba(22,163,74,.4); }
+.accion-confirmar-danger { background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 4px 14px rgba(220,38,38,.3); }
+.accion-confirmar-danger:hover:not(:disabled) { background: linear-gradient(135deg, #f87171, #ef4444); box-shadow: 0 6px 20px rgba(220,38,38,.4); }
+.accion-confirmar-info { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 4px 14px rgba(37,99,235,.3); }
+.accion-confirmar-info:hover:not(:disabled) { background: linear-gradient(135deg, #60a5fa, #3b82f6); box-shadow: 0 6px 20px rgba(37,99,235,.4); }
+.accion-confirmar-violet { background: linear-gradient(135deg, #818cf8, #6366f1); box-shadow: 0 4px 14px rgba(99,102,241,.3); }
+.resultado-gomedisys-mensaje {
+  margin: 0;
+  padding: .85rem 1rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: .82rem;
+  line-height: 1.5;
+}
+.accion-confirmar-violet:hover:not(:disabled) { background: linear-gradient(135deg, #a5b4fc, #818cf8); box-shadow: 0 6px 20px rgba(99,102,241,.4); }
+.accion-confirmar-amber { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 14px rgba(217,119,6,.3); }
+.accion-confirmar-amber:hover:not(:disabled) { background: linear-gradient(135deg, #fbbf24, #f59e0b); box-shadow: 0 6px 20px rgba(217,119,6,.4); }
+</style>
+
+<style>
+/* ── Menú de acciones de la fila (teleportado al body por Element Plus,
+   por eso va sin "scoped" — el estilo normal no le llegaría) ── */
+.sol-acciones-menu {
+  min-width: 190px;
+  border-radius: 14px !important;
+  border: 1.5px solid #d7dde6 !important;
+  box-shadow: 0 14px 38px rgba(15, 23, 42, .18) !important;
+  overflow: hidden;
+}
+.sol-acciones-menu .el-dropdown-menu {
+  padding: 6px !important;
+}
+.sol-acciones-menu .el-dropdown-menu__item {
+  border-radius: 8px;
+  margin: 1px 0;
+  padding: .4rem .6rem;
+  font-size: .78rem;
+  font-weight: 500;
+  line-height: 1.3;
+  gap: .45rem;
+}
+.sol-acciones-menu .el-dropdown-menu__item i,
+.sol-acciones-menu .el-dropdown-menu__item svg {
+  font-size: .85rem;
+  margin-right: 0;
+}
+.sol-acciones-menu .el-dropdown-menu__item--divided {
+  margin-top: 5px;
+  border-top-color: #eef1f5;
+}
+.sol-acciones-menu .el-dropdown-menu__item--divided::before {
+  margin-bottom: 5px;
+}
+.sol-acciones-menu .sol-accion-success { color: #16a34a; }
+.sol-acciones-menu .sol-accion-success:hover { background: #f0fdf4; color: #15803d; }
+.sol-acciones-menu .sol-accion-info { color: #2563eb; }
+.sol-acciones-menu .sol-accion-info:hover { background: #eff6ff; color: #1d4ed8; }
+.sol-acciones-menu .sol-accion-violet { color: #6366f1; }
+.sol-acciones-menu .sol-accion-violet:hover { background: #eef2ff; color: #4f46e5; }
+.sol-acciones-menu .sol-accion-teal { color: #0d9488; }
+.sol-acciones-menu .sol-accion-teal:hover { background: #f0fdfa; color: #0f766e; }
+.sol-acciones-menu .sol-accion-danger { color: #dc2626; }
+.sol-acciones-menu .sol-accion-danger:hover { background: #fef2f2; color: #b91c1c; }
+.sol-acciones-menu .sol-accion-neutral { color: #64748b; }
+.sol-acciones-menu .sol-accion-neutral:hover { background: #f8fafc; color: #334155; }
 </style>

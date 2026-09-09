@@ -7,13 +7,15 @@
   >
     <template #reference>
       <button
-        class="w-8 h-8 rounded bg-transparent hover:bg-white/10 text-[var(--blue-300)] hover:text-white flex items-center justify-center transition-colors relative border-none cursor-pointer"
+        class="w-8 h-8 rounded flex items-center justify-center transition-colors relative border-none cursor-pointer"
+        :class="light ? 'bg-transparent hover:bg-slate-100 text-slate-500 hover:text-slate-700' : 'bg-transparent hover:bg-white/10 text-[var(--blue-300)] hover:text-white'"
         title="Notificaciones"
       >
         <BellIcon class="w-4.5 h-4.5" />
         <span
           v-if="notifications.hasUnread"
-          class="absolute top-[5px] right-[5px] min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 border border-[var(--blue-800)] text-[10px] font-bold text-white flex items-center justify-center"
+          class="absolute top-[5px] right-[5px] min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center"
+          :class="light ? 'border border-white' : 'border border-[var(--blue-800)]'"
         >
           {{ notifications.unreadCount > 9 ? '9+' : notifications.unreadCount }}
         </span>
@@ -85,10 +87,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { usePolling } from '@/lib/usePolling';
 import { ElMessageBox } from 'element-plus';
-import { useNotificationsStore, type Notification } from '@/stores/notifications';
+import { useNotificationsStore, useClinicaNotificationsStore, type Notification } from '@/stores/notifications';
 import {
   Bell as BellIcon,
   BellOff as BellOffIcon,
@@ -98,7 +101,15 @@ import {
   XCircle as XCircleIcon,
 } from '@lucide/vue';
 
-const notifications = useNotificationsStore();
+/**
+ * `light`: variante para fondos claros (portal de clínicas externas). Por
+ * defecto usa los tonos --blue-* sobre fondo oscuro (header interno).
+ * `scope`: qué bandeja de notificaciones consultar — el personal interno y
+ * las clínicas externas se autentican distinto y tienen tablas separadas.
+ */
+const props = withDefaults(defineProps<{ light?: boolean; scope?: 'interno' | 'externo' }>(), { light: false, scope: 'interno' });
+
+const notifications = props.scope === 'externo' ? useClinicaNotificationsStore() : useNotificationsStore();
 const router = useRouter();
 
 const typeIcons: Record<string, any> = {
@@ -115,20 +126,13 @@ const typeColors: Record<string, string> = {
   error: 'bg-red-100 text-red-600',
 };
 
-let pollInterval: ReturnType<typeof setInterval> | null = null;
-
 onMounted(() => {
   notifications.fetchUnreadCount();
-  pollInterval = setInterval(() => {
-    notifications.fetchUnreadCount();
-  }, 60000);
 });
 
-onUnmounted(() => {
-  if (pollInterval) {
-    clearInterval(pollInterval);
-  }
-});
+usePolling(() => {
+  notifications.fetchUnreadCount();
+}, 60000);
 
 function onOpen() {
   notifications.fetchNotifications({ force: true });

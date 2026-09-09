@@ -90,5 +90,24 @@ class FortifyServiceProvider extends ServiceProvider
                 ($credentialId ?: $request->session()->getId()).'|'.$request->ip()
             );
         });
+
+        // Se limita por NIT de la clínica (el objetivo del ataque), no solo
+        // por IP: un atacante puede rotar de IP, pero no de NIT. Con 5
+        // intentos por minuto, en los 10 minutos que dura el código OTP
+        // como máximo se prueban ~50 de las 1,000,000 combinaciones posibles.
+        RateLimiter::for('otp-verify', function (Request $request) {
+            $nit = preg_replace('/\D/', '', (string) $request->input('nit'));
+
+            return Limit::perMinute(5)->by('otp-verify|'.$nit);
+        });
+
+        // Evita que se spamee la solicitud de un código nuevo (cada solicitud
+        // invalida el código anterior no usado, así que sin límite se podría
+        // bloquear a una clínica legítima además de saturar SMS/correo).
+        RateLimiter::for('otp-request', function (Request $request) {
+            $nit = preg_replace('/\D/', '', (string) $request->input('nit'));
+
+            return Limit::perMinutes(10, 3)->by('otp-request|'.$nit.'|'.$request->ip());
+        });
     }
 }

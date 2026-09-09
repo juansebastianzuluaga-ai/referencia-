@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Autocompletar Gomedisys — Referencia",
+  "version": "1.9.5",
+  "description": "Diligencia el formulario de Registro de Referencia en Gomedisys con los datos de una solicitud ya aceptada en la aplicación de referencia. No toca login ni reCAPTCHA — usa la pestaña de Gomedisys que ya tienes abierta y logueada.",
+  "icons": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" },
+  "permissions": ["tabs", "scripting", "storage"],
+  "host_permissions": ["*://*.gomedisys.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:8020/*",
+        "http://localhost:5173/*",
+        "http://referencia.test/*"
+      ],
+      "js": ["content-bridge.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://*.gomedisys.com/*"],
+      "js": ["content-gomedisys.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

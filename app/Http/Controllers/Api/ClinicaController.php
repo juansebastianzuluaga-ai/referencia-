@@ -6,15 +6,40 @@ use App\Http\Controllers\Controller;
 use App\Mail\ClinicaAprobacion;
 use App\Mail\ClinicaRechazo;
 use App\Models\Clinica;
+use App\Services\NominatimGeocodingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Mail;
 
 class ClinicaController extends Controller
 {
+    public function __construct(private NominatimGeocodingService $geocoding) {}
+
+    private function geocodificar(Clinica $clinica): void
+    {
+        $coords = $this->geocoding->geocode($clinica->direccion, $clinica->ciudad, $clinica->departamento);
+
+        if ($coords) {
+            $clinica->update([
+                'latitud' => $coords['lat'],
+                'longitud' => $coords['lon'],
+                'geocoded_at' => now(),
+            ]);
+        }
+    }
+
     public function index(): JsonResponse
     {
-        $clinicas = Clinica::orderByRaw("FIELD(estado, 'pendiente', 'activa', 'rechazada')")
+        abort_unless(request()->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
+
+        // withCount/withMax en vez de cargar las relaciones completas: solo
+        // se necesita el número de referencias enviadas y la fecha del
+        // último envío / último acceso al portal, no las filas en sí.
+        $clinicas = Clinica::withCount('solicitudes')
+            ->withMax('solicitudes', 'created_at')
+            ->withMax('sessions', 'created_at')
+            ->orderByRaw("FIELD(estado, 'pendiente', 'activa', 'rechazada')")
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -23,6 +48,8 @@ class ClinicaController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        abort_unless($request->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
+
         $validated = $request->validate([
             'nit' => ['required', 'string', 'max:20', 'unique:clinicas,nit'],
             'nombre' => ['required', 'string', 'max:255'],
@@ -58,14 +85,18 @@ class ClinicaController extends Controller
             'estado' => 'pendiente',
         ]);
 
+        $this->geocodificar($clinica);
+
         return response()->json([
             'message' => 'Clínica creada correctamente.',
-            'data' => $clinica,
+            'data' => $clinica->fresh(),
         ], 201);
     }
 
     public function aprobar(Clinica $clinica): JsonResponse
     {
+        abort_unless(request()->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
+
         $clinica->update([
             'is_active' => true,
             'estado' => 'activa',
@@ -80,6 +111,8 @@ class ClinicaController extends Controller
 
     public function update(Request $request, Clinica $clinica): JsonResponse
     {
+        abort_unless($request->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
+
         $validated = $request->validate([
             'nit' => ['required', 'string', 'max:20', 'unique:clinicas,nit,'.$clinica->id],
             'nombre' => ['required', 'string', 'max:255'],
@@ -96,7 +129,15 @@ class ClinicaController extends Controller
             'nit.unique' => 'Ya existe una clínica registrada con este NIT.',
         ]);
 
+        $direccionCambio = $clinica->direccion !== ($validated['direccion'] ?? null)
+            || $clinica->ciudad !== ($validated['ciudad'] ?? null)
+            || $clinica->departamento !== ($validated['departamento'] ?? null);
+
         $clinica->update($validated);
+
+        if ($direccionCambio) {
+            $this->geocodificar($clinica);
+        }
 
         return response()->json([
             'message' => 'Clínica actualizada correctamente.',
@@ -106,6 +147,8 @@ class ClinicaController extends Controller
 
     public function rechazar(Request $request, Clinica $clinica): JsonResponse
     {
+        abort_unless($request->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
+
         $request->validate([
             'motivo' => ['required', 'string', 'max:500'],
         ]);
@@ -124,6 +167,8 @@ class ClinicaController extends Controller
 
     public function reactivar(Clinica $clinica): JsonResponse
     {
+        abort_unless(request()->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
+
         $clinica->update([
             'is_active' => true,
             'estado' => 'activa',
@@ -135,6 +180,8 @@ class ClinicaController extends Controller
 
     public function cargaMasiva(Request $request): JsonResponse
     {
+        abort_unless($request->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
+
         $request->validate([
             'clinicas' => ['required', 'array', 'min:1'],
             'clinicas.*.nit' => ['required', 'string', 'max:20'],

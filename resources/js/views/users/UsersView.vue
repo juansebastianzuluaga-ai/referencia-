@@ -21,24 +21,10 @@
 
     <!-- ── Stat cards ── -->
     <div class="users-stats-bar shrink-0">
-      <div
-        v-for="card in statCards"
-        :key="card.label"
-        class="users-stat-card"
-        :style="{ '--stat-color': card.color }"
-      >
-        <div class="users-stat-icon" :style="{ background: card.iconBg, color: card.color }">
-          <component :is="card.icon" class="w-4 h-4" />
-        </div>
-        <div class="users-stat-body">
-          <p class="users-stat-label">{{ card.label }}</p>
-          <p class="users-stat-value" :style="{ color: card.color }">{{ card.value }}</p>
-          <div class="users-stat-bar-track">
-            <div class="users-stat-bar-fill" :style="{ width: card.percent + '%', background: card.color }"></div>
-          </div>
-        </div>
-        <span class="users-stat-delta" :style="{ background: card.iconBg, color: card.color }">{{ card.delta }}</span>
-      </div>
+      <StatCard variant="pastel" tone="info" label="Total" :value="statTotal" comparacion="Usuarios" :icon="UsersIcon" />
+      <StatCard variant="pastel" tone="success" label="Activos" :value="statActivos" comparacion="Cuenta habilitada" :icon="UserCheckIcon" />
+      <StatCard variant="pastel" tone="danger" label="Inactivos" :value="statInactivos" comparacion="Suspendidos" :icon="UserXIcon" />
+      <StatCard variant="pastel" tone="violet" label="Con roles" :value="statConRoles" comparacion="Asignados" :icon="KeyRoundIcon" />
     </div>
 
     <!-- ── Filtros ── -->
@@ -129,6 +115,7 @@
                   <component :is="sortIcon('email')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortBy === 'email', 'opacity-30': sortBy !== 'email' }" />
                 </th>
                 <th class="users-th users-th-status">Estado</th>
+                <th class="users-th">Último acceso</th>
                 <th class="users-th users-th-roles">Roles</th>
                 <th class="users-th users-th-actions">Acciones</th>
               </tr>
@@ -138,7 +125,7 @@
                 v-for="(u, idx) in users"
                 :key="u.id"
                 class="users-table-row"
-                :class="{ 'users-table-row-selected': seleccionadas.has(u.id) }"
+                :class="{ 'users-table-row-selected': seleccionadas.has(u.id), 'users-table-row-resaltada': idsActualizados.has(u.id) }"
               >
                 <td class="users-td users-td-check">
                   <input type="checkbox" :checked="seleccionadas.has(u.id)" @change="toggleSeleccion(u.id)" class="users-checkbox" />
@@ -164,6 +151,9 @@
                   </span>
                 </td>
                 <td class="users-td">
+                  <span class="users-table-doc">{{ u.last_login_at ? formatFecha(u.last_login_at) : 'Nunca' }}</span>
+                </td>
+                <td class="users-td">
                   <div class="users-table-roles">
                     <span v-for="role in visibleRoles(u.roles)" :key="role.id" class="users-role-tag">
                       {{ role.display_name || role.name }}
@@ -173,9 +163,9 @@
                 </td>
                 <td class="users-td">
                   <div class="users-table-actions">
-                    <el-tooltip v-permission="'users.update'" :content="u.is_active ? 'Inactivar' : 'Activar'" placement="top">
+                    <el-tooltip v-permission="'users.update'" :content="u.is_active ? 'Inactivar' : 'Activar'" placement="top" :popper-options="{ strategy: 'fixed' }">
                       <button
-                        v-if="u.user_name !== 'superadmin'"
+                        v-if="!u.is_protected"
                         type="button"
                         class="users-action-btn"
                         :class="u.is_active ? 'text-amber-600 hover:bg-amber-50' : 'text-green-600 hover:bg-green-50'"
@@ -184,14 +174,14 @@
                         <component :is="u.is_active ? PowerOffIcon : PowerIcon" class="w-3.5 h-3.5" />
                       </button>
                     </el-tooltip>
-                    <el-tooltip v-permission="'users.update'" content="Editar" placement="top">
+                    <el-tooltip v-permission="'users.update'" content="Editar" placement="top" :popper-options="{ strategy: 'fixed' }">
                       <button type="button" class="users-action-btn text-blue-600 hover:bg-blue-50" @click="openDialog('edit', u)">
                         <EditIcon class="w-3.5 h-3.5" />
                       </button>
                     </el-tooltip>
-                    <el-tooltip v-permission="'users.update'" content="Cambiar contraseña" placement="top">
+                    <el-tooltip v-permission="'users.update'" content="Cambiar contraseña" placement="top" :popper-options="{ strategy: 'fixed' }">
                       <button
-                        v-if="u.user_name !== 'superadmin'"
+                        v-if="!u.is_protected"
                         type="button"
                         class="users-action-btn text-purple-600 hover:bg-purple-50"
                         @click="openPasswordDialog(u)"
@@ -199,9 +189,14 @@
                         <KeyRoundIcon class="w-3.5 h-3.5" />
                       </button>
                     </el-tooltip>
-                    <el-tooltip v-permission="'users.delete'" content="Eliminar" placement="top">
+                    <el-tooltip v-permission="'users.view'" content="Ver historial" placement="top" :popper-options="{ strategy: 'fixed' }">
+                      <button type="button" class="users-action-btn text-slate-600 hover:bg-slate-50" @click="openHistorialDialog(u)">
+                        <HistoryIcon class="w-3.5 h-3.5" />
+                      </button>
+                    </el-tooltip>
+                    <el-tooltip v-permission="'users.delete'" content="Eliminar" placement="top" :popper-options="{ strategy: 'fixed' }">
                       <button
-                        v-if="u.user_name !== 'superadmin'"
+                        v-if="!u.is_protected"
                         type="button"
                         class="users-action-btn text-red-600 hover:bg-red-50"
                         @click="deleteUser(u)"
@@ -249,11 +244,42 @@
       :user="selectedUser"
       @saved="loadUsersData"
     />
+
+    <!-- Modal de Historial de cambios -->
+    <el-dialog v-model="historialDialogVisible" width="520px" align-center>
+      <template #header>
+        <div class="flex items-center gap-2">
+          <component :is="HistoryIcon" class="w-4 h-4" />
+          <span class="font-bold text-sm">Historial de {{ historialUsuario?.full_name }}</span>
+        </div>
+      </template>
+      <div v-if="historialCargando" class="py-6 text-center text-xs text-gray-400">Cargando…</div>
+      <div v-else-if="!historialItems.length" class="py-6 text-center text-xs text-gray-400">
+        Sin cambios administrativos registrados para esta cuenta.
+      </div>
+      <div v-else class="historial-list">
+        <div v-for="(item, i) in historialItems" :key="i" class="historial-item">
+          <p class="historial-item-head">
+            <strong>{{ item.actor }}</strong>
+            <span class="historial-item-fecha">{{ formatFecha(item.created_at) }}</span>
+          </p>
+          <ul class="historial-item-cambios">
+            <li v-for="campo in Object.keys(item.new_values)" :key="campo">
+              <span class="historial-campo">{{ campoLabel(campo) }}:</span>
+              <span class="historial-old">{{ valorLegible(item.old_values[campo]) }}</span>
+              →
+              <span class="historial-new">{{ valorLegible(item.new_values[campo]) }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { usePolling } from '@/lib/usePolling';
 import { useDebounceFn } from '@vueuse/core';
 import {
   Plus as PlusIcon,
@@ -271,16 +297,20 @@ import {
   ArrowUp as ArrowUpIcon,
   ArrowDown as ArrowDownIcon,
   ArrowUpDown as ArrowUpDownIcon,
+  History as HistoryIcon,
 } from '@lucide/vue';
 import { ElMessageBox } from 'element-plus';
 import notify from '@/plugins/toast';
+import http from '@/plugins/axios';
 import UserFormDialog from '@/views/users/UserFormDialog.vue';
+import StatCard from '@/components/ui/StatCard.vue';
 import UserPasswordDialog from '@/views/users/UserPasswordDialog.vue';
 import { useUsersStore } from '@/stores/users';
 import { storeToRefs } from 'pinia';
 
 const search = ref('');
 const searchDebounced = ref('');
+const idsActualizados = ref<Set<number>>(new Set());
 const updateSearchDebounced = useDebounceFn((val: string) => { searchDebounced.value = val; }, 300);
 watch(search, (val) => updateSearchDebounced(val));
 const roleFilter = ref(null);
@@ -301,29 +331,61 @@ const dialogType = ref<'create' | 'edit'>('create');
 const selectedUser = ref<any>(null);
 const passwordDialogVisible = ref(false);
 
+const historialDialogVisible = ref(false);
+const historialUsuario = ref<any>(null);
+const historialItems = ref<Array<{ event: string; created_at: string; actor: string; old_values: Record<string, unknown>; new_values: Record<string, unknown> }>>([]);
+const historialCargando = ref(false);
+
+const CAMPO_LABEL: Record<string, string> = {
+  first_name: 'Nombre', middle_name: 'Segundo nombre', last_name: 'Apellido', sur_name: 'Segundo apellido',
+  email: 'Correo', job_title: 'Cargo', is_active: 'Estado activo', must_change_password: 'Debe cambiar contraseña',
+  must_update_profile: 'Debe actualizar perfil', user_name: 'Usuario', identification_number: 'Documento',
+};
+
+function campoLabel(campo: string): string {
+  return CAMPO_LABEL[campo] ?? campo;
+}
+
+function valorLegible(v: unknown): string {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'boolean') return v ? 'Sí' : 'No';
+  return String(v);
+}
+
+async function openHistorialDialog(user: any) {
+  historialUsuario.value = user;
+  historialDialogVisible.value = true;
+  historialCargando.value = true;
+  try {
+    const { data } = await http.get(`/api/users/${user.id}/audits`);
+    historialItems.value = data.data;
+  } catch {
+    notify.error('No se pudo cargar el historial');
+  } finally {
+    historialCargando.value = false;
+  }
+}
+
 const todasSeleccionadas = computed(() => {
   if (users.value.length === 0) return false;
   return users.value.every(u => seleccionadas.value.has(u.id));
 });
 
-const statCards = computed(() => {
-  const total = usersStore.pagination.total || users.value.length;
-  const activos = users.value.filter(u => u.is_active).length;
-  const inactivos = users.value.filter(u => !u.is_active).length;
-  const conRoles = users.value.filter(u => u.roles && u.roles.length > 0).length;
-  const pct = (n: number) => total > 0 ? Math.round((n / total) * 100) : 0;
-  return [
-    { label: 'Total', value: total, icon: UsersIcon, color: '#2563eb', iconBg: '#dbeafe', percent: 100, delta: 'Usuarios' },
-    { label: 'Activos', value: activos, icon: UserCheckIcon, color: '#16a34a', iconBg: '#dcfce7', percent: pct(activos), delta: 'En línea' },
-    { label: 'Inactivos', value: inactivos, icon: UserXIcon, color: '#dc2626', iconBg: '#fee2e2', percent: pct(inactivos), delta: 'Suspendidos' },
-    { label: 'Con roles', value: conRoles, icon: KeyRoundIcon, color: '#7c3aed', iconBg: '#ede9fe', percent: pct(conRoles), delta: 'Asignados' },
-  ];
-});
+const statTotal = computed(() => usersStore.pagination.total || users.value.length);
+const statActivos = computed(() => users.value.filter(u => u.is_active).length);
+const statInactivos = computed(() => users.value.filter(u => !u.is_active).length);
+const statConRoles = computed(() => users.value.filter(u => u.roles && u.roles.length > 0).length);
 
 function userInitials(u: any): string {
   const parts = [u.first_name, u.last_name].filter(Boolean);
   if (parts.length === 0) return '?';
   return parts.map((p: string) => p[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function formatFecha(fecha: string): string {
+  const d = new Date(fecha);
+  if (isNaN(d.getTime())) return fecha;
+  return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 function visibleRoles(roles: any[]): any[] {
@@ -370,7 +432,7 @@ function toggleSeleccionTodas() {
 
 async function bulkActivar(activar: boolean) {
   const ids = [...seleccionadas.value];
-  const lote = users.value.filter(u => ids.includes(u.id) && u.user_name !== 'superadmin' && u.is_active !== activar);
+  const lote = users.value.filter(u => ids.includes(u.id) && !u.is_protected && u.is_active !== activar);
   if (lote.length === 0) {
     notify.warning('No hay usuarios para cambiar estado');
     return;
@@ -390,7 +452,7 @@ async function bulkActivar(activar: boolean) {
 
 async function bulkEliminar() {
   const ids = [...seleccionadas.value];
-  const lote = users.value.filter(u => ids.includes(u.id) && u.user_name !== 'superadmin');
+  const lote = users.value.filter(u => ids.includes(u.id) && !u.is_protected);
   if (lote.length === 0) {
     notify.warning('No hay usuarios para eliminar');
     return;
@@ -472,7 +534,7 @@ async function toggleUserStatus(user: any) {
 }
 
 async function deleteUser(user: any) {
-  if (user.user_name === 'superadmin') {
+  if (user.is_protected) {
     notify.warning('No se puede eliminar al usuario superadmin.');
     return;
   }
@@ -515,14 +577,27 @@ function handleSizeChange(size: number) {
   loadUsersData();
 }
 
-async function loadUsersData() {
-  await usersStore.loadUsers({
+function filtrosActuales() {
+  return {
     general: searchDebounced.value || undefined,
     roles: roleFilter.value ? [roleFilter.value] : undefined,
     is_active: statusFilter.value,
     sort_by: sortBy.value,
     sort_order: sortOrder.value,
-  });
+  };
+}
+
+async function loadUsersData() {
+  await usersStore.loadUsers(filtrosActuales());
+}
+
+/** Refresco automático de fondo: sin esqueleto de carga, y solo resalta las
+ * filas que de verdad cambiaron. */
+async function loadUsersDataSilent() {
+  const cambiados = await usersStore.loadUsersSilent(filtrosActuales());
+  if (cambiados.length === 0) return;
+  idsActualizados.value = new Set(cambiados);
+  setTimeout(() => { idsActualizados.value = new Set(); }, 3000);
 }
 
 watch(searchDebounced, () => {
@@ -541,16 +616,9 @@ onMounted(async () => {
   await loadUsersData();
 });
 
-let pollTimer: ReturnType<typeof setInterval> | null = null;
-onMounted(() => {
-  pollTimer = setInterval(() => {
-    if (!usersStore.loading && !dialogVisible.value && !passwordDialogVisible.value) loadUsersData();
-  }, 30000);
-});
-
-onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer);
-});
+usePolling(() => {
+  if (!usersStore.loading && !dialogVisible.value && !passwordDialogVisible.value) loadUsersDataSilent();
+}, 30000);
 </script>
 
 <style scoped>
@@ -563,33 +631,21 @@ onUnmounted(() => {
 /* ── Header ── */
 .users-header {
   display: flex; align-items: center; gap: .75rem;
-  padding: .75rem 1rem;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #0D2D6B 0%, #16468E 60%, #1e3a7a 100%);
-  box-shadow: 0 6px 24px rgba(13, 45, 107, .25), inset 0 1px 0 rgba(255,255,255,0.08);
-  position: relative; overflow: hidden;
-}
-.users-header::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, #2563eb, #60a5fa, #2563eb);
-  background-size: 200% 100%;
-  animation: headerShine 3s linear infinite;
-}
-@keyframes headerShine {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  padding: .25rem 0;
 }
 .users-header-icon {
   width: 36px; height: 36px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
-  color: #fff; flex-shrink: 0;
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  color: var(--rf-primary);
+  flex-shrink: 0;
 }
+.dark .users-header-icon { background: rgba(99,102,241,0.15); color: #a5b4fc; }
 .users-header-title {
-  font-size: 16px; font-weight: 800; color: #fff;
+  font-size: 16px; font-weight: 800; color: #1e293b;
   letter-spacing: 0.01em; white-space: nowrap;
 }
+.dark .users-header-title { color: #e2e8f0; }
 .users-header-spacer { flex: 1; }
 
 .users-search { width: 280px; }
@@ -599,72 +655,7 @@ onUnmounted(() => {
 .users-stats-bar {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: .5rem;
-}
-.users-stat-card {
-  display: flex;
-  align-items: center;
-  gap: .6rem;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: .65rem .8rem;
-  position: relative;
-  overflow: hidden;
-  transition: transform .2s ease, box-shadow .2s ease;
-}
-.users-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(13,45,107,.08);
-}
-.users-stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--stat-color);
-  opacity: .8;
-}
-.users-stat-icon {
-  width: 2.2rem; height: 2.2rem;
-  border-radius: 10px;
-  display: grid; place-items: center;
-  flex-shrink: 0;
-}
-.users-stat-body { flex: 1; min-width: 0; }
-.users-stat-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: .03em;
-  margin: 0;
-}
-.users-stat-value {
-  font-size: 1.3rem;
-  font-weight: 800;
-  line-height: 1.1;
-  margin: 0;
-}
-.users-stat-bar-track {
-  height: 3px;
-  border-radius: 2px;
-  background: #f1f5f9;
-  margin-top: .25rem;
-  overflow: hidden;
-}
-.users-stat-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width .4s ease;
-}
-.users-stat-delta {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 6px;
-  white-space: nowrap;
-  flex-shrink: 0;
+  gap: .75rem;
 }
 
 /* ── Bulk actions bar ── */
@@ -755,9 +746,20 @@ onUnmounted(() => {
 }
 
 .users-table-row {
-  transition: background .15s ease;
+  transition: background .15s ease, box-shadow .15s ease;
 }
-.users-table-row:hover { background: #f8fafc; }
+.users-table-row:hover { background: #f8fafc; box-shadow: inset 3px 0 0 var(--rf-primary); }
+.users-table-row:hover .users-table-status { transform: scale(1.06); }
+
+/* ── Fila resaltada (actualización silenciosa en segundo plano) ── */
+.users-table-row-resaltada {
+  animation: users-row-glow 2.2s ease-in-out 2;
+  box-shadow: inset 3px 0 0 #D97706;
+}
+@keyframes users-row-glow {
+  0%, 100% { background: transparent; }
+  50% { background: rgba(217, 119, 6, .12); }
+}
 
 .users-td {
   padding: 0.6rem 0.75rem;
@@ -824,6 +826,7 @@ onUnmounted(() => {
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
+  transition: transform .2s ease;
 }
 .status-active {
   background: #dcfce7;
@@ -935,4 +938,15 @@ onUnmounted(() => {
   .users-search { width: 100%; }
   .users-filter { width: calc(50% - 0.25rem); }
 }
+
+/* ── Historial de cambios ── */
+.historial-list { display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; }
+.historial-item { border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; }
+.historial-item-head { display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 4px; }
+.historial-item-fecha { font-size: 10.5px; color: #94a3b8; }
+.historial-item-cambios { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.historial-item-cambios li { font-size: 11px; color: #475569; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.historial-campo { font-weight: 700; color: #334155; }
+.historial-old { color: #dc2626; text-decoration: line-through; }
+.historial-new { color: #16a34a; font-weight: 600; }
 </style>

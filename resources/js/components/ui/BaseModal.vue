@@ -47,7 +47,7 @@
           <el-button :icon="XIcon" @click="handleClose">{{ cancelText }}</el-button>
           <el-button
             v-if="mode !== 'close-only'"
-            type="primary"
+            :type="confirmType"
             :icon="confirmIcon"
             :loading="loading"
             @click="emit('confirm')"
@@ -78,6 +78,7 @@ withDefaults(defineProps<{
   cancelText?: string;
   confirmText?: string;
   confirmIcon?: LucideIcon;
+  confirmType?: 'primary' | 'success' | 'warning' | 'danger';
   destroyOnClose?: boolean;
   closeOnClickModal?: boolean;
   /** Ignored: BaseModal always renders its own close button in the header. Declared to prevent fallthrough to el-dialog. */
@@ -92,6 +93,7 @@ withDefaults(defineProps<{
   cancelText: 'Cancelar',
   confirmText: 'Guardar',
   confirmIcon: () => SaveIcon,
+  confirmType: 'primary',
   destroyOnClose: true,
   closeOnClickModal: false,
 });

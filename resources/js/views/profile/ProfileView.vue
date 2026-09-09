@@ -1,39 +1,6 @@
 <template>
   <div class="profile-page h-full flex flex-col gap-2 p-3 sm:p-4 overflow-auto">
 
-    <!-- ── Hero ── -->
-    <div class="profile-hero shrink-0 animate-fade-in-up"
-      style="animation-duration: 0.4s; animation-fill-mode: both;">
-      <div class="profile-hero-glow"></div>
-      <div class="profile-hero-pattern"></div>
-      <div class="profile-hero-content">
-        <div class="profile-hero-avatar">
-          {{ userInitials }}
-        </div>
-        <div class="profile-hero-info">
-          <h1 class="profile-hero-name">{{ auth.user?.full_name || 'Usuario' }}</h1>
-          <p class="profile-hero-role">{{ auth.user?.job_title || 'Personal interno' }}</p>
-          <div class="profile-hero-tags">
-            <span v-for="role in auth.user?.roles" :key="role.name" class="profile-hero-tag">
-              {{ role.display_name || role.name }}
-            </span>
-          </div>
-        </div>
-        <div class="profile-hero-spacer"></div>
-        <div class="profile-hero-stats">
-          <div class="profile-hero-stat">
-            <span class="profile-hero-stat-num">{{ auth.user?.user_name }}</span>
-            <span class="profile-hero-stat-label">Usuario</span>
-          </div>
-          <div class="profile-hero-divider"></div>
-          <div class="profile-hero-stat">
-            <span class="profile-hero-stat-num">{{ auth.user?.email }}</span>
-            <span class="profile-hero-stat-label">Correo</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- ── Content ── -->
     <div class="profile-content-panel flex-1 overflow-auto">
       <el-tabs v-model="activeTab" class="profile-tabs">
@@ -189,12 +156,6 @@ const activeTab = ref((route.query.tab as string) || 'profile');
 const loading = ref(false);
 const savingProfile = ref(false);
 const savingPassword = ref(false);
-
-const userInitials = computed(() => {
-  const name = auth.user?.first_name || 'U';
-  const lastName = auth.user?.last_name || '';
-  return `${name.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-});
 
 const profileFormRef = ref<FormInstance>();
 const passwordFormRef = ref<FormInstance>();
@@ -392,115 +353,6 @@ watch(activeTab, async (newTab) => {
   background: linear-gradient(160deg, #eef4fc 0%, #e3edf8 40%, #f0f5fa 100%);
 }
 
-/* ── Hero ── */
-.profile-hero {
-  position: relative;
-  overflow: hidden;
-  border-radius: 16px;
-  padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, #0D2D6B 0%, #16468E 50%, #1a5290 100%);
-  box-shadow: 0 8px 32px rgba(13,45,107,.25);
-}
-.profile-hero-glow {
-  position: absolute;
-  top: -40px; right: -30px;
-  width: 180px; height: 180px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(126,179,255,0.2), transparent 70%);
-  pointer-events: none;
-}
-.profile-hero-pattern {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0);
-  background-size: 22px 22px;
-  pointer-events: none;
-}
-.profile-hero-content {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  position: relative;
-  z-index: 1;
-}
-.profile-hero-avatar {
-  width: 56px; height: 56px;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.15);
-  border: 2px solid rgba(255,255,255,0.2);
-  color: #fff;
-  font-size: 20px;
-  font-weight: 800;
-  display: grid; place-items: center;
-  flex-shrink: 0;
-  backdrop-filter: blur(10px);
-}
-.profile-hero-info {
-  flex: 1;
-  min-width: 0;
-}
-.profile-hero-name {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #fff;
-  line-height: 1.2;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.profile-hero-role {
-  font-size: 12px;
-  color: rgba(255,255,255,0.6);
-  margin: .15rem 0 0;
-}
-.profile-hero-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .25rem;
-  margin-top: .35rem;
-}
-.profile-hero-tag {
-  font-size: 10px;
-  font-weight: 600;
-  padding: .15rem .5rem;
-  border-radius: 6px;
-  background: rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.85);
-}
-.profile-hero-spacer { flex-shrink: 0; }
-.profile-hero-stats {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-shrink: 0;
-}
-.profile-hero-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-.profile-hero-stat-num {
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
-  white-space: nowrap;
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.profile-hero-stat-label {
-  font-size: 9px;
-  color: rgba(255,255,255,0.45);
-  text-transform: uppercase;
-  letter-spacing: .05em;
-}
-.profile-hero-divider {
-  width: 1px;
-  height: 28px;
-  background: rgba(255,255,255,0.15);
-}
-
 /* ── Content panel ── */
 .profile-content-panel {
   background: rgba(255,255,255,0.92);
@@ -513,10 +365,5 @@ watch(activeTab, async (newTab) => {
 
 .profile-tabs :deep(.el-tabs__header) {
   margin-bottom: 1.5rem;
-}
-
-@media (max-width: 768px) {
-  .profile-hero-content { flex-wrap: wrap; }
-  .profile-hero-stats { display: none; }
 }
 </style>

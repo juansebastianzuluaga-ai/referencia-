@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 
-#[Fillable(['user_id', 'type', 'title', 'message', 'link', 'read_at'])]
+#[Fillable(['user_id', 'clinica_id', 'type', 'title', 'message', 'link', 'read_at'])]
 class Notification extends Model implements Auditable
 {
     use HasAuditableTags, HasFactory, SoftDeletes;
@@ -25,6 +25,11 @@ class Notification extends Model implements Auditable
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function clinica(): BelongsTo
+    {
+        return $this->belongsTo(Clinica::class);
     }
 
     public function scopeUnread($query)

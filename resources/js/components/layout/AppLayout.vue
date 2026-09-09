@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-screen overflow-hidden text-gray-700" style="background:#e8ecf1;">
+  <div class="flex flex-col h-screen overflow-hidden text-gray-700" :style="{ background: layout.isDarkMode ? '#0b0e17' : 'var(--rf-bg)' }">
     <AppHeader />
 
     <!-- Overlay móvil -->
@@ -12,7 +12,7 @@
     <div class="flex flex-1 overflow-hidden pt-[56px]">
       <AppSidebar />
 
-      <main class="flex-1 flex flex-col min-h-0 p-4 overflow-hidden" style="background:#e8ecf1;">
+      <main class="flex-1 flex flex-col min-h-0 p-4 overflow-hidden" :style="{ background: layout.isDarkMode ? '#0b0e17' : 'var(--rf-bg)' }">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />

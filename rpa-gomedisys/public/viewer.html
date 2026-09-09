@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Sesión en vivo — Gomedisys (prueba)</title>
+<style>
+  body { margin: 0; font-family: system-ui, sans-serif; background: #1e293b; color: #e2e8f0; }
+  #barra { display: flex; align-items: center; gap: .75rem; padding: .6rem 1rem; background: #0f172a; }
+  #barra button { padding: .45rem .9rem; border-radius: 8px; border: none; background: #4F46E5; color: #fff; font-weight: 600; cursor: pointer; }
+  #barra button:hover { background: #6366f1; }
+  #estado { font-size: .82rem; color: #94a3b8; flex: 1; }
+  #lienzo-envoltorio { display: flex; justify-content: center; padding: 1rem; }
+  canvas { border: 1px solid #334155; border-radius: 8px; cursor: default; max-width: 100%; height: auto; }
+  #entrada-oculta { position: absolute; top: -1000px; left: -1000px; opacity: 0; }
+</style>
+</head>
+<body>
+  <div id="barra">
+    <strong>Sesión en vivo — Gomedisys (prueba)</strong>
+    <button id="btn-autocompletar" disabled>Autocompletar</button>
+    <span id="estado">Conectando...</span>
+  </div>
+  <div id="lienzo-envoltorio">
+    <canvas id="lienzo" width="1280" height="800"></canvas>
+  </div>
+  <input id="entrada-oculta" autocomplete="off" />
+
+  <script>
+    const lienzo = document.getElementById('lienzo');
+    const ctx = lienzo.getContext('2d');
+    const estadoEl = document.getElementById('estado');
+    const btnAutocompletar = document.getElementById('btn-autocompletar');
+    const entradaOculta = document.getElementById('entrada-oculta');
+
+    const ws = new WebSocket(`ws://${location.host}`);
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+
+    ws.onopen = () => { estadoEl.textContent = 'Conectado. Iniciando sesión...'; };
+    ws.onclose = () => { estadoEl.textContent = 'Sesión cerrada.'; btnAutocompletar.disabled = true; };
+    ws.onerror = () => { estadoEl.textContent = 'Error de conexión.'; };
+
+    ws.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'ready') {
+        lienzo.width = msg.width;
+        lienzo.height = msg.height;
+        btnAutocompletar.disabled = false;
+      } else if (msg.type === 'frame') {
+        img.src = 'data:image/jpeg;base64,' + msg.data;
+      } else if (msg.type === 'status') {
+        estadoEl.textContent = msg.mensaje;
+      } else if (msg.type === 'error') {
+        estadoEl.textContent = '✗ ' + msg.mensaje;
+      }
+    };
+
+    function enviar(obj) {
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+    }
+
+    // ── Mouse: se convierte la posición del clic en el canvas (que puede
+    // estar escalado en pantalla) a coordenadas reales de la página remota.
+    function coordenadasReales(ev) {
+      const rect = lienzo.getBoundingClientRect();
+      const escalaX = lienzo.width / rect.width;
+      const escalaY = lienzo.height / rect.height;
+      return {
+        x: Math.round((ev.clientX - rect.left) * escalaX),
+        y: Math.round((ev.clientY - rect.top) * escalaY),
+      };
+    }
+
+    lienzo.addEventListener('mousemove', (ev) => {
+      const { x, y } = coordenadasReales(ev);
+      enviar({ type: 'mousemove', x, y });
+    });
+    lienzo.addEventListener('mousedown', (ev) => {
+      entradaOculta.focus();
+      const { x, y } = coordenadasReales(ev);
+      enviar({ type: 'mousedown', x, y, button: 'left' });
+    });
+    lienzo.addEventListener('mouseup', (ev) => {
+      const { x, y } = coordenadasReales(ev);
+      enviar({ type: 'mouseup', x, y, button: 'left' });
+    });
+    lienzo.addEventListener('wheel', (ev) => {
+      ev.preventDefault();
+      const { x, y } = coordenadasReales(ev);
+      enviar({ type: 'wheel', x, y, deltaX: ev.deltaX, deltaY: ev.deltaY });
+    }, { passive: false });
+    lienzo.addEventListener('contextmenu', (ev) => ev.preventDefault());
+
+    // ── Teclado: un input oculto siempre enfocado captura el texto real
+    // que se escribe (maneja bien acentos/autocompletado del sistema), y
+    // por separado se reenvían teclas especiales (Enter, Backspace, etc.)
+    // que no producen texto directamente.
+    let valorAnterior = '';
+    entradaOculta.addEventListener('input', () => {
+      const actual = entradaOculta.value;
+      if (actual.length > valorAnterior.length) {
+        const nuevoTexto = actual.slice(valorAnterior.length);
+        enviar({ type: 'keydown', text: nuevoTexto });
+      }
+      valorAnterior = actual;
+      // Se limpia seguido para no acumular texto indefinidamente.
+      if (actual.length > 20) {
+        entradaOculta.value = '';
+        valorAnterior = '';
+      }
+    });
+
+    const TECLAS_ESPECIALES = ['Enter', 'Backspace', 'Tab', 'Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Delete'];
+    entradaOculta.addEventListener('keydown', (ev) => {
+      if (TECLAS_ESPECIALES.includes(ev.key)) {
+        enviar({ type: 'keydown', key: ev.key, code: ev.code });
+      }
+    });
+    entradaOculta.addEventListener('keyup', (ev) => {
+      if (TECLAS_ESPECIALES.includes(ev.key)) {
+        enviar({ type: 'keyup', key: ev.key, code: ev.code });
+      }
+    });
+
+    lienzo.addEventListener('click', () => entradaOculta.focus());
+    window.addEventListener('load', () => entradaOculta.focus());
+
+    btnAutocompletar.addEventListener('click', () => {
+      enviar({ type: 'autocompletar' });
+    });
+  </script>
+</body>
+</html>

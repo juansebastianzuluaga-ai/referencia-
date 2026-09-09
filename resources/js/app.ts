@@ -4,6 +4,8 @@ import ElementPlus from 'element-plus';
 import es from 'element-plus/es/locale/lang/es';
 import 'element-plus/dist/index.css';
 import VueApexCharts from 'vue3-apexcharts';
+import 'highcharts/esm/highcharts-3d';
+import { Chart as HighchartsChart } from 'highcharts-vue';
 import { MotionPlugin } from '@vueuse/motion';
 import '../css/tailwind.css';
 import '../css/app.scss';
@@ -24,6 +26,7 @@ app.use(ElementPlus, {
 app.use(MotionPlugin);
 app.directive('permission', PermissionDirective);
 app.component('apexchart', VueApexCharts);
+app.component('highcharts-chart', HighchartsChart);
 app.component('FloatingTooltip', FloatingTooltip);
 
 app.mount('#app');

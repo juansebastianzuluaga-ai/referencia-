@@ -153,6 +153,8 @@ declare global {
   const useBrowserLocation: typeof import('@vueuse/core').useBrowserLocation
   const useCached: typeof import('@vueuse/core').useCached
   const useClinicaAuthStore: typeof import('./stores/clinicaAuth').useClinicaAuthStore
+  const useClinicaLayoutStore: typeof import('./stores/clinicaLayout').useClinicaLayoutStore
+  const useClinicaNotificationsStore: typeof import('./stores/notifications').useClinicaNotificationsStore
   const useClipboard: typeof import('@vueuse/core').useClipboard
   const useClipboardItems: typeof import('@vueuse/core').useClipboardItems
   const useCloned: typeof import('@vueuse/core').useCloned
@@ -492,6 +494,8 @@ declare module 'vue' {
     readonly useBrowserLocation: UnwrapRef<typeof import('@vueuse/core')['useBrowserLocation']>
     readonly useCached: UnwrapRef<typeof import('@vueuse/core')['useCached']>
     readonly useClinicaAuthStore: UnwrapRef<typeof import('./stores/clinicaAuth')['useClinicaAuthStore']>
+    readonly useClinicaLayoutStore: UnwrapRef<typeof import('./stores/clinicaLayout')['useClinicaLayoutStore']>
+    readonly useClinicaNotificationsStore: UnwrapRef<typeof import('./stores/notifications')['useClinicaNotificationsStore']>
     readonly useClipboard: UnwrapRef<typeof import('@vueuse/core')['useClipboard']>
     readonly useClipboardItems: UnwrapRef<typeof import('@vueuse/core')['useClipboardItems']>
     readonly useCloned: UnwrapRef<typeof import('@vueuse/core')['useCloned']>

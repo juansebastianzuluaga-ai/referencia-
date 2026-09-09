@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\Clinica;
 
 use App\Http\Controllers\Controller;
 use App\Mail\NuevaSolicitudReferenciaInterna;
+use App\Models\CiudadGomedisys;
 use App\Models\Clinica;
 use App\Models\ClinicaSession;
+use App\Models\DiagnosticoCie10;
 use App\Models\Notification;
 use App\Models\SolicitudReferencia;
 use App\Models\SolicitudReferenciaAdjunto;
@@ -51,6 +53,64 @@ class SolicitudReferenciaController extends Controller
         return response()->json(['data' => $solicitudes]);
     }
 
+    /**
+     * Busca en el catálogo real de diagnósticos CIE-10 (importado directo
+     * de la tabla `diagnostics` de Gomedisys — ver migración
+     * create_diagnosticos_cie10_table) por código o por descripción. Antes
+     * el formulario filtraba una lista fija de 332 códigos de categoría
+     * incompletos (ej. "B34" en vez de "B34.2"), que Gomedisys nunca
+     * reconocía — ahora busca contra los ~12.500 códigos específicos que sí
+     * existen allá.
+     */
+    public function buscarDiagnosticosCie10(Request $request): JsonResponse
+    {
+        $clinicaId = $this->getClinicaId($request);
+
+        if (! $clinicaId) {
+            return response()->json(['message' => 'No autenticado'], 401);
+        }
+
+        $buscar = trim((string) $request->query('buscar', ''));
+
+        if ($buscar === '') {
+            return response()->json(['data' => []]);
+        }
+
+        $resultados = DiagnosticoCie10::query()
+            ->where(function ($q) use ($buscar) {
+                $q->where('codigo', 'like', $buscar.'%')
+                    ->orWhere('descripcion', 'like', '%'.$buscar.'%');
+            })
+            ->orderByRaw('CASE WHEN codigo LIKE ? THEN 0 ELSE 1 END', [$buscar.'%'])
+            ->orderBy('descripcion')
+            ->limit(20)
+            ->get(['codigo', 'descripcion']);
+
+        return response()->json(['data' => $resultados]);
+    }
+
+    /**
+     * Catálogo completo de municipios de Gomedisys (importado directo de su
+     * tabla `generalPoliticalDivisions` — ver migración
+     * create_ciudades_gomedisys_table), para la lista desplegable del campo
+     * "Municipio". Se manda completo (~1.100 filas) para que el formulario
+     * solo permita elegir de la lista real en vez de escribir texto libre,
+     * que podía tener errores de formato o nombres que Gomedisys no
+     * reconocía al buscar.
+     */
+    public function listarCiudadesGomedisys(Request $request): JsonResponse
+    {
+        $clinicaId = $this->getClinicaId($request);
+
+        if (! $clinicaId) {
+            return response()->json(['message' => 'No autenticado'], 401);
+        }
+
+        $ciudades = CiudadGomedisys::orderBy('nombre')->get(['nombre']);
+
+        return response()->json(['data' => $ciudades]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $clinicaId = $this->getClinicaId($request);
@@ -73,15 +133,18 @@ class SolicitudReferenciaController extends Controller
             'eps' => ['required', 'string', 'max:120'],
             'diagnostico' => ['nullable', 'string', 'max:400'],
             'diagnosticos' => ['nullable', 'array'],
-            'diagnosticos.*.codigo_cie10' => ['required', 'string', 'max:20'],
+            'diagnosticos.*.codigo_cie10' => ['nullable', 'string', 'max:20'],
             'diagnosticos.*.descripcion' => ['required', 'string', 'max:400'],
             'municipio_capita' => ['required', 'string', 'max:120'],
+            // Mismos límites que #addressPatient / #telecomPatient en Gomedisys.
+            'direccion_paciente' => ['nullable', 'string', 'max:25'],
+            'telefono_paciente' => ['nullable', 'string', 'max:15', 'regex:/^[0-9]*$/'],
             'especialidad_requerida' => ['required', 'string', 'max:120'],
             'servicio_ubicacion_actual' => ['required', 'string', 'max:60'],
             'servicio_remision' => ['nullable', 'string', 'max:60'],
-            'quien_remitente' => ['nullable', 'string', 'max:200'],
-            'telefono_contacto' => ['nullable', 'string', 'max:30'],
-            'correo_contacto' => ['nullable', 'email', 'max:150'],
+            'quien_remitente' => ['required', 'string', 'max:200'],
+            'telefono_contacto' => ['required', 'string', 'max:30'],
+            'correo_contacto' => ['required', 'email', 'max:150'],
             'resumen_historia_clinica' => ['required', 'string'],
             'via_contacto' => ['nullable', 'string', 'max:20'],
             'gestante' => ['nullable', 'boolean'],
@@ -95,6 +158,12 @@ class SolicitudReferenciaController extends Controller
         $validated['hora'] ??= now()->format('H:i');
         $validated['clinica_id'] = $clinicaId;
         $validated['estado'] = 'pendiente';
+        // Normaliza el espacio alrededor de la coma ("Palmira,Valle del
+        // Cauca" → "Palmira, Valle del Cauca") — Gomedisys siempre muestra
+        // sus municipios con ese formato exacto, y sin el espacio la
+        // extensión que autocompleta el registro no encuentra la opción
+        // aunque sí exista en su catálogo.
+        $validated['municipio_capita'] = trim(preg_replace('/\s*,\s*/', ', ', $validated['municipio_capita']));
 
         $adjuntos = $validated['adjuntos'] ?? [];
         $diagnosticos = $validated['diagnosticos'] ?? [];
@@ -104,7 +173,7 @@ class SolicitudReferenciaController extends Controller
 
         foreach ($diagnosticos as $dx) {
             $solicitud->diagnosticos()->create([
-                'codigo_cie10' => $dx['codigo_cie10'],
+                'codigo_cie10' => $dx['codigo_cie10'] ?? '',
                 'descripcion' => $dx['descripcion'],
             ]);
         }
@@ -134,7 +203,7 @@ class SolicitudReferenciaController extends Controller
             titulo: 'Nueva solicitud de referencia',
             mensaje: "La institución \"{$clinica->nombre}\" solicita referencia para el paciente {$paciente} — {$validated['especialidad_requerida']}.",
             tipo: 'warning',
-            link: '/solicitudes-referencia',
+            link: "/solicitudes-referencia?resaltar={$solicitud->id}",
         );
 
         $destinatarios = User::permission('clinicas.view')

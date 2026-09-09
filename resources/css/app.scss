@@ -38,6 +38,24 @@
   --el-color-primary-light-8: var(--blue-100);
   --el-color-primary-light-9: var(--blue-50);
   --el-color-primary-dark-2: var(--blue-700);
+
+  /*
+   * Paleta clara ("rf-*") del portal de clínicas externas (ClinicaLayout.vue
+   * + ClinicaDashboardView.vue). Deliberadamente separada de --blue-*: esa
+   * escala alimenta el tema de Element Plus para TODA la app (interno
+   * incluido) y no se toca. rf-* es aditiva y solo la usan esos archivos.
+   */
+  --rf-primary: #0d2d6b;
+  --rf-primary-2: #16468e;
+  --rf-bg: #f6f7fb;
+  --rf-info-tint: #eef2ff;
+  --rf-info: #4f46e5;
+  --rf-success-tint: #dcfce7;
+  --rf-success: #16a34a;
+  --rf-warning-tint: #fef3c7;
+  --rf-warning: #d97706;
+  --rf-danger-tint: #fee2e2;
+  --rf-danger: #dc2626;
 }
 
 body {

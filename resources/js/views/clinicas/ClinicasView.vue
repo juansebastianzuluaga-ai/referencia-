@@ -9,44 +9,48 @@
       </div>
       <h1 class="clinic-header-title">Clínicas registradas</h1>
       <div class="clinic-header-spacer"></div>
-      <el-button type="primary" size="small" @click="cargar">
-        <component :is="RefreshIcon" class="w-3.5 h-3.5 mr-1" />
-        Actualizar
-      </el-button>
-      <el-button type="success" size="small" @click="abrirCargaMasiva">
-        <component :is="UploadIcon" class="w-3.5 h-3.5 mr-1" />
-        Carga masiva
-      </el-button>
-      <el-button type="warning" size="small" @click="abrirNuevaClinica">
-        <component :is="PlusIcon" class="w-3.5 h-3.5 mr-1" />
-        Nueva clínica
-      </el-button>
+      <el-tooltip content="Actualizar" placement="top">
+        <el-button circle size="small" @click="cargar">
+          <component :is="RefreshIcon" class="w-3.5 h-3.5" />
+        </el-button>
+      </el-tooltip>
       <el-button size="small" @click="exportarExcel" :disabled="clinicasFiltradas.length === 0">
         <component :is="DownloadIcon" class="w-3.5 h-3.5 mr-1" />
         Exportar
+      </el-button>
+      <div class="clinic-header-divider"></div>
+      <el-button plain size="small" @click="abrirCargaMasiva">
+        <component :is="UploadIcon" class="w-3.5 h-3.5 mr-1" />
+        Carga masiva
+      </el-button>
+      <el-button type="primary" size="small" @click="abrirNuevaClinica">
+        <component :is="PlusIcon" class="w-3.5 h-3.5 mr-1" />
+        Nueva clínica
       </el-button>
     </div>
 
     <!-- ── Stat cards ── -->
     <div class="clinic-stats-bar shrink-0">
-      <div
-        v-for="card in statCards"
-        :key="card.label"
-        class="clinic-stat-card"
-        :style="{ '--stat-color': card.color, '--stat-bg': card.iconBg }"
-      >
-        <div class="clinic-stat-icon" :style="{ background: card.iconBg, color: card.color }">
-          <component :is="card.icon" class="w-4 h-4" />
-        </div>
-        <div class="clinic-stat-body">
-          <p class="clinic-stat-label">{{ card.label }}</p>
-          <p class="clinic-stat-value" :style="{ color: card.color }">{{ card.value }}</p>
-          <div class="clinic-stat-bar-track">
-            <div class="clinic-stat-bar-fill" :style="{ width: card.percent + '%', background: card.color }"></div>
-          </div>
-        </div>
-        <span class="clinic-stat-delta" :style="{ background: card.deltaBg, color: card.deltaColor }">{{ card.delta }}</span>
-      </div>
+      <StatCard
+        variant="pastel" tone="info"
+        label="Total clínicas" :value="clinicas.length" comparacion="Registradas"
+        :icon="HospitalIcon" :sparkline="crecimientoClinicas"
+      />
+      <StatCard
+        variant="pastel" tone="warning"
+        label="Pendientes" :value="resumen.pendientes" comparacion="En revisión"
+        :icon="ClockIcon"
+      />
+      <StatCard
+        variant="pastel" tone="success"
+        label="Activas" :value="resumen.activas" comparacion="Aprobadas"
+        :icon="ShieldCheck"
+      />
+      <StatCard
+        variant="pastel" tone="danger"
+        label="Rechazadas" :value="resumen.rechazadas" comparacion="Rechazadas"
+        :icon="AlertTriangle"
+      />
     </div>
 
     <!-- ── Tabs + Búsqueda ── -->
@@ -89,14 +93,16 @@
         <el-button type="success" size="small" @click="aprobarLote">
           <component :is="CheckIcon" class="w-3 h-3 mr-0.5" /> Aprobar
         </el-button>
-        <el-button type="danger" size="small" @click="rechazarLote">
+        <el-button type="danger" size="small" @click="abrirRechazoLote">
           <component :is="XIcon" class="w-3 h-3 mr-0.5" /> Rechazar
         </el-button>
         <el-button size="small" text @click="seleccionadas.clear()">Limpiar</el-button>
       </div>
     </Transition>
 
-    <!-- ── Tabla ── -->
+    <!-- ── Mapa + Tabla ── -->
+    <div class="flex-1 flex gap-2 overflow-hidden">
+    <MapaClinicas ref="mapaRef" :clinicas="clinicas" class="clinic-map-col shrink-0" />
     <div class="flex-1 overflow-hidden clinic-table-panel">
       <!-- Loading -->
       <div v-if="cargando" class="clinic-table-loading">
@@ -154,7 +160,7 @@
                 v-for="(clinica, idx) in clinicasPaginadas"
                 :key="clinica.id"
                 class="clinic-table-row"
-                :class="{ 'clinic-table-row-selected': seleccionadas.has(clinica.id) }"
+                :class="{ 'clinic-table-row-selected': seleccionadas.has(clinica.id), 'clinic-table-row-resaltada': idsActualizados.has(clinica.id) }"
               >
                 <td class="clinic-table-td clinic-table-td-check">
                   <input type="checkbox" :checked="seleccionadas.has(clinica.id)" @change="toggleSeleccion(clinica.id)" class="clinic-checkbox" />
@@ -166,7 +172,7 @@
                     </div>
                     <div>
                       <p class="clinic-table-name">{{ clinica.nombre }}</p>
-                      <p class="clinic-table-email">{{ clinica.email }}</p>
+                      <a :href="`mailto:${clinica.email}`" class="clinic-table-email" @click.stop>{{ clinica.email }}</a>
                     </div>
                   </div>
                 </td>
@@ -184,34 +190,23 @@
                 </td>
                 <td class="clinic-table-td">
                   <div class="clinic-table-actions">
-                    <el-button
-                      v-if="clinica.estado !== 'activa'"
-                      type="success"
-                      size="small"
-                      :loading="procesando === clinica.id + '_aprobar'"
-                      @click="aprobar(clinica)"
-                    >
-                      <component :is="CheckIcon" class="w-3 h-3 mr-0.5" />
-                      {{ clinica.estado === 'rechazada' ? 'Reactivar' : 'Aprobar' }}
-                    </el-button>
-                    <el-button
-                      v-if="clinica.estado !== 'rechazada'"
-                      type="danger"
-                      size="small"
-                      :loading="procesando === clinica.id + '_rechazar'"
-                      @click="abrirRechazo(clinica)"
-                    >
-                      <component :is="XIcon" class="w-3 h-3 mr-0.5" />
-                      Rechazar
-                    </el-button>
-                    <el-button size="small" @click="verDetalle(clinica)">
-                      <component :is="EyeIcon" class="w-3 h-3 mr-0.5" />
-                      Ver
-                    </el-button>
-                    <el-button size="small" type="warning" plain @click="abrirEditar(clinica)">
-                      <component :is="EditIcon" class="w-3 h-3 mr-0.5" />
-                      Editar
-                    </el-button>
+                    <el-tooltip :key="`ver-${clinica.id}`" content="Ver detalle" placement="top" :popper-options="{ strategy: 'fixed' }">
+                      <el-button circle size="small" @click="verDetalle(clinica)">
+                        <component :is="EyeIcon" class="w-3.5 h-3.5" />
+                      </el-button>
+                    </el-tooltip>
+                    <el-dropdown trigger="click" placement="bottom-end" :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [8, 8] } }] }" popper-class="clinic-acciones-menu" @command="(cmd: string) => manejarAccionFila(cmd, clinica)">
+                      <el-button circle size="small" :loading="procesando === clinica.id + '_aprobar' || procesando === clinica.id + '_rechazar'">
+                        <component :is="MoreIcon" class="w-3.5 h-3.5" />
+                      </el-button>
+                      <template #dropdown>
+                        <el-dropdown-menu>
+                          <el-dropdown-item v-if="clinica.estado !== 'activa'" command="aprobar" :icon="CheckIcon" class="clinic-accion-success">{{ clinica.estado === 'rechazada' ? 'Reactivar' : 'Aprobar' }}</el-dropdown-item>
+                          <el-dropdown-item v-if="clinica.estado !== 'rechazada'" command="rechazar" :icon="XIcon" class="clinic-accion-danger">Rechazar</el-dropdown-item>
+                          <el-dropdown-item command="editar" :icon="EditIcon" class="clinic-accion-neutral" divided>Editar</el-dropdown-item>
+                        </el-dropdown-menu>
+                      </template>
+                    </el-dropdown>
                   </div>
                 </td>
               </tr>
@@ -236,18 +231,29 @@
         </div>
       </div>
     </div>
+    </div>
 
     <!-- Modal: Detalle -->
-    <BaseModal v-model="modalDetalle" width="620px" class="detalle-clinica-dialog" align-center :title="'Detalle de clínica'" :subtitle="clinicaSeleccionada ? clinicaSeleccionada.nit + ' · ' + clinicaSeleccionada.nombre : ''">
+    <el-dialog
+      v-model="modalDetalle"
+      width="640px"
+      class="detalle-clinica-dialog"
+      :show-close="false"
+      append-to-body
+      align-center
+    >
       <template v-if="clinicaSeleccionada">
         <div class="detalle-clinica-content">
-          <!-- Header azul -->
+          <button type="button" class="detalle-close-btn" @click="modalDetalle = false">
+            <component :is="XIcon" class="w-4 h-4" />
+          </button>
+
           <div class="detalle-head">
-            <div class="detalle-head-glow"></div>
+            <div class="detalle-head-pattern"></div>
             <div class="detalle-head-icon">
-              <component :is="clinicaSeleccionada.estado === 'activa' ? ShieldCheck : clinicaSeleccionada.estado === 'rechazada' ? AlertTriangle : ClockIcon" class="w-6 h-6" />
+              <component :is="BuildingIcon" class="w-6 h-6" />
             </div>
-            <div class="z-10 flex-1 min-w-0">
+            <div class="detalle-head-info">
               <p class="detalle-head-title">Detalle de clínica</p>
               <p class="detalle-head-sub">{{ clinicaSeleccionada.nit }} · {{ clinicaSeleccionada.nombre }}</p>
             </div>
@@ -264,122 +270,116 @@
           <div class="detalle-body">
             <div class="detalle-cards-grid">
               <!-- Card: Información General -->
-              <div class="detalle-card detalle-card-blue">
-                <div class="detalle-card-header">
-                  <component :is="BuildingIcon" class="w-4 h-4" />
-                  <span>INFORMACIÓN GENERAL</span>
+              <div class="detalle-card">
+                <div class="detalle-card-head">
+                  <span class="detalle-card-icon detalle-card-icon-blue"><component :is="BuildingIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="detalle-card-title detalle-card-title-blue">Información general</p>
                 </div>
-                <div class="detalle-card-rows">
-                  <div class="detalle-card-row">
-                    <span class="detalle-card-row-label">Nombre</span>
-                    <span class="detalle-card-row-value">{{ clinicaSeleccionada.nombre }}</span>
-                  </div>
-                  <div class="detalle-card-row">
-                    <span class="detalle-card-row-label">NIT</span>
-                    <span class="detalle-card-row-value font-mono">{{ clinicaSeleccionada.nit }}</span>
-                  </div>
-                  <div class="detalle-card-row">
-                    <span class="detalle-card-row-label">Razón social</span>
-                    <span class="detalle-card-row-value">{{ clinicaSeleccionada.razon_social || '—' }}</span>
-                  </div>
-                  <div class="detalle-card-row">
-                    <span class="detalle-card-row-label">Fecha</span>
-                    <span class="detalle-card-row-value">{{ formatFecha(clinicaSeleccionada.created_at) }}</span>
-                  </div>
+                <div class="card-body">
+                  <div class="data-row"><span>Nombre</span><strong>{{ clinicaSeleccionada.nombre }}</strong></div>
+                  <div class="data-row"><span>NIT</span><strong class="font-mono">{{ clinicaSeleccionada.nit }}</strong></div>
+                  <div class="data-row"><span>Razón social</span><strong>{{ clinicaSeleccionada.razon_social || '—' }}</strong></div>
+                  <div class="data-row"><span>Fecha</span><strong>{{ formatFecha(clinicaSeleccionada.created_at) }}</strong></div>
                 </div>
               </div>
 
               <!-- Card: Ubicación -->
-              <div class="detalle-card detalle-card-green">
-                <div class="detalle-card-header">
-                  <component :is="HospitalIcon" class="w-4 h-4" />
-                  <span>UBICACIÓN</span>
+              <div class="detalle-card">
+                <div class="detalle-card-head">
+                  <span class="detalle-card-icon detalle-card-icon-amber"><component :is="HospitalIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="detalle-card-title detalle-card-title-amber">Ubicación</p>
                 </div>
-                <div class="detalle-card-rows">
-                  <div class="detalle-card-row">
-                    <span class="detalle-card-row-label">Ciudad</span>
-                    <span class="detalle-card-row-value">{{ clinicaSeleccionada.ciudad }}</span>
-                  </div>
-                  <div class="detalle-card-row">
-                    <span class="detalle-card-row-label">Departamento</span>
-                    <span class="detalle-card-row-value">{{ clinicaSeleccionada.departamento }}</span>
-                  </div>
-                  <div class="detalle-card-row">
-                    <span class="detalle-card-row-label">Dirección</span>
-                    <span class="detalle-card-row-value">{{ clinicaSeleccionada.direccion }}</span>
-                  </div>
-                  <div class="detalle-card-row">
-                    <span class="detalle-card-row-label">Teléfono</span>
-                    <span class="detalle-card-row-value">{{ clinicaSeleccionada.telefono }}</span>
+                <div class="card-body">
+                  <div class="data-row"><span>Ciudad</span><strong>{{ clinicaSeleccionada.ciudad }}</strong></div>
+                  <div class="data-row"><span>Departamento</span><strong>{{ clinicaSeleccionada.departamento }}</strong></div>
+                  <div class="data-row"><span>Dirección</span><strong>{{ clinicaSeleccionada.direccion }}</strong></div>
+                  <div class="data-row">
+                    <span>Teléfono</span>
+                    <a v-if="clinicaSeleccionada.telefono" :href="`tel:${clinicaSeleccionada.telefono}`" class="detalle-card-row-link">{{ clinicaSeleccionada.telefono }}</a>
+                    <strong v-else>—</strong>
                   </div>
                 </div>
               </div>
 
-              <!-- Card: Representante -->
-              <div class="detalle-card detalle-card-purple">
-                <div class="detalle-card-header">
-                  <component :is="ShieldCheck" class="w-4 h-4" />
-                  <span>REPRESENTANTE LEGAL</span>
+              <!-- Card: Persona a cargo -->
+              <div class="detalle-card">
+                <div class="detalle-card-head">
+                  <span class="detalle-card-icon detalle-card-icon-violet"><component :is="UserIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="detalle-card-title detalle-card-title-violet">Persona a cargo</p>
                 </div>
-                <div class="detalle-card-rows">
-                  <div class="detalle-card-row">
-                    <span class="detalle-card-row-label">Nombre</span>
-                    <span class="detalle-card-row-value">{{ clinicaSeleccionada.representante_legal }}</span>
-                  </div>
-                  <div class="detalle-card-row">
-                    <span class="detalle-card-row-label">Cédula</span>
-                    <span class="detalle-card-row-value font-mono">{{ clinicaSeleccionada.cedula_representante }}</span>
-                  </div>
-                  <div class="detalle-card-row">
-                    <span class="detalle-card-row-label">Correo</span>
-                    <span class="detalle-card-row-value">{{ clinicaSeleccionada.email }}</span>
+                <div class="card-body">
+                  <div class="data-row"><span>Nombre</span><strong>{{ clinicaSeleccionada.representante_legal }}</strong></div>
+                  <div class="data-row"><span>Cédula</span><strong class="font-mono">{{ clinicaSeleccionada.cedula_representante }}</strong></div>
+                  <div class="data-row">
+                    <span>Correo</span>
+                    <a :href="`mailto:${clinicaSeleccionada.email}`" class="detalle-card-row-link">{{ clinicaSeleccionada.email }}</a>
                   </div>
                 </div>
               </div>
 
-              <!-- Card: Especialidades -->
-              <div class="detalle-card detalle-card-amber">
-                <div class="detalle-card-header">
-                  <component :is="HospitalIcon" class="w-4 h-4" />
-                  <span>ESPECIALIDADES</span>
+              <!-- Card: Actividad -->
+              <div class="detalle-card">
+                <div class="detalle-card-head">
+                  <span class="detalle-card-icon detalle-card-icon-slate"><component :is="ClipboardListIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="detalle-card-title detalle-card-title-slate">Actividad</p>
                 </div>
-                <div class="detalle-card-rows">
-                  <div v-if="clinicaSeleccionada.especialidades && clinicaSeleccionada.especialidades.length" class="flex flex-wrap gap-1.5 pt-1">
-                    <span v-for="esp in clinicaSeleccionada.especialidades" :key="esp" class="esp-tag esp-tag-detail">{{ esp }}</span>
-                  </div>
-                  <p v-else class="text-xs text-gray-400 italic">Sin especialidades registradas</p>
+                <div class="card-body">
+                  <div class="data-row"><span>Referencias enviadas</span><strong>{{ clinicaSeleccionada.solicitudes_count ?? 0 }}</strong></div>
+                  <div class="data-row"><span>Última referencia</span><strong>{{ clinicaSeleccionada.solicitudes_max_created_at ? formatFecha(clinicaSeleccionada.solicitudes_max_created_at) : 'Nunca' }}</strong></div>
+                  <div class="data-row"><span>Último acceso al portal</span><strong>{{ clinicaSeleccionada.sessions_max_created_at ? formatFecha(clinicaSeleccionada.sessions_max_created_at) : 'Nunca' }}</strong></div>
                 </div>
               </div>
             </div>
 
             <!-- Observaciones -->
-            <div v-if="clinicaSeleccionada.observaciones" class="detalle-card detalle-card-blue mt-3">
-              <div class="detalle-card-header">
-                <component :is="EyeIcon" class="w-4 h-4" />
-                <span>OBSERVACIONES</span>
+            <div v-if="clinicaSeleccionada.observaciones" class="detalle-card mt-2">
+              <div class="detalle-card-head">
+                <span class="detalle-card-icon detalle-card-icon-blue"><component :is="EyeIcon" class="w-3.5 h-3.5" /></span>
+                <p class="detalle-card-title detalle-card-title-blue">Observaciones</p>
               </div>
-              <p class="text-xs text-gray-600 leading-relaxed mt-2">{{ clinicaSeleccionada.observaciones }}</p>
+              <div class="card-body"><p class="card-text">{{ clinicaSeleccionada.observaciones }}</p></div>
             </div>
 
             <!-- Motivo rechazo -->
-            <div v-if="clinicaSeleccionada.motivo_rechazo" class="detalle-card detalle-card-red mt-3">
-              <div class="detalle-card-header detalle-card-header-red">
-                <component :is="AlertTriangle" class="w-4 h-4" />
-                <span>MOTIVO DE RECHAZO</span>
+            <div v-if="clinicaSeleccionada.motivo_rechazo" class="detalle-card mt-2">
+              <div class="detalle-card-head">
+                <span class="detalle-card-icon detalle-card-icon-rose"><component :is="AlertTriangle" class="w-3.5 h-3.5" /></span>
+                <p class="detalle-card-title detalle-card-title-rose">Motivo de rechazo</p>
               </div>
-              <p class="text-xs text-red-600 leading-relaxed mt-2">{{ clinicaSeleccionada.motivo_rechazo }}</p>
+              <div class="card-body"><p class="card-text">{{ clinicaSeleccionada.motivo_rechazo }}</p></div>
             </div>
+          </div>
+
+          <div class="detalle-footer">
+            <p class="detalle-footer-note">
+              <component :is="ShieldIcon" class="w-3.5 h-3.5" />
+              La información está protegida y será tratada confidencialmente.
+            </p>
+            <button type="button" class="detalle-cerrar-btn" @click="modalDetalle = false">
+              <component :is="SendIcon" class="w-3.5 h-3.5" />
+              Cerrar
+            </button>
           </div>
         </div>
       </template>
-    </BaseModal>
+    </el-dialog>
 
     <!-- Modal: Motivo de rechazo -->
-    <el-dialog v-model="modalRechazo" title="Rechazar clínica" width="420px" :close-on-click-modal="false" class="rounded-2xl">
-      <div class="mb-2">
-        <p class="text-sm text-gray-600 mb-1">
-          Indique el motivo de rechazo para <strong>{{ clinicaSeleccionada?.nombre }}</strong>:
-        </p>
+    <el-dialog v-model="modalRechazo" width="440px" :close-on-click-modal="false" class="nueva-clinica-dialog" align-center>
+      <template #header>
+        <div class="accion-head">
+          <div class="accion-head-glow"></div>
+          <div class="accion-head-icon accion-head-icon-red">
+            <component :is="XIcon" class="w-5 h-5" />
+          </div>
+          <div class="accion-head-info">
+            <p class="accion-head-title">{{ rechazoLoteActivo ? `Rechazar ${seleccionadas.size} clínica(s)` : 'Rechazar clínica' }}</p>
+            <p class="accion-head-sub">{{ rechazoLoteActivo ? 'El motivo se aplica a todas las seleccionadas' : `${clinicaSeleccionada?.nit} · ${clinicaSeleccionada?.nombre}` }}</p>
+          </div>
+        </div>
+      </template>
+      <div class="px-5 py-4">
+        <label class="block text-xs font-semibold mb-1.5" style="color:#475569;">Motivo del rechazo <span class="text-red-500">*</span></label>
         <el-input
           v-model="motivoRechazo"
           type="textarea"
@@ -388,10 +388,13 @@
         />
       </div>
       <template #footer>
-        <el-button @click="modalRechazo = false">Cancelar</el-button>
-        <el-button type="danger" :loading="procesando !== null" @click="rechazar">
-          Confirmar rechazo
-        </el-button>
+        <div class="px-5 pb-4 flex justify-end gap-2">
+          <el-button @click="modalRechazo = false">Cancelar</el-button>
+          <el-button type="danger" :loading="procesando !== null" @click="rechazar">
+            <component :is="XIcon" class="w-3.5 h-3.5 mr-1" />
+            Confirmar rechazo
+          </el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -400,7 +403,7 @@
       <template #header>
         <div class="accion-head">
           <div class="accion-head-glow"></div>
-          <div class="accion-head-icon" style="background:rgba(59,130,246,0.2); color:#60a5fa;">
+          <div class="accion-head-icon accion-head-icon-blue">
             <component :is="EditIcon" class="w-5 h-5" />
           </div>
           <div class="accion-head-info">
@@ -458,13 +461,13 @@
 
           <div class="flex items-center gap-2 mb-2 mt-3">
             <div class="nueva-clinica-step-num">2</div>
-            <p class="text-xs font-bold text-[#0D2D6B] uppercase tracking-widest">Representante legal</p>
+            <p class="text-xs font-bold text-[#0D2D6B] uppercase tracking-widest">Persona a cargo</p>
             <div class="flex-1 h-px" style="background: linear-gradient(90deg, #c5cfdb, transparent);"></div>
           </div>
           <div class="grid grid-cols-2 gap-x-3 mb-1">
             <el-form-item prop="representante_legal" class="mb-1 form-item-custom">
               <template #label><span class="flex items-center gap-1"><component :is="UserIcon" class="w-3 h-3 text-[#16468E]" /> Nombre</span></template>
-              <el-input v-model="formEditar.representante_legal" placeholder="Nombre del representante" clearable />
+              <el-input v-model="formEditar.representante_legal" placeholder="Nombre de la persona a cargo" clearable />
             </el-form-item>
             <el-form-item prop="cedula_representante" class="mb-1 form-item-custom">
               <template #label><span class="flex items-center gap-1"><component :is="IdCardIcon" class="w-3 h-3 text-[#16468E]" /> Cédula</span></template>
@@ -488,7 +491,7 @@
       <template #header>
         <div class="accion-head">
           <div class="accion-head-glow"></div>
-          <div class="accion-head-icon" style="background:rgba(245,158,11,0.2); color:#fbbf24;">
+          <div class="accion-head-icon accion-head-icon-amber">
             <component :is="PlusIcon" class="w-5 h-5" />
           </div>
           <div class="accion-head-info">
@@ -559,13 +562,13 @@
           <!-- Sección representante -->
           <div class="flex items-center gap-2 mb-2 mt-3">
             <div class="nueva-clinica-step-num">3</div>
-            <p class="text-xs font-bold text-[#0D2D6B] uppercase tracking-widest">Representante legal</p>
+            <p class="text-xs font-bold text-[#0D2D6B] uppercase tracking-widest">Persona a cargo</p>
             <div class="flex-1 h-px" style="background: linear-gradient(90deg, #c5cfdb, transparent);"></div>
           </div>
           <div class="grid grid-cols-2 gap-x-3 mb-1">
             <el-form-item prop="representante_legal" class="mb-1 form-item-custom">
               <template #label><span class="flex items-center gap-1"><component :is="UserIcon" class="w-3 h-3 text-[#16468E]" /> Nombre completo</span></template>
-              <el-input v-model="formNueva.representante_legal" placeholder="Nombre del representante" clearable autocomplete="off" />
+              <el-input v-model="formNueva.representante_legal" placeholder="Nombre de la persona a cargo" clearable autocomplete="off" />
             </el-form-item>
             <el-form-item prop="cedula_representante" class="mb-1 form-item-custom">
               <template #label><span class="flex items-center gap-1"><component :is="IdCardIcon" class="w-3 h-3 text-[#16468E]" /> Cédula</span></template>
@@ -589,7 +592,7 @@
       <template #header>
         <div class="accion-head">
           <div class="accion-head-glow"></div>
-          <div class="accion-head-icon" style="background:rgba(34,197,94,0.2); color:#4ade80;">
+          <div class="accion-head-icon accion-head-icon-green">
             <component :is="UploadIcon" class="w-5 h-5" />
           </div>
           <div class="accion-head-info">
@@ -606,7 +609,7 @@
             <component :is="ClipboardListIcon" class="w-4 h-4 text-blue-600" />
             <p class="text-xs font-bold" style="color:#334e70;">Pegar datos desde Excel</p>
           </div>
-          <p class="text-xs text-gray-500 mb-2">Pega celdas copiadas desde Excel. Columnas: <strong>NIT | Nombre | Email | Teléfono | Ciudad | Departamento | Dirección | Representante | Cédula</strong></p>
+          <p class="text-xs text-gray-500 mb-2">Pega celdas copiadas desde Excel. Columnas: <strong>NIT | Nombre | Email | Teléfono | Ciudad | Departamento | Dirección | Persona a cargo | Cédula</strong></p>
           <el-input
             v-model="textoPegado"
             type="textarea"
@@ -639,7 +642,7 @@
                   <th class="carga-masiva-th">Ciudad</th>
                   <th class="carga-masiva-th">Depto</th>
                   <th class="carga-masiva-th">Dirección</th>
-                  <th class="carga-masiva-th">Representante</th>
+                  <th class="carga-masiva-th">Persona a cargo</th>
                   <th class="carga-masiva-th">Cédula</th>
                   <th class="carga-masiva-th"></th>
                 </tr>
@@ -653,7 +656,7 @@
                   <td class="carga-masiva-td"><input v-model="fila.ciudad" class="carga-masiva-input" placeholder="Ciudad" /></td>
                   <td class="carga-masiva-td"><input v-model="fila.departamento" class="carga-masiva-input" placeholder="Depto" /></td>
                   <td class="carga-masiva-td"><input v-model="fila.direccion" class="carga-masiva-input" placeholder="Dirección" /></td>
-                  <td class="carga-masiva-td"><input v-model="fila.representante_legal" class="carga-masiva-input" placeholder="Representante" /></td>
+                  <td class="carga-masiva-td"><input v-model="fila.representante_legal" class="carga-masiva-input" placeholder="Persona a cargo" /></td>
                   <td class="carga-masiva-td"><input v-model="fila.cedula_representante" class="carga-masiva-input" placeholder="Cédula" /></td>
                   <td class="carga-masiva-td">
                     <button class="carga-masiva-remove" @click="filasCarga.splice(idx, 1)">
@@ -693,34 +696,24 @@
 /* ── Header ── */
 .clinic-header {
   display: flex; align-items: center; gap: .75rem;
-  padding: .75rem 1rem;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #0D2D6B 0%, #16468E 60%, #1e3a7a 100%);
-  box-shadow: 0 6px 24px rgba(13, 45, 107, .25), inset 0 1px 0 rgba(255,255,255,0.08);
-  position: relative; overflow: hidden;
-}
-.clinic-header::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, #2563eb, #60a5fa, #2563eb);
-  background-size: 200% 100%;
-  animation: clinicHeaderShimmer 3s linear infinite;
-}
-@keyframes clinicHeaderShimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  padding: .25rem 0;
 }
 .clinic-header-icon {
   width: 36px; height: 36px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
-  color: #fff; flex-shrink: 0;
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  color: var(--rf-primary);
+  flex-shrink: 0;
 }
+.dark .clinic-header-icon { background: rgba(99,102,241,0.15); color: #a5b4fc; }
 .clinic-header-title {
-  font-size: 16px; font-weight: 800; color: #fff;
+  font-size: 16px; font-weight: 800; color: #1e293b;
   letter-spacing: 0.01em; white-space: nowrap;
 }
+.dark .clinic-header-title { color: #e2e8f0; }
 .clinic-header-spacer { flex: 1; }
+.clinic-header-divider { width: 1px; height: 20px; background: #e2e8f0; margin: 0 2px; }
+.dark .clinic-header-divider { background: rgba(255,255,255,0.08); }
 
 /* ── Filter bar ── */
 .clinic-filter-bar {
@@ -795,6 +788,15 @@
   padding: 4px;
 }
 
+/* ── Mapa ── */
+.clinic-map-col {
+  width: 380px;
+  max-width: 40%;
+}
+@media (max-width: 1100px) {
+  .clinic-map-col { display: none; }
+}
+
 /* ── Table loading ── */
 .clinic-table-loading {
   display: flex; flex-direction: column; gap: 6px;
@@ -827,8 +829,19 @@
   vertical-align: middle;
   white-space: nowrap;
 }
-.clinic-table-row { transition: background .15s ease; }
-.clinic-table-row:hover { background: #f8fafc; }
+.clinic-table-row { transition: background .15s ease, box-shadow .15s ease; }
+.clinic-table-row:hover { background: #f8fafc; box-shadow: inset 3px 0 0 var(--rf-primary); }
+.clinic-table-row:hover .clinic-table-status { transform: scale(1.06); }
+
+/* ── Fila resaltada (actualización silenciosa en segundo plano) ── */
+.clinic-table-row-resaltada {
+  animation: clinic-row-glow 2.2s ease-in-out 2;
+  box-shadow: inset 3px 0 0 #D97706;
+}
+@keyframes clinic-row-glow {
+  0%, 100% { background: transparent; }
+  50% { background: rgba(217, 119, 6, .12); }
+}
 .clinic-table-row:last-child td { border-bottom: none; }
 .clinic-table-th-clinica { min-width: 200px; }
 .clinic-table-th-actions { text-align: right; }
@@ -848,12 +861,16 @@
   max-width: 180px;
 }
 .clinic-table-email {
+  display: block;
   font-size: 10px; color: #94a3b8; margin: 1px 0 0;
+  text-decoration: none;
 }
+.clinic-table-email:hover { color: var(--rf-primary); text-decoration: underline; }
 .clinic-table-status {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 10px; border-radius: 999px;
   font-size: 10px; font-weight: 700;
+  transition: transform .2s ease;
 }
 .clinic-status-dot { width: 5px; height: 5px; border-radius: 50%; }
 .clinic-status-pending { background: #fef3c7; color: #d97706; }
@@ -862,112 +879,191 @@
 .clinic-status-active .clinic-status-dot { background: #22c55e; }
 .clinic-status-rejected { background: #fee2e2; color: #dc2626; }
 .clinic-status-rejected .clinic-status-dot { background: #ef4444; }
-.clinic-table-actions { display: flex; justify-content: flex-end; gap: 4px; }
+.clinic-table-actions { display: flex; justify-content: flex-end; align-items: center; gap: 4px; }
 
 /* ── Modal detalle ── */
 :deep(.detalle-clinica-dialog) {
-  border-radius: 22px;
+  border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 32px 80px rgba(11, 35, 73, .4), 0 0 0 1px rgba(255,255,255,.08);
 }
-:deep(.detalle-clinica-dialog .el-dialog__header) { position: absolute; top: 0; right: 0; z-index: 30; padding: 0; margin: 0; background: transparent; border: none; }
-:deep(.detalle-clinica-dialog .el-dialog__title) { display: none; }
-:deep(.detalle-clinica-dialog .el-dialog__body) { padding: 0; }
-:deep(.detalle-clinica-dialog .el-dialog__headerbtn) { position: absolute; top: 14px; right: 14px; z-index: 40; }
-:deep(.detalle-clinica-dialog .el-dialog__headerbtn .el-dialog__close) { color: #fff; font-size: 1.5rem; font-weight: 700; }
-:deep(.detalle-clinica-dialog .el-dialog__headerbtn:hover .el-dialog__close) { color: #e1f7ff; }
-.detalle-clinica-content { overflow: hidden; }
+:deep(.detalle-clinica-dialog .el-dialog__header) { display: none; }
+:deep(.detalle-clinica-dialog .el-dialog__body) { padding: 0; overflow: hidden; }
+.detalle-clinica-content { position: relative; overflow: hidden; background: #fff; }
 
-/* Header */
+.detalle-close-btn {
+  position: absolute;
+  top: .9rem; right: .9rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(15,23,42,.08);
+  background: #fff;
+  color: #94A3B8;
+  cursor: pointer;
+  transition: all .2s ease;
+  box-shadow: 0 2px 8px rgba(15,23,42,.08);
+}
+.detalle-close-btn:hover { color: #DC2626; border-color: #FCA5A5; background: #FEF2F2; }
+
+/* Header claro — mismo estilo que el modal de detalle de Solicitudes */
 .detalle-head {
   position: relative;
-  background: linear-gradient(135deg, #0a1f4d 0%, #0D2D6B 48%, #16468E 100%);
-  padding: 22px 24px;
-  display: flex; align-items: center; gap: 14px;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .7rem 3.5rem .7rem 1.1rem;
+  background: #fff;
+  border-bottom: 1px solid #EEF2F9;
 }
-.detalle-head-glow {
-  position: absolute; top: -30px; right: -30px;
-  width: 120px; height: 120px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(126,179,255,0.2), transparent 70%);
+.detalle-head-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(79,70,229,.06) 1.4px, transparent 1.4px);
+  background-size: 15px 15px;
+  -webkit-mask-image: linear-gradient(115deg, rgba(0,0,0,.9), transparent 70%);
+  mask-image: linear-gradient(115deg, rgba(0,0,0,.9), transparent 70%);
   pointer-events: none;
 }
 .detalle-head-icon {
-  width: 44px; height: 44px; border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; z-index: 10;
-  background: rgba(255,255,255,0.12); color: #fff;
-  border: 1px solid rgba(255,255,255,0.15);
+  position: relative; z-index: 1;
+  width: 36px; height: 36px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  display: grid; place-items: center;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, .3);
 }
-.detalle-head-title {
-  margin: 0; color: #fff; font-size: 17px; font-weight: 800;
-}
-.detalle-head-sub {
-  margin: 2px 0 0; color: rgba(255,255,255,0.55); font-size: 11px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+.detalle-head-info { position: relative; z-index: 1; flex: 1; min-width: 0; }
+.detalle-head-title { margin: 0; color: #0F172A; font-size: 1rem; font-weight: 800; }
+.detalle-head-sub { margin: .15rem 0 0; color: #64748b; font-size: .7rem; }
+
 .detalle-head-badge {
-  padding: 5px 14px; border-radius: 999px;
-  font-size: 11px; font-weight: 700; flex-shrink: 0; z-index: 10;
+  padding: 4px 12px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; flex-shrink: 0;
   white-space: nowrap;
+  z-index: 1;
 }
-.detalle-badge-pending { background: #f59e0b; color: #fff; }
-.detalle-badge-active { background: #22c55e; color: #fff; }
-.detalle-badge-rejected { background: #ef4444; color: #fff; }
+.detalle-badge-pending { background: #fef3c7; color: #d97706; }
+.detalle-badge-active { background: #dcfce7; color: #15966a; }
+.detalle-badge-rejected { background: #fee2e2; color: #dc2626; }
 
 /* Body */
-.detalle-body { padding: 20px 24px; background: #f1f5f9; }
-.detalle-cards-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+.detalle-body {
+  padding: 16px 20px 4px;
+  max-height: min(60vh, 560px);
+  overflow-y: auto;
 }
 
-/* Card base */
+.detalle-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .6rem;
+  padding: .9rem 1.3rem;
+  background: #fff;
+  border-top: 1px solid #F1F5F9;
+}
+.detalle-footer-note {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  margin: 0;
+  font-size: .66rem;
+  font-weight: 500;
+  color: #94A3B8;
+}
+.detalle-cerrar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .55rem 1.2rem;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, .3);
+  transition: all .2s ease;
+}
+.detalle-cerrar-btn:hover {
+  background: linear-gradient(135deg, #5B52F0, #8B47E8);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, .4);
+}
+.detalle-cards-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+
+/* Card base — mismo estilo que el modal de detalle de Solicitudes */
 .detalle-card {
   background: #fff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d4deea;
   border-radius: 14px;
-  padding: 14px 16px;
-  border-left: 4px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(22,70,142,.05);
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(22,70,142,.07);
+  transition: box-shadow .25s ease, border-color .25s ease, transform .25s ease;
+  position: relative;
 }
-.detalle-card-blue { border-left-color: #3b82f6; }
-.detalle-card-green { border-left-color: #22c55e; }
-.detalle-card-purple { border-left-color: #8b5cf6; }
-.detalle-card-amber { border-left-color: #f59e0b; }
-.detalle-card-red { border-left-color: #ef4444; background: #fef2f2; border-color: #fecaca; }
+.detalle-card:hover {
+  box-shadow: 0 10px 28px rgba(22,70,142,.14);
+  border-color: #b8c8de;
+  transform: translateY(-1px);
+}
+.detalle-card-head {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .45rem .6rem .25rem;
+}
+.detalle-card-icon {
+  width: 1.6rem; height: 1.6rem;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.detalle-card-icon-blue { background: #dbeafe; color: #2563eb; }
+.detalle-card-icon-amber { background: #fef3c7; color: #d97706; }
+.detalle-card-icon-violet { background: #ede9fe; color: #7c3aed; }
+.detalle-card-icon-slate { background: #f1f5f9; color: #475569; }
+.detalle-card-icon-rose { background: #fee2e2; color: #dc2626; }
+.detalle-card-title {
+  margin: 0;
+  font-size: .74rem;
+  font-weight: 800;
+}
+.detalle-card-title-blue { color: #1e40af; }
+.detalle-card-title-amber { color: #b45309; }
+.detalle-card-title-violet { color: #6d28d9; }
+.detalle-card-title-slate { color: #334155; }
+.detalle-card-title-rose { color: #b91c1c; }
 
-.detalle-card-header {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 800; color: #1e2d55;
-  letter-spacing: .04em; margin-bottom: 10px;
-}
-.detalle-card-header svg { color: #3b82f6; }
-.detalle-card-blue .detalle-card-header svg { color: #3b82f6; }
-.detalle-card-green .detalle-card-header svg { color: #22c55e; }
-.detalle-card-purple .detalle-card-header svg { color: #8b5cf6; }
-.detalle-card-amber .detalle-card-header svg { color: #f59e0b; }
-.detalle-card-header-red svg { color: #ef4444; }
-.detalle-card-header-red { color: #dc2626; }
+.card-body { padding: 0 .6rem .45rem; }
+.card-text { font-size: .72rem; color: #334e70; line-height: 1.5; margin: 0; }
 
-.detalle-card-rows { display: flex; flex-direction: column; gap: 6px; }
-.detalle-card-row {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .4rem;
+  padding: .12rem 0;
+  border-bottom: 1px solid #f1f5f9;
 }
-.detalle-card-row-label {
-  font-size: 11px; color: #94a3b8; flex-shrink: 0;
-}
-.detalle-card-row-value {
-  font-size: 12px; font-weight: 700; color: #1e293b;
-  text-align: right; word-break: break-word;
-}
+.data-row:last-child { border-bottom: none; }
+.data-row span { font-size: .62rem; color: #94a3b8; white-space: nowrap; }
+.data-row strong { font-size: .68rem; color: #1e293b; font-weight: 600; text-align: right; }
 
-/* ── Esp tags ── */
-.esp-tag {
-  font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
-  background: #e7efff; color: #2563c4; border: 1px solid rgba(37,99,196,.12);
+.detalle-card-row-link {
+  font-size: .68rem; font-weight: 600; color: var(--rf-primary);
+  text-align: right; word-break: break-word; text-decoration: none;
 }
-.esp-tag-more { background: #f1f5f9; color: #64748b; border-color: #e2e8f0; }
-.esp-tag-detail { font-size: 11px; padding: 4px 12px; }
+.detalle-card-row-link:hover { text-decoration: underline; }
 
 .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
@@ -1006,72 +1102,7 @@
 .clinic-stats-bar {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: .5rem;
-}
-.clinic-stat-card {
-  display: flex;
-  align-items: center;
-  gap: .6rem;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: .65rem .8rem;
-  position: relative;
-  overflow: hidden;
-  transition: transform .2s ease, box-shadow .2s ease;
-}
-.clinic-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(13,45,107,.08);
-}
-.clinic-stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--stat-color);
-  opacity: .8;
-}
-.clinic-stat-icon {
-  width: 2.2rem; height: 2.2rem;
-  border-radius: 10px;
-  display: grid; place-items: center;
-  flex-shrink: 0;
-}
-.clinic-stat-body { flex: 1; min-width: 0; }
-.clinic-stat-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: .03em;
-  margin: 0;
-}
-.clinic-stat-value {
-  font-size: 1.3rem;
-  font-weight: 800;
-  line-height: 1.1;
-  margin: 0;
-}
-.clinic-stat-bar-track {
-  height: 3px;
-  border-radius: 2px;
-  background: #f1f5f9;
-  margin-top: .25rem;
-  overflow: hidden;
-}
-.clinic-stat-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width .4s ease;
-}
-.clinic-stat-delta {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 6px;
-  white-space: nowrap;
-  flex-shrink: 0;
+  gap: .75rem;
 }
 
 /* ── Tab dots ── */
@@ -1312,22 +1343,27 @@
 /* ── Shared accion-head (if not already defined elsewhere) ── */
 .accion-head {
   position: relative;
-  background: linear-gradient(125deg, #0d2d6b 0%, #16468e 50%, #1a3d8a 100%);
+  background: linear-gradient(120deg, #dbeafe 0%, #e0e7ff 55%, #ede9fe 100%);
   padding: 1.1rem 1.3rem;
   display: flex;
   align-items: center;
   gap: .8rem;
   overflow: hidden;
 }
-.accion-head-glow { position: absolute; top: -40px; right: -30px; width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,.06); }
+.accion-head-glow { position: absolute; top: -40px; right: -30px; width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,.5); filter: blur(10px); }
 .accion-head-icon {
   width: 2.4rem; height: 2.4rem; border-radius: 12px;
   display: grid; place-items: center; flex-shrink: 0; z-index: 1;
-  border: 1px solid rgba(255,255,255,.2);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, .3);
 }
-.accion-head-info { flex: 1; z-index: 1; }
-.accion-head-title { margin: 0; color: #fff; font-size: .9rem; font-weight: 800; }
-.accion-head-sub { margin: .1rem 0 0; color: rgba(255,255,255,.55); font-size: .65rem; }
+.accion-head-icon-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.accion-head-icon-amber { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.accion-head-icon-green { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.accion-head-icon-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.accion-head-info { flex: 1; z-index: 1; min-width: 0; }
+.accion-head-title { margin: 0; color: #1E1B4B; font-size: .9rem; font-weight: 800; }
+.accion-head-sub { margin: .1rem 0 0; color: #4c4a6e; font-size: .68rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── Empty state ── */
 .clinic-empty-wrap {
@@ -1376,10 +1412,49 @@
   box-shadow: 0 8px 20px rgba(13, 45, 107, .35);
 }
 
+:deep(.clinic-acciones-menu) {
+  min-width: 170px;
+  border-radius: 14px !important;
+  border: 1.5px solid #d7dde6 !important;
+  box-shadow: 0 14px 38px rgba(15, 23, 42, .18) !important;
+  overflow: hidden;
+}
+:deep(.clinic-acciones-menu .el-dropdown-menu) {
+  padding: 6px !important;
+}
+:deep(.clinic-acciones-menu .el-dropdown-menu__item) {
+  border-radius: 8px;
+  margin: 1px 0;
+  padding: .4rem .6rem;
+  font-size: .78rem;
+  font-weight: 500;
+  line-height: 1.3;
+  gap: .45rem;
+}
+:deep(.clinic-acciones-menu .el-dropdown-menu__item i),
+:deep(.clinic-acciones-menu .el-dropdown-menu__item svg) {
+  font-size: .85rem;
+  margin-right: 0;
+}
+:deep(.clinic-acciones-menu .el-dropdown-menu__item--divided) {
+  margin-top: 5px;
+  border-top-color: #eef1f5;
+}
+:deep(.clinic-acciones-menu .el-dropdown-menu__item--divided::before) {
+  margin-bottom: 5px;
+}
+:deep(.clinic-acciones-menu .clinic-accion-success) { color: #16a34a; }
+:deep(.clinic-acciones-menu .clinic-accion-success:hover) { background: #f0fdf4; color: #15803d; }
+:deep(.clinic-acciones-menu .clinic-accion-danger) { color: #dc2626; }
+:deep(.clinic-acciones-menu .clinic-accion-danger:hover) { background: #fef2f2; color: #b91c1c; }
+:deep(.clinic-acciones-menu .clinic-accion-neutral) { color: #64748b; }
+:deep(.clinic-acciones-menu .clinic-accion-neutral:hover) { background: #f8fafc; color: #334155; }
 </style>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { usePolling } from '@/lib/usePolling';
+import { actualizarSiCambio } from '@/lib/silentRefresh';
 import { useStorage, useDebounceFn } from '@vueuse/core';
 import { ElMessageBox } from 'element-plus';
 import notify from '@/plugins/toast';
@@ -1410,9 +1485,14 @@ import {
   ArrowUp as ArrowUpIcon,
   ArrowDown as ArrowDownIcon,
   ArrowUpDown as ArrowUpDownIcon,
+  Shield as ShieldIcon,
+  Send as SendIcon,
+  MoreVertical as MoreIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 import type { FormInstance, FormRules } from 'element-plus';
+import StatCard from '@/components/ui/StatCard.vue';
+import MapaClinicas from '@/components/clinicas/MapaClinicas.vue';
 
 interface Clinica {
   id: number;
@@ -1430,13 +1510,20 @@ interface Clinica {
   especialidades?: string[];
   estado: 'pendiente' | 'activa' | 'rechazada';
   motivo_rechazo?: string;
+  latitud?: number | null;
+  longitud?: number | null;
   created_at: string;
+  solicitudes_count?: number;
+  solicitudes_max_created_at?: string | null;
+  sessions_max_created_at?: string | null;
 }
 
 const clinicas = ref<Clinica[]>([]);
+const mapaRef = ref<InstanceType<typeof MapaClinicas> | null>(null);
 const cargando = ref(false);
 const procesando = ref<string | null>(null);
 const modalRechazo = ref(false);
+const rechazoLoteActivo = ref(false);
 const modalDetalle = ref(false);
 const modalCargaMasiva = ref(false);
 const clinicaSeleccionada = ref<Clinica | null>(null);
@@ -1482,6 +1569,7 @@ const rulesEditar: FormRules = {
 };
 
 const seleccionadas = ref<Set<number>>(new Set());
+const idsActualizados = ref<Set<number>>(new Set());
 const sortKey = ref<'nombre' | 'nit' | 'ciudad'>('nombre');
 const sortDir = ref<'asc' | 'desc'>('asc');
 const paginaActual = ref(1);
@@ -1566,42 +1654,33 @@ const resumen = computed(() => ({
   rechazadas: clinicas.value.filter(c => c.estado === 'rechazada').length,
 }));
 
-const tabs = computed(() => [
+const tabs = computed<{ label: string; value: 'todas' | 'pendiente' | 'activa' | 'rechazada'; count: number }[]>(() => [
   { label: 'Todas', value: 'todas', count: clinicas.value.length },
   { label: 'Pendientes', value: 'pendiente', count: resumen.value.pendientes },
   { label: 'Activas', value: 'activa', count: resumen.value.activas },
   { label: 'Rechazadas', value: 'rechazada', count: resumen.value.rechazadas },
 ]);
 
-const statCards = computed(() => {
-  const total = clinicas.value.length || 1;
-  return [
-    {
-      label: 'Total clínicas', value: String(clinicas.value.length),
-      icon: HospitalIcon, color: '#2563c4', iconBg: '#e7efff',
-      delta: 'Registradas', deltaBg: '#e7efff', deltaColor: '#2563c4',
-      percent: 100,
-    },
-    {
-      label: 'Pendientes', value: String(resumen.value.pendientes),
-      icon: ClockIcon, color: '#e67700', iconBg: '#fff3cd',
-      delta: 'En revisión', deltaBg: '#fff3cd', deltaColor: '#e67700',
-      percent: Math.round((resumen.value.pendientes / total) * 100),
-    },
-    {
-      label: 'Activas', value: String(resumen.value.activas),
-      icon: ShieldCheck, color: '#15966a', iconBg: '#dcfce7',
-      delta: 'Aprobadas', deltaBg: '#dcfce7', deltaColor: '#15966a',
-      percent: Math.round((resumen.value.activas / total) * 100),
-    },
-    {
-      label: 'Rechazadas', value: String(resumen.value.rechazadas),
-      icon: AlertTriangle, color: '#dc2626', iconBg: '#fee2e2',
-      delta: 'Rechazadas', deltaBg: '#fee2e2', deltaColor: '#dc2626',
-      percent: Math.round((resumen.value.rechazadas / total) * 100),
-    },
-  ];
+/** Crecimiento real de registros: conteo acumulado por día desde la primera clínica registrada. */
+const crecimientoClinicas = computed(() => {
+  if (!clinicas.value.length) return [];
+  const fechas = clinicas.value
+    .map(c => c.created_at?.slice(0, 10))
+    .filter((f): f is string => !!f)
+    .sort();
+  if (!fechas.length) return [];
+
+  const desde = new Date(fechas[0]);
+  const hasta = new Date();
+  const dias = Math.max(1, Math.round((hasta.getTime() - desde.getTime()) / (1000 * 60 * 60 * 24)));
+  const puntos = Math.min(14, dias + 1);
+
+  return Array.from({ length: puntos }, (_, i) => {
+    const corte = new Date(desde.getTime() + (dias * i) / (puntos - 1 || 1) * 24 * 60 * 60 * 1000);
+    return fechas.filter(f => new Date(f) <= corte).length;
+  });
 });
+
 
 function estadoLabel(estado: string) {
   return estado === 'pendiente' ? 'Pendiente' : estado === 'activa' ? 'Activa' : 'Rechazada';
@@ -1674,8 +1753,14 @@ function cambiarTab(tab: 'todas' | 'pendiente' | 'activa' | 'rechazada') {
 
 function toggleSeleccion(id: number) {
   const s = new Set(seleccionadas.value);
-  if (s.has(id)) s.delete(id);
-  else s.add(id);
+  if (s.has(id)) {
+    s.delete(id);
+    mapaRef.value?.restablecerVista();
+  } else {
+    s.add(id);
+    const clinica = clinicas.value.find(c => c.id === id);
+    if (clinica) mapaRef.value?.enfocarClinica(clinica);
+  }
   seleccionadas.value = s;
 }
 
@@ -1683,6 +1768,7 @@ function toggleSeleccionTodas() {
   const s = new Set(seleccionadas.value);
   if (todasSeleccionadas.value) {
     clinicasPaginadas.value.forEach(c => s.delete(c.id));
+    mapaRef.value?.restablecerVista();
   } else {
     clinicasPaginadas.value.forEach(c => s.add(c.id));
   }
@@ -1717,29 +1803,42 @@ async function aprobarLote() {
   }
 }
 
-async function rechazarLote() {
+function abrirRechazoLote() {
   const ids = [...seleccionadas.value];
-  const clinicasLote = clinicas.value.filter(c => ids.includes(c.id) && c.estado !== 'rechazada');
-  if (clinicasLote.length === 0) {
+  const lote = clinicas.value.filter(c => ids.includes(c.id) && c.estado !== 'rechazada');
+  if (lote.length === 0) {
     notify.warning('No hay clínicas para rechazar');
     return;
   }
+  rechazoLoteActivo.value = true;
+  motivoRechazo.value = '';
+  modalRechazo.value = true;
+}
+
+async function confirmarRechazoLote() {
+  const ids = [...seleccionadas.value];
+  const lote = clinicas.value.filter(c => ids.includes(c.id) && c.estado !== 'rechazada');
+
+  procesando.value = 'lote_rechazar';
   try {
-    await ElMessageBox.confirm(`¿Rechazar ${clinicasLote.length} clínica(s)?`, 'Confirmar rechazo', { confirmButtonText: 'Rechazar', cancelButtonText: 'Cancelar', type: 'warning' });
-    for (const c of clinicasLote) {
-      await http.post(`/api/clinicas/${c.id}/rechazar`, { motivo: 'Rechazo masivo' });
-    }
-    notify.success(`${clinicasLote.length} clínica(s) rechazada(s)`);
+    const resultados = await Promise.allSettled(
+      lote.map(c => http.post(`/api/clinicas/${c.id}/rechazar`, { motivo: motivoRechazo.value })),
+    );
+    const ok = resultados.filter(r => r.status === 'fulfilled').length;
+    const fallidas = resultados.length - ok;
+    if (ok > 0) notify.success(`${ok} clínica(s) rechazada(s)`);
+    if (fallidas > 0) notify.error(`${fallidas} clínica(s) no se pudieron rechazar`);
     seleccionadas.value = new Set();
+    modalRechazo.value = false;
     await cargar();
-  } catch (e: any) {
-    if (e !== 'cancel') notify.error('Error al rechazar en lote');
+  } finally {
+    procesando.value = null;
   }
 }
 
 function exportarExcel() {
   const rows = clinicasFiltradas.value;
-  const headers = ['NIT', 'Nombre', 'Email', 'Teléfono', 'Ciudad', 'Departamento', 'Dirección', 'Representante', 'Cédula', 'Estado', 'Fecha registro'];
+  const headers = ['NIT', 'Nombre', 'Email', 'Teléfono', 'Ciudad', 'Departamento', 'Dirección', 'Persona a cargo', 'Cédula', 'Estado', 'Fecha registro'];
   const csv = [
     headers.join('\t'),
     ...rows.map(c => [
@@ -1815,6 +1914,20 @@ async function cargar() {
   }
 }
 
+/** Refresco automático de fondo: sin esqueleto de carga, y solo toca lo que
+ * de verdad cambió, resaltando esas filas puntuales. */
+async function cargarSilencioso() {
+  try {
+    const { data } = await http.get('/api/clinicas');
+    const cambiados = actualizarSiCambio(clinicas, data.data);
+    if (cambiados.length === 0) return;
+    idsActualizados.value = new Set(cambiados);
+    setTimeout(() => { idsActualizados.value = new Set(); }, 3000);
+  } catch {
+    // Refresco de fondo: si falla, se reintenta en el siguiente ciclo sin interrumpir al usuario.
+  }
+}
+
 async function aprobar(clinica: Clinica) {
   const esReactivar = clinica.estado === 'rechazada';
   try {
@@ -1842,7 +1955,17 @@ function verDetalle(clinica: Clinica) {
   modalDetalle.value = true;
 }
 
+function manejarAccionFila(comando: string, clinica: Clinica) {
+  const acciones: Record<string, (c: Clinica) => void> = {
+    aprobar,
+    rechazar: abrirRechazo,
+    editar: abrirEditar,
+  };
+  acciones[comando]?.(clinica);
+}
+
 function abrirRechazo(clinica: Clinica) {
+  rechazoLoteActivo.value = false;
   clinicaSeleccionada.value = clinica;
   motivoRechazo.value = '';
   modalDetalle.value = false;
@@ -1852,6 +1975,10 @@ function abrirRechazo(clinica: Clinica) {
 async function rechazar() {
   if (!motivoRechazo.value.trim()) {
     notify.warning('Ingrese el motivo de rechazo');
+    return;
+  }
+  if (rechazoLoteActivo.value) {
+    await confirmarRechazoLote();
     return;
   }
   try {
@@ -1963,16 +2090,11 @@ async function enviarCargaMasiva() {
   }
 }
 
-let pollTimer: ReturnType<typeof setInterval> | null = null;
-
 onMounted(() => {
   cargar();
-  pollTimer = setInterval(() => {
-    if (!cargando.value && !modalRechazo.value && !modalDetalle.value && !modalCargaMasiva.value && !modalNuevaClinica.value && !modalEditar.value) cargar();
-  }, 30000);
 });
 
-onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer);
-});
+usePolling(() => {
+  if (!cargando.value && !modalRechazo.value && !modalDetalle.value && !modalCargaMasiva.value && !modalNuevaClinica.value && !modalEditar.value) cargarSilencioso();
+}, 30000);
 </script>
