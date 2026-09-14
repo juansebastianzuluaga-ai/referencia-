@@ -21,13 +21,11 @@ class RoleSeeder extends Seeder
             ],
             'admin' => [
                 'display_name' => 'Administrador',
-                'description' => 'Administra usuarios, roles y catalogos base',
+                'description' => 'Administra usuarios y catalogos base',
                 'permissions' => [
                     'users.view',
                     'users.create',
                     'users.update',
-                    'roles.view',
-                    'permissions.view',
                     'identification-types.view',
                     'identification-types.create',
                     'identification-types.update',
