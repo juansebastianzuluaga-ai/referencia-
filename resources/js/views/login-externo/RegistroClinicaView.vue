@@ -308,11 +308,11 @@ function capitalizar(campo: 'razon_social' | 'direccion' | 'representante_legal'
 
 // ── Validación NIT (formato simple) ──
 function validarNIT() {
-  const nit = form.nit.trim();
-  if (!nit) { nitError.value = ''; nitValido.value = false; return; }
+  const digitos = form.nit.replace(/\D/g, '');
+  if (!digitos) { nitError.value = ''; nitValido.value = false; return; }
 
-  if (!/^\d{6,10}-?\d?$/.test(nit)) {
-    nitError.value = 'Formato inválido. Use solo números (ej: 900123456 o 900123456-7)';
+  if (digitos.length < 8 || digitos.length > 11) {
+    nitError.value = 'Formato inválido. Ejemplos: 900123456, 900123456-7 o 900.123.456-7';
     nitValido.value = false;
     return;
   }
