@@ -9,8 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('clinicas', function (Blueprint $table) {
-            $table->string('cedula_representante', 20)->nullable()->after('representante_legal');
-            $table->text('observaciones')->nullable()->after('cedula_representante');
+            if (! Schema::hasColumn('clinicas', 'cedula_representante')) {
+                $table->string('cedula_representante', 20)->nullable()->after('representante_legal');
+            }
+            if (! Schema::hasColumn('clinicas', 'observaciones')) {
+                $table->text('observaciones')->nullable()->after('cedula_representante');
+            }
         });
     }
 
