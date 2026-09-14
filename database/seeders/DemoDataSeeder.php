@@ -186,7 +186,7 @@ class DemoDataSeeder extends Seeder
                 'updated_at' => $fecha->copy()->setTimeFromTimeString($horaCreacion),
             ];
 
-            if (in_array($estado, ['aceptado', 'completado', 'en_espera'], true)) {
+            if (in_array($estado, ['completado', 'en_espera'], true)) {
                 $data['hora_respuesta'] = $this->horaRespuestaDesde($horaCreacion);
                 $data['nombre_quien_responde'] = ucfirst($this->nombresF[array_rand($this->nombresF)]);
                 $data['numero_ingreso'] = random_int(100000, 999999);
@@ -200,7 +200,7 @@ class DemoDataSeeder extends Seeder
 
             $solicitud = SolicitudReferencia::create($data);
 
-            if (in_array($estado, ['aceptado', 'completado'], true)) {
+            if (in_array($estado, ['en_espera', 'completado'], true)) {
                 $solicitud->update(['codigo_aceptacion' => 'REF'.str_pad((string) $solicitud->id, 8, '0', STR_PAD_LEFT)]);
             }
 
@@ -230,16 +230,14 @@ class DemoDataSeeder extends Seeder
         if ($esReciente) {
             return match (true) {
                 $roll <= 25 => 'pendiente',
-                $roll <= 45 => 'en_espera',
-                $roll <= 65 => 'aceptado',
+                $roll <= 65 => 'en_espera',
                 $roll <= 90 => 'completado',
                 default => 'negado',
             };
         }
 
         return match (true) {
-            $roll <= 5 => 'en_espera',
-            $roll <= 25 => 'aceptado',
+            $roll <= 25 => 'en_espera',
             $roll <= 80 => 'completado',
             default => 'negado',
         };
