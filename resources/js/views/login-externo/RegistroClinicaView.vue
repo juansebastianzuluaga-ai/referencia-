@@ -146,8 +146,8 @@
                     </el-select>
                   </el-form-item>
                   <el-form-item prop="ciudad" class="mb-1 form-item-custom">
-                    <template #label><span class="flex items-center gap-1"><component :is="MapPinIcon" class="w-3 h-3 text-[#16468E]" /> Ciudad / Municipio</span></template>
-                    <el-select v-model="form.ciudad" placeholder="Seleccione" filterable autocomplete="off" class="w-full" :disabled="!form.departamento">
+                    <template #label><span class="flex items-center gap-1"><component :is="MapPinIcon" class="w-3 h-3 text-[#16468E]" /> Municipio / Ciudad</span></template>
+                    <el-select v-model="form.ciudad" placeholder="Seleccione o escriba el municipio o ciudad" filterable allow-create default-first-option autocomplete="off" class="w-full" :disabled="!form.departamento">
                       <el-option v-for="c in ciudadesDelDepartamento" :key="c" :label="c" :value="c" />
                     </el-select>
                   </el-form-item>
@@ -308,11 +308,11 @@ function capitalizar(campo: 'razon_social' | 'direccion' | 'representante_legal'
 
 // ── Validación NIT (formato simple) ──
 function validarNIT() {
-  const nit = form.nit.trim();
-  if (!nit) { nitError.value = ''; nitValido.value = false; return; }
+  const digitos = form.nit.replace(/\D/g, '');
+  if (!digitos) { nitError.value = ''; nitValido.value = false; return; }
 
-  if (!/^\d{6,10}-?\d?$/.test(nit)) {
-    nitError.value = 'Formato inválido. Use solo números (ej: 900123456 o 900123456-7)';
+  if (digitos.length < 8 || digitos.length > 11) {
+    nitError.value = 'Formato inválido. Ejemplos: 900123456, 900123456-7 o 900.123.456-7';
     nitValido.value = false;
     return;
   }

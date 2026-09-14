@@ -23,7 +23,7 @@ class LoginExternoController extends Controller
     public function registro(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'nit' => ['required', 'string', 'max:20', 'unique:clinicas,nit'],
+            'nit' => ['required', 'string', 'max:20'],
             'razon_social' => ['required', 'string', 'max:255'],
             'nombre' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
@@ -39,12 +39,23 @@ class LoginExternoController extends Controller
             'especialidades.*' => ['string', 'max:100'],
             'logo_path' => ['nullable', 'string', 'max:255'],
         ], [
-            'nit.unique' => 'Ya existe una clínica registrada con este NIT.',
             'email_confirmacion.same' => 'Los correos electrónicos no coinciden.',
         ]);
 
+        $nitNormalizado = preg_replace('/\D/', '', $validated['nit']);
+
+        if (strlen($nitNormalizado) < 8 || strlen($nitNormalizado) > 11) {
+            return response()->json(['message' => 'El NIT debe tener entre 8 y 11 dígitos.', 'errors' => ['nit' => ['El NIT debe tener entre 8 y 11 dígitos.']]], 422);
+        }
+
+        $existeNit = Clinica::whereRaw("REGEXP_REPLACE(nit, '[^0-9]', '') = ?", [$nitNormalizado])->exists();
+
+        if ($existeNit) {
+            return response()->json(['message' => 'Ya existe una clínica registrada con este NIT.', 'errors' => ['nit' => ['Ya existe una clínica registrada con este NIT.']]], 422);
+        }
+
         $clinica = Clinica::create([
-            'nit' => $validated['nit'],
+            'nit' => $nitNormalizado,
             'razon_social' => $validated['razon_social'],
             'nombre' => $validated['nombre'],
             'email' => $validated['email'],
