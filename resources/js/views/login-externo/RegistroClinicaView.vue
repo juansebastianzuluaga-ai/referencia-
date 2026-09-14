@@ -146,8 +146,8 @@
                     </el-select>
                   </el-form-item>
                   <el-form-item prop="ciudad" class="mb-1 form-item-custom">
-                    <template #label><span class="flex items-center gap-1"><component :is="MapPinIcon" class="w-3 h-3 text-[#16468E]" /> Ciudad / Municipio</span></template>
-                    <el-select v-model="form.ciudad" placeholder="Seleccione o escriba el municipio" filterable allow-create default-first-option autocomplete="off" class="w-full" :disabled="!form.departamento">
+                    <template #label><span class="flex items-center gap-1"><component :is="MapPinIcon" class="w-3 h-3 text-[#16468E]" /> Municipio / Ciudad</span></template>
+                    <el-select v-model="form.ciudad" placeholder="Seleccione o escriba el municipio o ciudad" filterable allow-create default-first-option autocomplete="off" class="w-full" :disabled="!form.departamento">
                       <el-option v-for="c in ciudadesDelDepartamento" :key="c" :label="c" :value="c" />
                     </el-select>
                   </el-form-item>
