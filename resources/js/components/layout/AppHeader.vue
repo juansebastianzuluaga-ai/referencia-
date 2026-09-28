@@ -1,72 +1,63 @@
 <template>
   <header
-    class="fixed top-0 left-0 right-0 h-[56px] flex items-center justify-between pr-4 z-50 transition-colors duration-300"
-    :style="{ background: layout.isDarkMode ? '#11151f' : 'linear-gradient(165deg, var(--rf-primary) 0%, var(--rf-primary-2) 100%)', borderBottom: layout.isDarkMode ? '1px solid rgba(255,255,255,0.06)' : 'none' }"
+    class="h-[56px] flex items-center justify-between pr-4 pl-2 md:pl-3 shrink-0 z-40 transition-colors duration-300 relative"
+    :style="{ background: layout.isDarkMode ? '#11151f' : '#ffffff', borderBottom: layout.isDarkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #e8edf4' }"
   >
-    <div class="flex items-center h-full">
-      <div
-        class="h-full flex items-center transition-all duration-200 shrink-0 overflow-hidden w-[52px] md:px-4 px-2"
-        :class="layout.isSidebarCollapsed ? 'md:w-[64px] md:justify-center md:px-0' : 'md:w-[240px] md:justify-start md:px-4'"
-      >
-        <div class="w-9 h-9 shrink-0 rounded-full flex items-center justify-center overflow-hidden bg-white" :style="{ boxShadow: layout.isDarkMode ? 'none' : '0 0 0 2px rgba(255,255,255,0.4)' }">
-          <img :src="logoAvatar" alt="Santa Bárbara" class="w-7 h-7 object-contain" />
-        </div>
-        <div
-          class="hidden md:flex flex-col ml-2.5 overflow-hidden whitespace-nowrap transition-all duration-200"
-          :class="layout.isSidebarCollapsed ? 'opacity-0 max-w-0' : 'opacity-100 max-w-[160px]'"
-        >
-          <strong class="block text-sm font-semibold leading-tight" style="color:#ffffff;">Santa Bárbara</strong>
-          <span class="text-[10px] font-light tracking-wide" style="color:rgba(255,255,255,0.65);">Clínica de Alta Complejidad</span>
-        </div>
-      </div>
-
+    <div class="flex items-center gap-2 flex-1 min-w-0">
+      <!-- Hamburguesa móvil -->
       <button
-        class="md:hidden w-9 h-9 rounded-lg flex items-center justify-center mx-3 transition-colors shrink-0 border-none cursor-pointer hover:bg-white/10"
-        style="color:#fff;"
+        class="flex md:hidden header-icon-btn"
+        :style="{ color: layout.isDarkMode ? '#cbd5e1' : '#475569' }"
         title="Mostrar/ocultar menu"
         @click="layout.toggleMobileMenu"
       >
         <MenuIcon class="w-4.5 h-4.5" />
       </button>
 
+      <!-- Colapsar sidebar (desktop) -->
       <button
-        class="hidden md:flex w-9 h-9 rounded-lg items-center justify-center mx-3 transition-colors shrink-0 border-none cursor-pointer hover:bg-white/10"
-        style="color:#fff;"
+        class="hidden md:flex header-icon-btn"
+        :style="{ color: layout.isDarkMode ? '#cbd5e1' : '#475569' }"
         title="Mostrar/ocultar sidebar"
         @click="layout.toggleSidebar"
       >
         <MenuIcon class="w-4.5 h-4.5" />
       </button>
 
-      <nav class="hidden md:flex items-center gap-1.5 text-[13px] font-medium" style="color:rgba(255,255,255,0.75);">
-        <span class="capitalize">{{ $route.name }}</span>
-      </nav>
+      <!-- Logo móvil -->
+      <div class="md:hidden flex items-center gap-2 shrink-0">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden bg-white border border-slate-200">
+          <img :src="logoAvatar" alt="Santa Bárbara" class="w-6 h-6 object-contain" />
+        </div>
+      </div>
     </div>
 
-    <div class="flex items-center gap-1.5">
-      <NotificationCenter :light="false" />
+    <div class="flex items-center gap-1">
+      <div class="header-action">
+        <NotificationCenter :light="!layout.isDarkMode" />
+      </div>
 
       <button
-        class="w-9 h-9 rounded-lg flex items-center justify-center transition-all border-none cursor-pointer hover:scale-110 hover:bg-white/10"
-        style="color:#fff;"
+        class="flex header-icon-btn"
+        :style="{ color: layout.isDarkMode ? '#cbd5e1' : '#475569' }"
         :title="layout.isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
         @click="layout.toggleDarkMode"
       >
-        <component :is="layout.isDarkMode ? SunIcon : MoonIcon" class="w-5 h-5" />
+        <component :is="layout.isDarkMode ? SunIcon : MoonIcon" class="w-[18px] h-[18px]" />
       </button>
 
-      <div class="w-px h-5 mx-1" style="background:rgba(255,255,255,0.18);"></div>
+      <div class="w-px h-5 mx-1.5" :style="{ background: layout.isDarkMode ? 'rgba(255,255,255,0.12)' : '#e2e8f0' }"></div>
 
       <el-dropdown trigger="click" @command="handleCommand">
-        <button class="flex items-center gap-2 py-1 pr-2 pl-1 rounded-lg transition-colors border-none cursor-pointer outline-none md:gap-2 gap-0 hover:bg-white/10">
-          <div class="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden text-white" :style="{ background: layout.isDarkMode ? 'linear-gradient(135deg, var(--rf-primary), var(--rf-primary-2))' : 'rgba(255,255,255,0.2)' }">
+        <button class="header-user border-none cursor-pointer outline-none">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden shrink-0" style="background: linear-gradient(135deg, var(--rf-primary), var(--rf-primary-2));">
             <img :src="logoAvatarWhite" alt="Usuario" class="w-7 h-8 object-contain" />
           </div>
           <div class="hidden md:block text-left">
-            <div class="text-[12.5px] font-medium leading-tight whitespace-nowrap" style="color:#fff;">{{ auth.user?.full_name || 'Usuario' }}</div>
-            <div class="text-[10.5px] leading-none mt-0.5" style="color:rgba(255,255,255,0.55);">{{ auth.user?.job_title || 'Personal' }}</div>
+            <div class="text-[12.5px] font-semibold leading-tight whitespace-nowrap" :style="{ color: layout.isDarkMode ? '#e2e8f0' : '#1e293b' }">{{ auth.user?.full_name || 'Usuario' }}</div>
+            <div class="text-[10.5px] leading-none mt-0.5" :style="{ color: layout.isDarkMode ? '#64748b' : '#94a3b8' }">{{ auth.user?.job_title || 'Personal' }}</div>
           </div>
-          <ChevronDownIcon class="hidden md:block w-3.5 h-3.5 ml-0.5" style="color:rgba(255,255,255,0.55);" />
+          <ChevronDownIcon class="hidden md:block w-3.5 h-3.5 ml-0.5 header-user-caret" :style="{ color: layout.isDarkMode ? '#64748b' : '#94a3b8' }" />
         </button>
 
         <template #dropdown>
@@ -91,7 +82,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useLayoutStore } from '@/stores/layout';
 import { useAuthStore } from '@/stores/auth';
@@ -110,18 +100,10 @@ const layout = useLayoutStore();
 const auth = useAuthStore();
 const router = useRouter();
 
-// Public images served from /public
-const logoLight = '/images/logo.png';
-const logoWhite = '/images/logo-w.png';
+// Public images served from /public — binding dinámico para que Vite no
+// intente resolverlas como imports en build.
 const logoAvatar = '/images/logo-avatar.png';
 const logoAvatarWhite = '/images/logo-avatar-w.png';
-
-const userInitials = computed(() => {
-  const name = auth.user?.first_name || 'U';
-  const lastName = auth.user?.last_name || '';
-
-  return `${name.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-});
 
 function handleCommand(command: string): void {
   if (command === 'logout') {
@@ -133,3 +115,60 @@ function handleCommand(command: string): void {
   }
 }
 </script>
+
+<style scoped>
+/* Solo estilos visuales — el display lo controlan las clases de Tailwind
+   (flex/hidden md:flex) para que la variante responsive funcione. */
+.header-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, transform .15s ease;
+}
+.header-icon-btn:hover {
+  background: #f1f5f9;
+}
+.header-icon-btn:active {
+  transform: scale(0.92);
+}
+.dark .header-icon-btn:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+.header-action {
+  border-radius: 10px;
+  transition: background .15s ease;
+}
+.header-action:hover {
+  background: #f1f5f9;
+}
+.dark .header-action:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 12px;
+  transition: background .15s ease;
+}
+.header-user:hover {
+  background: #f1f5f9;
+}
+.dark .header-user:hover {
+  background: rgba(255,255,255,0.06);
+}
+.header-user-caret {
+  transition: transform .2s ease;
+}
+.header-user:hover .header-user-caret {
+  transform: translateY(1px);
+}
+</style>

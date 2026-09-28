@@ -1,16 +1,16 @@
 <template>
-  <div class="flex flex-col h-screen overflow-hidden text-gray-700" :style="{ background: layout.isDarkMode ? '#0b0e17' : 'var(--rf-bg)' }">
-    <AppHeader />
-
+  <div class="flex h-screen overflow-hidden text-gray-700" :style="{ background: layout.isDarkMode ? '#0b0e17' : 'var(--rf-bg)' }">
     <!-- Overlay móvil -->
-    <div 
-      v-if="layout.isMobileMenuOpen" 
-      class="fixed inset-0 bg-black/40 z-40 md:hidden" 
+    <div
+      v-if="layout.isMobileMenuOpen"
+      class="fixed inset-0 bg-black/40 z-40 md:hidden"
       @click="layout.closeMobileMenu"
     ></div>
 
-    <div class="flex flex-1 overflow-hidden pt-[56px]">
-      <AppSidebar />
+    <AppSidebar />
+
+    <div class="flex-1 flex flex-col min-w-0 min-h-0">
+      <AppHeader />
 
       <main class="flex-1 flex flex-col min-h-0 p-4 overflow-hidden" :style="{ background: layout.isDarkMode ? '#0b0e17' : 'var(--rf-bg)' }">
         <router-view v-slot="{ Component }">

@@ -26,6 +26,7 @@ declare module 'vue' {
     CardTitle: typeof import('./components/ui/card/CardTitle.vue')['default']
     ClinicaLayout: typeof import('./components/layout/ClinicaLayout.vue')['default']
     ContentCard: typeof import('./components/ui/ContentCard.vue')['default']
+    DateRangeFilter: typeof import('./components/ui/DateRangeFilter.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
     ElButton: typeof import('element-plus/es')['ElButton']

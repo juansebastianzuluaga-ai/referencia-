@@ -55,6 +55,7 @@ Route::prefix('api')->name('api.')->group(function (): void {
 
     Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
         Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
+        Route::get('search', [DashboardController::class, 'search'])->name('search');
 
         Route::get('reportes/stats', [ReportesController::class, 'stats'])->name('reportes.stats');
         Route::get('reportes/exportar', [ReportesController::class, 'exportar'])->name('reportes.exportar');
