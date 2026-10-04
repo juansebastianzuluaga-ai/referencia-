@@ -1,4 +1,4 @@
-NUEVO<?php
+<?php
 
 namespace App\Http\Controllers\Api;
 
@@ -21,7 +21,7 @@ class DashboardController extends BaseController
         if ($request->filled('hasta')) {
             $query->whereDate('created_at', '<=', $request->input('hasta'));
         }
-        if ($request->filled('estado') && $request->input('estado') !== 'todas') {
+        if ($request->filled('estado ') && $request->input('estado') !== 'todas') {
             $query->where('solicitudes_referencia.estado', $request->input('estado'));
         }
         if ($request->filled('especialidad')) {
@@ -47,28 +47,49 @@ class DashboardController extends BaseController
         $clinicasTotal = Clinica::count();
         $clinicasActivas = Clinica::where('is_active', true)->count();
         $clinicasPendientes = Clinica::where('estado', 'pendiente')->count();
+        $clinicasNuevasMes = Clinica::where('created_at', '>=', now()->startOfMonth())->count();
 
         $usuariosTotal = User::count();
         $usuariosActivos = User::where('is_active', true)->count();
 
         $solicitudesRecientes = (clone $query)->with('clinica:id,nombre')
-            ->select('id', 'clinica_id', 'tipo_documento', 'numero_documento', 'primer_nombre', 'segundo_nombre', 'primer_apellido', 'segundo_apellido', 'telefono_contacto', 'estado', 'especialidad_requerida', 'eps', 'fecha', 'hora_respuesta', 'created_at')
+            ->select('id', 'clinica_id', 'tipo_documento', 'numero_documento', 'primer_nombre', 'segundo_nombre', 'primer_apellido', 'segundo_apellido', 'telefono_contacto', 'estado', 'especialidad_requerida', 'eps', 'fecha', 'hora', 'hora_respuesta', 'created_at')
             ->latest()
             ->limit(8)
             ->get()
-            ->map(fn ($s) => [
-                'id' => $s->id,
-                'paciente' => trim("{$s->primer_nombre} {$s->primer_apellido}"),
-                'nombre_completo' => trim("{$s->primer_nombre} {$s->segundo_nombre} {$s->primer_apellido} {$s->segundo_apellido}"),
-                'tipo_documento' => $s->tipo_documento,
-                'numero_documento' => $s->numero_documento,
-                'telefono_contacto' => $s->telefono_contacto,
-                'estado' => $s->estado,
-                'especialidad' => $s->especialidad_requerida,
-                'eps' => $s->eps,
-                'clinica' => $s->clinica?->nombre,
-                'created_at' => $s->created_at?->toISOString(),
-            ]);
+            ->map(function ($s) {
+                // "Tiempo": duración de la gestión si ya respondieron; si no,
+                // tiempo que lleva esperando desde su creación.
+                $minutos = null;
+                if ($s->hora_respuesta && $s->fecha && $s->hora) {
+                    $inicio = Carbon::parse("{$s->fecha->toDateString()} {$s->hora}");
+                    $minutos = $inicio->diffInMinutes(Carbon::parse("{$s->fecha->toDateString()} {$s->hora_respuesta}"));
+                } elseif ($s->created_at) {
+                    $minutos = (int) abs(now()->diffInMinutes($s->created_at));
+                }
+                $tiempo = null;
+                if ($minutos !== null) {
+                    $tiempo = $minutos >= 60
+                        ? intdiv($minutos, 60).'h '.str_pad((string) ($minutos % 60), 2, '0', STR_PAD_LEFT).'m'
+                        : $minutos.'m';
+                }
+
+                return [
+                    'id' => $s->id,
+                    'paciente' => trim("{$s->primer_nombre} {$s->primer_apellido}"),
+                    'nombre_completo' => trim("{$s->primer_nombre} {$s->segundo_nombre} {$s->primer_apellido} {$s->segundo_apellido}"),
+                    'tipo_documento' => $s->tipo_documento,
+                    'numero_documento' => $s->numero_documento,
+                    'telefono_contacto' => $s->telefono_contacto,
+                    'estado' => $s->estado,
+                    'especialidad' => $s->especialidad_requerida,
+                    'eps' => $s->eps,
+                    'clinica' => $s->clinica?->nombre,
+                    'fecha_solicitud' => $s->created_at?->format('d M Y · H:i'),
+                    'tiempo' => $tiempo,
+                    'created_at' => $s->created_at?->toISOString(),
+                ];
+            });
 
         $especialidades = SolicitudReferencia::select('especialidad_requerida')
             ->distinct()
@@ -85,9 +106,15 @@ class DashboardController extends BaseController
             ->values();
 
         $tendencia = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14);
+        $tendenciaAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, null, 14);
         $tendenciaClinicas = $this->tendenciaUltimosDias(Clinica::class, 14);
         $tendenciaUsuarios = $this->tendenciaUltimosDias(User::class, 14);
-        $tendenciaPendientes = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'pendiente'));
+        $tendenciaPendientes = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'pendiente'), 0);
+        $tendenciaPendientesAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'pendiente'), 14);
+        $tendenciaEnEspera = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'en_espera'), 0);
+        $tendenciaEnEsperaAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'en_espera'), 14);
+        $tendenciaCompletadas = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'completado'), 0);
+        $tendenciaCompletadasAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'completado'), 14);
 
         // Hace cuánto está esperando revisión la solicitud pendiente más
         // antigua — el volumen total no dice si el personal va al día o si
@@ -115,6 +142,7 @@ class DashboardController extends BaseController
 
         $porDiaHora = $this->porDiaHora();
         $sla = $this->slaRespuesta(clone $query);
+        $slaDiario = $this->slaDiario(14);
         $actividad = $this->actividadReciente(clone $query);
         $clinicasFiltro = Clinica::orderBy('nombre')->get(['id', 'nombre']);
         $porClinica = (clone $query)
@@ -126,6 +154,9 @@ class DashboardController extends BaseController
             ->limit(8)
             ->get()
             ->map(fn ($r) => ['clinica' => $r->nombre, 'total' => (int) $r->total]);
+
+        $topClinicas = $this->topConSparkline($query, 'clinicas.nombre', 'clinicas', 5, $solicitudesTotal);
+        $topEspecialidadesConSerie = $this->topConSparkline($query, 'especialidad_requerida', 'especialidades', 5, $solicitudesTotal);
 
         $porEps = (clone $query)
             ->select('eps')
@@ -150,6 +181,7 @@ class DashboardController extends BaseController
                 'total' => $clinicasTotal,
                 'activas' => $clinicasActivas,
                 'pendientes' => $clinicasPendientes,
+                'nuevas_mes' => $clinicasNuevasMes,
             ],
             'usuarios' => [
                 'total' => $usuariosTotal,
@@ -162,9 +194,15 @@ class DashboardController extends BaseController
                 'clinicas' => $clinicasFiltro,
             ],
             'tendencia' => $tendencia,
+            'tendencia_anterior' => $tendenciaAnterior,
             'tendencia_clinicas' => $tendenciaClinicas,
             'tendencia_usuarios' => $tendenciaUsuarios,
             'tendencia_pendientes' => $tendenciaPendientes,
+            'tendencia_pendientes_anterior' => $tendenciaPendientesAnterior,
+            'tendencia_en_espera' => $tendenciaEnEspera,
+            'tendencia_en_espera_anterior' => $tendenciaEnEsperaAnterior,
+            'tendencia_completadas' => $tendenciaCompletadas,
+            'tendencia_completadas_anterior' => $tendenciaCompletadasAnterior,
             'pendiente_mas_antigua_horas' => $pendienteMasAntiguaHoras,
             'top_especialidades' => $topEspecialidades,
             'tasa_aceptacion' => $tasaAceptacion,
@@ -172,6 +210,9 @@ class DashboardController extends BaseController
             'por_clinica' => $porClinica,
             'por_eps' => $porEps,
             'sla' => $sla,
+            'sla_diario' => $slaDiario,
+            'top_clinicas' => $topClinicas,
+            'top_especialidades_serie' => $topEspecialidadesConSerie,
             'actividad' => $actividad,
         ], 'Estadísticas del dashboard');
     }
@@ -229,11 +270,12 @@ class DashboardController extends BaseController
      * @param  class-string  $modelClass
      * @return array<int, array{fecha: string, total: int}>
      */
-    private function tendenciaUltimosDias(string $modelClass, int $dias, ?\Closure $scope = null): array
+    private function tendenciaUltimosDias(string $modelClass, int $dias, ?\Closure $scope = null, int $offsetDias = 0): array
     {
-        $desde = now()->subDays($dias - 1)->startOfDay();
+        $desde = now()->subDays($dias - 1 + $offsetDias)->startOfDay();
+        $hasta = now()->subDays($offsetDias)->endOfDay();
 
-        $query = $modelClass::query()->where('created_at', '>=', $desde);
+        $query = $modelClass::query()->whereBetween('created_at', [$desde, $hasta]);
         if ($scope) {
             $scope($query);
         }
@@ -244,7 +286,7 @@ class DashboardController extends BaseController
 
         $resultado = [];
         for ($i = $dias - 1; $i >= 0; $i--) {
-            $fecha = now()->subDays($i)->format('Y-m-d');
+            $fecha = now()->subDays($i + $offsetDias)->format('Y-m-d');
             $resultado[] = [
                 'fecha' => $fecha,
                 'total' => (int) ($conteos[$fecha] ?? 0),
@@ -252,6 +294,117 @@ class DashboardController extends BaseController
         }
 
         return $resultado;
+    }
+
+    /**
+     * Top N de una dimensión (clínica o especialidad) con su conteo, el % que
+     * representa del total de solicitudes y una sparkline de los últimos
+     * 14 días — alimenta las tablas con mini-gráficas del dashboard.
+     *
+     * @return array<int, array{nombre: string, total: int, pct: int, serie: array<int, int>}>
+     */
+    private function topConSparkline($query, string $columna, string $tipo, int $limite, ?int $totalBase = null): array
+    {
+        $porDia = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14);
+        $dias = array_column($porDia, 'fecha');
+
+        if ($tipo === 'clinicas') {
+            $base = (clone $query)
+                ->join('clinicas', 'clinicas.id', '=', 'solicitudes_referencia.clinica_id')
+                ->select('clinicas.nombre as nombre')
+                ->selectRaw('COUNT(*) as total')
+                ->groupBy('clinicas.nombre');
+        } else {
+            $base = (clone $query)
+                ->select("{$columna} as nombre")
+                ->selectRaw('COUNT(*) as total')
+                ->whereNotNull($columna)
+                ->groupBy($columna);
+        }
+
+        $top = $base->orderByDesc('total')->limit($limite)->get();
+        $nombres = $top->pluck('nombre');
+
+        $conteos = SolicitudReferencia::query()
+            ->leftJoin('clinicas', 'clinicas.id', '=', 'solicitudes_referencia.clinica_id')
+            ->where('solicitudes_referencia.created_at', '>=', now()->subDays(13)->startOfDay())
+            ->whereIn($tipo === 'clinicas' ? 'clinicas.nombre' : "solicitudes_referencia.{$columna}", $nombres)
+            ->selectRaw(($tipo === 'clinicas' ? 'clinicas.nombre' : "solicitudes_referencia.{$columna}").' as nombre, DATE(solicitudes_referencia.created_at) as f, COUNT(*) as t')
+            ->groupByRaw(($tipo === 'clinicas' ? 'clinicas.nombre' : "solicitudes_referencia.{$columna}").', DATE(solicitudes_referencia.created_at)')
+            ->get()
+            ->groupBy('nombre');
+
+        $divisor = $totalBase ?? max(1, (int) $top->sum('total'));
+
+        return $top->map(fn ($r) => [
+            'nombre' => $r->nombre,
+            'total' => (int) $r->total,
+            'pct' => (int) round(((int) $r->total / $divisor) * 100),
+            'serie' => array_map(function ($dia) use ($conteos, $r) {
+                $fila = $conteos->get($r->nombre)?->firstWhere('f', $dia);
+
+                return $fila ? (int) $fila->t : 0;
+            }, $dias),
+        ])->values()->all();
+    }
+
+    /**
+     * SLA desglosado por día (últimos $dias): cuántas respuestas cayeron en
+     * cada banda (≤2h, 2–4h, >4h) y el promedio en horas — alimenta las
+     * barras apiladas + línea del panel "Tiempo de respuesta".
+     *
+     * @return array{dias: array<int, array{fecha: string, hasta2: int, de2a4: int, mas4: int, avg_horas: float}>, promedio: string|null, promedio_min: int|null, promedio_delta: int|null}
+     */
+    private function slaDiario(int $dias): array
+    {
+        $expresion = "TIMESTAMPDIFF(MINUTE, CONCAT(fecha, ' ', hora), CONCAT(fecha, ' ', hora_respuesta))";
+        $desde = now()->subDays($dias - 1)->startOfDay();
+
+        $filas = SolicitudReferencia::query()
+            ->whereNotNull('hora_respuesta')
+            ->where('created_at', '>=', $desde)
+            ->selectRaw("DATE(created_at) as f, {$expresion} as m")
+            ->get()
+            ->groupBy('f');
+
+        $resultado = [];
+        for ($i = $dias - 1; $i >= 0; $i--) {
+            $fecha = now()->subDays($i)->format('Y-m-d');
+            $del = $filas->get($fecha, collect());
+            $hasta2 = $del->filter(fn ($r) => $r->m <= 120)->count();
+            $de2a4 = $del->filter(fn ($r) => $r->m > 120 && $r->m <= 240)->count();
+            $mas4 = $del->count() - $hasta2 - $de2a4;
+            $resultado[] = [
+                'fecha' => $fecha,
+                'hasta2' => $hasta2,
+                'de2a4' => $de2a4,
+                'mas4' => $mas4,
+                'avg_horas' => $del->count() ? round($del->avg('m') / 60, 1) : 0,
+            ];
+        }
+
+        // Promedio del período vs el período anterior para el delta del mockup.
+        $promedioDe = function ($desdeDias, $hastaDias) use ($expresion) {
+            return SolicitudReferencia::query()
+                ->whereNotNull('hora_respuesta')
+                ->whereBetween('created_at', [now()->subDays($desdeDias)->startOfDay(), now()->subDays($hastaDias)->endOfDay()])
+                ->selectRaw("AVG({$expresion}) as m")
+                ->value('m');
+        };
+
+        $promedio = $promedioDe($dias - 1, 0);
+        $promedioAnt = $promedioDe(2 * $dias - 1, $dias);
+        $promedioMin = $promedio !== null ? (int) round($promedio) : null;
+        $delta = ($promedioMin !== null && $promedioAnt)
+            ? (int) round((($promedioMin - $promedioAnt) / $promedioAnt) * 100)
+            : null;
+
+        return [
+            'dias' => $resultado,
+            'promedio' => $promedioMin !== null ? intdiv($promedioMin, 60).'h '.str_pad((string) ($promedioMin % 60), 2, '0', STR_PAD_LEFT).'m' : null,
+            'promedio_min' => $promedioMin,
+            'promedio_delta' => $delta,
+        ];
     }
 
     /**

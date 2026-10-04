@@ -2,6 +2,7 @@
 import { type HTMLAttributes, type Component, computed } from 'vue';
 import { cn } from '@/lib/utils';
 import Sparkline from '@/components/ui/Sparkline.vue';
+import { TrendingUp, TrendingDown, Minus } from '@lucide/vue';
 
 export type StatCardTone = 'info' | 'success' | 'warning' | 'danger' | 'violet';
 
@@ -45,6 +46,8 @@ interface StatCardProps {
   sparkline?: number[];
   /** Texto de comparación contra el periodo anterior, ej. "↑12.5% vs periodo anterior" (solo variante `pastel`). */
   comparacion?: string;
+  /** Icono en cuadro sólido del color del tono con icono blanco (en vez del cuadro tintado suave). */
+  solidIcon?: boolean;
   /** En modo oscuro la variante `pastel` usa una tarjeta neutra oscura en vez del tinte pastel (que es ilegible sobre fondo oscuro). */
   dark?: boolean;
 }
@@ -59,7 +62,6 @@ const props = withDefaults(defineProps<StatCardProps>(), {
 
 const tone = computed(() => TONE_MAP[props.tone]);
 const pastelTone = computed(() => PASTEL_TONE_MAP[props.tone]);
-const pastelCardBg = computed(() => (props.dark ? '#161b28' : pastelTone.value.tint));
 
 const cardStyle = computed(() => ({
   '--accent': tone.value.accent,
@@ -71,24 +73,63 @@ const cardStyle = computed(() => ({
 }));
 
 const ringOffset = computed(() => 169.6 - (169.6 * props.percent) / 100);
+
+/** Pill de comparación: verde si sube, rojo si baja, neutro si es plano. */
+const compClass = computed(() => {
+  const c = props.comparacion ?? '';
+  if (c.startsWith('↓')) return 'stat-pastel-comp--down';
+  if (c.startsWith('↑') || c.startsWith('+')) return 'stat-pastel-comp--up';
+  return 'stat-pastel-comp--flat';
+});
+const compIcon = computed(() => {
+  if (compClass.value === 'stat-pastel-comp--down') return TrendingDown;
+  if (compClass.value === 'stat-pastel-comp--up') return TrendingUp;
+  return Minus;
+});
+const comparacionTexto = computed(() => (props.comparacion ?? '').replace(/^[↑↓]/, ''));
 </script>
 
 <template>
   <div
     v-if="variant === 'pastel'"
-    :class="cn('stat-card-pastel rounded-2xl p-3.5 flex items-center gap-3 relative overflow-hidden', props.class)"
-    :style="{ background: pastelCardBg, borderColor: dark ? 'rgba(255,255,255,0.06)' : undefined }"
+    :class="cn('stat-card-pastel rounded-2xl relative overflow-hidden', props.class)"
+    :style="{ borderColor: dark ? 'rgba(255,255,255,0.06)' : undefined }"
   >
-    <div class="stat-pastel-icon shrink-0" :style="{ background: pastelTone.solid }">
-      <component :is="icon" class="w-5 h-5 text-white" />
+    <!-- Franja superior del tono + halo decorativo -->
+    <div class="stat-pastel-bar" :style="{ background: `linear-gradient(90deg, ${pastelTone.solid}, color-mix(in srgb, ${pastelTone.solid} 45%, #fff))` }"></div>
+    <div class="stat-pastel-glow" :style="{ background: `radial-gradient(circle, color-mix(in srgb, ${pastelTone.solid} 18%, transparent), transparent 70%)` }"></div>
+
+    <div class="p-3.5 flex items-start gap-3 relative z-10">
+      <!-- Icono en cuadro tintado (o sólido si `solidIcon`) -->
+      <div class="stat-pastel-icon shrink-0" :style="solidIcon
+        ? { background: `linear-gradient(135deg, ${pastelTone.solid}, color-mix(in srgb, ${pastelTone.solid} 78%, #000))`, color: '#fff', boxShadow: `0 5px 14px color-mix(in srgb, ${pastelTone.solid} 42%, transparent)` }
+        : { background: `color-mix(in srgb, ${pastelTone.solid} 13%, #fff)`, color: pastelTone.solid, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${pastelTone.solid} 22%, transparent)` }">
+        <component :is="icon" class="w-[22px] h-[22px]" />
+      </div>
+
+      <div class="flex-1 min-w-0">
+        <div class="flex items-baseline gap-2">
+          <p class="stat-pastel-value">{{ value }}</p>
+          <span v-if="delta" class="stat-pastel-delta" :style="{ color: pastelTone.solid }">{{ delta }}</span>
+        </div>
+        <p class="stat-pastel-label">{{ label }}</p>
+        <span v-if="comparacion" class="stat-pastel-comp" :class="compClass">
+          <component :is="compIcon" class="w-2.5 h-2.5" />
+          {{ comparacionTexto }}
+        </span>
+      </div>
     </div>
-    <div class="flex-1 min-w-0">
-      <p class="stat-pastel-value">{{ value }}</p>
-      <p class="stat-pastel-label">{{ label }}</p>
-      <span v-if="delta" class="stat-pastel-delta" :style="{ color: pastelTone.solid }">{{ delta }}</span>
-      <p v-if="comparacion" class="stat-pastel-comparacion">{{ comparacion }}</p>
-    </div>
-    <Sparkline v-if="sparkline && sparkline.length > 1" :valores="sparkline" :color="pastelTone.solid" class="stat-pastel-sparkline" />
+
+    <!-- Sparkline anclado abajo a la derecha -->
+    <Sparkline
+      v-if="sparkline && sparkline.length > 1"
+      :valores="sparkline"
+      :color="pastelTone.solid"
+      :ancho="86"
+      :alto="32"
+      relleno
+      class="stat-pastel-sparkline"
+    />
   </div>
 
   <div v-else :class="cn('stat-card rounded-2xl p-3.5 flex items-center gap-3', dense && 'stat-card--dense p-3', props.class)" :style="cardStyle">
@@ -285,20 +326,32 @@ const ringOffset = computed(() => 169.6 - (169.6 * props.percent) / 100);
   font-size: 9.5px;
 }
 
-/* ── Variante pastel: tarjeta plana, tema claro ── */
+/* ── Variante pastel: tarjeta blanca con acento de color ── */
 .stat-card-pastel {
-  border: 1px solid rgba(15, 23, 42, 0.04);
+  background: #ffffff;
+  border: 1px solid #e9eef6;
+  box-shadow: 0 4px 16px rgba(22, 70, 142, 0.06);
   transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
 }
 .stat-card-pastel:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 16px 32px rgba(22, 70, 142, 0.14);
 }
 .stat-card-pastel:hover .stat-pastel-icon {
-  transform: scale(1.1) rotate(-4deg);
+  transform: scale(1.08);
 }
-.stat-card-pastel:hover .stat-pastel-sparkline {
-  opacity: 1;
+.stat-pastel-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.stat-pastel-glow {
+  position: absolute;
+  top: -34px; right: -30px;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  filter: blur(8px);
+  pointer-events: none;
 }
 .stat-pastel-icon {
   width: 42px;
@@ -310,46 +363,54 @@ const ringOffset = computed(() => 169.6 - (169.6 * props.percent) / 100);
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .stat-pastel-value {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
-  line-height: 1.15;
-  color: #1e293b;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #0f172a;
 }
 .stat-pastel-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: #64748b;
-  margin-top: 1px;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #8a97ab;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.07em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .stat-pastel-delta {
   display: inline-block;
-  font-size: 10px;
-  font-weight: 700;
-  margin-top: 3px;
-}
-.stat-pastel-comparacion {
   font-size: 9.5px;
-  font-weight: 600;
-  color: #94a3b8;
-  margin-top: 2px;
+  font-weight: 700;
 }
+.stat-pastel-comp {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  margin-top: 4px;
+  padding: 2.5px 8px;
+  border-radius: 999px;
+}
+.stat-pastel-comp--up { background: #dcfce7; color: #15803d; }
+.stat-pastel-comp--down { background: #fee2e2; color: #b91c1c; }
+.stat-pastel-comp--flat { background: #f1f5f9; color: #64748b; }
 .stat-pastel-sparkline {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
-  opacity: 0.6;
+  right: 12px;
+  bottom: 12px;
+  opacity: 0.9;
   pointer-events: none;
-  transition: opacity 0.25s ease;
 }
 
 /* En modo oscuro (ver ClinicaDashboardView.vue), estas tarjetas viven sobre
    fondo oscuro con :style inline; el texto neutro necesita su propia rama. */
+.dark .stat-card-pastel { background: #161b28; border-color: rgba(255,255,255,0.07); }
 .dark .stat-pastel-value { color: #e2e8f0; }
-.dark .stat-pastel-label { color: #94a3b8; }
-.dark .stat-pastel-comparacion { color: #64748b; }
+.dark .stat-pastel-label { color: #64748b; }
+.dark .stat-pastel-comp--up { background: rgba(34,197,94,0.15); color: #4ade80; }
+.dark .stat-pastel-comp--down { background: rgba(220,38,38,0.18); color: #fca5a5; }
+.dark .stat-pastel-comp--flat { background: rgba(255,255,255,0.07); color: #94a3b8; }
 </style>

@@ -1,96 +1,130 @@
 <template>
   <div class="ph-solicitudes h-full flex flex-col gap-2 p-3 sm:p-4 overflow-hidden">
 
-    <!-- ── Header ── -->
-    <div class="sol-header shrink-0 animate-fade-in-up"
-      style="animation-duration: 0.4s; animation-fill-mode: both;">
-      <div class="sol-header-icon">
-        <component :is="ClipboardListIcon" class="w-5 h-5" />
-      </div>
-      <h1 class="sol-header-title">Solicitudes de referencia</h1>
-      <div class="sol-header-spacer"></div>
-      <el-button type="primary" size="small" @click="cargar">
-        <component :is="RefreshIcon" class="w-3.5 h-3.5 mr-1" :class="{ 'animate-spin': cargando }" />
-        Actualizar
-      </el-button>
-      <el-button size="small" @click="exportarExcel" :disabled="solicitudesFiltradas.length === 0">
-        <component :is="DownloadIcon" class="w-3.5 h-3.5 mr-1" />
-        Exportar CSV
-      </el-button>
-      <el-button size="small" :loading="verificandoTodosIngresos" :disabled="!solicitudesEnEspera.length" @click="verificarTodosIngresos">
-        <component :is="SearchIcon" class="w-3.5 h-3.5 mr-1" />
-        Verificar ingresos
-      </el-button>
-    </div>
-
     <!-- ── Stat cards ── -->
     <div class="sol-stats-bar shrink-0">
       <StatCard
-        variant="pastel" tone="info"
-        label="Solicitudes" :value="displayStats[0]"
-        :comparacion="resumen.total ? `${resumen.total} registradas` : 'sin registros'"
-        :icon="ClipboardListIcon" :sparkline="crecimientoSolicitudes"
+        variant="pastel" tone="info" solid-icon
+        label="Solicitudes totales" :value="displayStats[0]"
+        :comparacion="deltaTotal"
+        :icon="ClipboardListIcon" :sparkline="serieTotal"
       />
       <StatCard
-        variant="pastel" tone="warning"
-        label="Pendientes" :value="displayStats[1]"
-        :comparacion="resumen.pendientes ? `${resumen.pendientes} sin revisar` : 'sin pendientes'"
-        :icon="ClockIcon"
+        variant="pastel" tone="warning" solid-icon
+        label="Pendientes de gestión" :value="displayStats[1]"
+        :comparacion="deltaPendientes"
+        :icon="ClockIcon" :sparkline="seriePendientes"
       />
       <StatCard
-        variant="pastel" tone="info"
+        variant="pastel" tone="violet" solid-icon
         label="En espera" :value="displayStats[2]"
-        :comparacion="resumen.enEspera ? `${resumen.enEspera} esperando llegada` : 'sin pacientes en espera'"
-        :icon="HourglassIcon"
+        :comparacion="deltaEnEspera"
+        :icon="HourglassIcon" :sparkline="serieEnEspera"
+      />
+      <StatCard
+        variant="pastel" tone="success" solid-icon
+        label="Completadas" :value="displayStats[3]"
+        :comparacion="deltaCompletadas"
+        :icon="CheckCircleIcon" :sparkline="serieCompletadas"
       />
     </div>
 
-    <!-- ── Tabs + Búsqueda ── -->
-    <div class="sol-filter-bar shrink-0">
-      <div class="sol-tabs">
-        <button
-          v-for="tab in tabs"
-          :key="tab.value"
-          class="sol-tab"
-          :class="{ 'sol-tab-active': tabActiva === tab.value }"
-          @click="cambiarTab(tab.value)"
-        >
-          <span v-if="tab.value !== 'todas'" class="sol-tab-dot" :class="'sol-tab-dot--' + tab.value"></span>
-          {{ tab.label }}
-          <span class="sol-tab-count">{{ tab.count }}</span>
-        </button>
-      </div>
-      <div class="sol-filter-divider"></div>
-      <el-input
-        v-model="filtro.buscar"
-        placeholder="Buscar paciente, EPS, especialidad..."
-        class="sol-search"
-        clearable
-        size="small"
-      >
-        <template #prefix>
-          <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
-        </template>
-      </el-input>
-      <el-button v-if="filtro.buscar || tabActiva !== 'todas'" type="danger" size="small" round @click="limpiarFiltros">
-        <component :is="RefreshIcon" class="w-3.5 h-3.5 mr-1" />
-        Borrar filtros
-      </el-button>
-    </div>
+    <!-- ── Contenido: columna izquierda (chips + filtros + tabla) + panel lateral ── -->
+    <div class="flex-1 flex gap-2 min-h-0 overflow-hidden">
+    <div class="flex-1 min-w-0 flex flex-col gap-2 min-h-0">
 
-    <!-- ── Bulk actions bar ── -->
-    <Transition name="bulk-slide">
-      <div v-if="seleccionadas.size > 0" class="sol-bulk-bar shrink-0">
-        <span class="text-xs font-bold" style="color:#0D2D6B;">{{ seleccionadas.size }} seleccionada(s)</span>
-        <el-button type="danger" size="small" :loading="procesandoLote" @click="abrirNegarLote">
-          <component :is="XIcon" class="w-3 h-3 mr-0.5" /> Negar
-        </el-button>
-        <el-button size="small" text @click="seleccionadas.clear()">Limpiar</el-button>
+      <!-- ── Chips de estado + toggle de filtros ── -->
+      <div class="sol-filter-bar shrink-0">
+        <div class="sol-tabs">
+          <button
+            v-for="tab in tabs"
+            :key="tab.value"
+            class="sol-tab"
+            :class="{ 'sol-tab-active': tabActiva === tab.value }"
+            @click="cambiarTab(tab.value)"
+          >
+            <span v-if="tab.value !== 'todas'" class="sol-tab-dot" :class="'sol-tab-dot--' + tab.value"></span>
+            {{ tab.label }}
+            <span class="sol-tab-count">{{ tab.count }}</span>
+          </button>
+          <button class="sol-tab sol-tab-link" @click="irAHistorico('completado')">
+            <span class="sol-tab-dot sol-tab-dot--completado"></span>
+            Completadas
+            <span class="sol-tab-count">{{ statsSol.completadas }}</span>
+          </button>
+          <button class="sol-tab sol-tab-link" @click="irAHistorico('negado')">
+            <span class="sol-tab-dot sol-tab-dot--negado"></span>
+            Negadas
+            <span class="sol-tab-count">{{ statsSol.negadas }}</span>
+          </button>
+        </div>
+        <div class="sol-header-spacer"></div>
+        <div class="sol-chips-actions">
+          <el-tooltip content="Actualizar" placement="top">
+            <button class="sol-icon-btn" @click="cargar">
+              <component :is="RefreshIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': cargando }" />
+            </button>
+          </el-tooltip>
+          <el-tooltip content="Exportar CSV" placement="top">
+            <button class="sol-icon-btn" :disabled="solicitudesFiltradas.length === 0" @click="exportarExcel">
+              <component :is="DownloadIcon" class="w-3.5 h-3.5" />
+            </button>
+          </el-tooltip>
+          <el-tooltip content="Verificar ingresos en Gomedisys" placement="top">
+            <button class="sol-icon-btn sol-icon-btn-primary" :disabled="!solicitudesEnEspera.length || verificandoTodosIngresos" @click="verificarTodosIngresos">
+              <component :is="SearchIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': verificandoTodosIngresos }" />
+            </button>
+          </el-tooltip>
+        </div>
+        <div ref="filtrosWrap" class="sol-filtros-wrap">
+          <button class="sol-filtros-btn" :class="{ 'sol-filtros-btn-active': filtrosAbiertos || conteoFiltros > 0 }" @click="filtrosAbiertos = !filtrosAbiertos">
+            <component :is="SlidersIcon" class="w-3.5 h-3.5" />
+            Filtros
+            <span v-if="conteoFiltros > 0" class="sol-filtros-badge">{{ conteoFiltros }}</span>
+          </button>
+
+          <!-- ── Panel de filtros ── -->
+          <Transition name="bulk-slide">
+            <div v-if="filtrosAbiertos" class="sol-filtros-panel">
+              <DateRangeFilter v-model="rangoFechas" />
+              <el-select v-model="filtroClinica" placeholder="Todas las clínicas" clearable filterable size="small" class="sol-select">
+                <el-option v-for="c in clinicasFiltro" :key="c.id" :label="c.nombre" :value="c.id" />
+              </el-select>
+              <el-select v-model="filtroEspecialidad" placeholder="Todas las especialidades" clearable filterable size="small" class="sol-select">
+                <el-option v-for="e in especialidadesFiltro" :key="e" :label="e" :value="e" />
+              </el-select>
+              <el-select
+                :model-value="tabActiva"
+                placeholder="Todos los estados"
+                size="small"
+                class="sol-select sol-select-estado"
+                @update:model-value="(v: string) => v === 'completado' || v === 'negado' ? (irAHistorico(v), filtrosAbiertos = false) : cambiarTab(v as 'todas' | 'pendiente' | 'en_espera')"
+              >
+                <el-option label="Todos los estados" value="todas" />
+                <el-option label="Pendientes" value="pendiente" />
+                <el-option label="En espera" value="en_espera" />
+                <el-option label="Completadas" value="completado" />
+                <el-option label="Negadas" value="negado" />
+              </el-select>
+              <el-input
+                v-model="filtro.buscar"
+                placeholder="Buscar paciente, EPS, diagnóstico..."
+                class="sol-search"
+                clearable
+                size="small"
+              >
+                <template #prefix>
+                  <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
+                </template>
+              </el-input>
+              <button v-if="hayFiltros" class="sol-limpiar" @click="limpiarFiltros">Limpiar filtros</button>
+            </div>
+          </Transition>
+        </div>
       </div>
-    </Transition>
 
     <!-- ── Tabla ── -->
-    <div class="flex-1 overflow-hidden sol-table-panel">
+    <div class="flex-1 min-h-0 overflow-hidden sol-table-panel">
       <!-- Loading -->
       <div v-if="cargando" class="sol-table-loading">
         <div v-for="i in 6" :key="i" class="sol-table-row-skeleton">
@@ -122,15 +156,12 @@
           <table class="sol-table">
             <thead class="sol-table-thead">
               <tr>
-                <th class="sol-th sol-th-check">
-                  <input type="checkbox" :checked="todasSeleccionadas" @change="toggleSeleccionTodas" class="sol-checkbox" />
-                </th>
                 <th class="sol-th sol-th-paciente sol-th-sortable" @click="toggleSort('paciente')">
                   Paciente
                   <component :is="sortIcon('paciente')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'paciente', 'opacity-30': sortKey !== 'paciente' }" />
                 </th>
                 <th class="sol-th sol-th-sortable" @click="toggleSort('clinica')">
-                  Clínica
+                  Clínica emisora
                   <component :is="sortIcon('clinica')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'clinica', 'opacity-30': sortKey !== 'clinica' }" />
                 </th>
                 <th class="sol-th sol-th-sortable" @click="toggleSort('especialidad')">
@@ -148,26 +179,16 @@
                 :id="`sol-row-${s.id}`"
                 :key="s.id"
                 class="sol-table-row"
-                :class="{ 'sol-table-row-selected': seleccionadas.has(s.id), 'sol-table-row-resaltada': resaltarId === s.id || idsActualizados.has(s.id) }"
+                :class="{ 'sol-table-row-resaltada': resaltarId === s.id || idsActualizados.has(s.id) }"
               >
-                <td class="sol-td sol-td-check">
-                  <input type="checkbox" :checked="seleccionadas.has(s.id)" @change="toggleSeleccion(s.id)" class="sol-checkbox" />
-                </td>
                 <td class="sol-td">
                   <div class="sol-table-paciente">
-                    <div class="sol-table-avatar"
-                      :style="{
-                        background: s.estado === 'pendiente' ? '#fef3c7' : s.estado === 'en_espera' ? '#dbeafe' : s.estado === 'completado' ? '#dcfce7' : '#fee2e2',
-                        color: s.estado === 'pendiente' ? '#d97706' : s.estado === 'en_espera' ? '#2563eb' : s.estado === 'completado' ? '#16a34a' : '#dc2626'
-                      }">
+                    <div class="sol-table-avatar" :style="avatarStyle(s)">
                       {{ inicialesPaciente(s) }}
                     </div>
                     <div class="sol-table-paciente-info">
                       <p class="sol-table-name" :class="{ 'sol-table-name-resaltada': resaltarId === s.id }">{{ nombreCompleto(s) }}</p>
-                      <p class="sol-table-doc">
-                        {{ formatFecha(s.created_at) }} · {{ s.hora }}
-                        <span v-if="s.estado === 'pendiente'" class="sol-age-badge" :class="edadClase(s)">{{ edadTexto(s) }}</span>
-                      </p>
+                      <p class="sol-table-doc">{{ s.edad }} años · {{ s.genero }} · {{ s.eps }}</p>
                     </div>
                   </div>
                 </td>
@@ -179,17 +200,9 @@
                 </td>
                 <td class="sol-td">{{ s.especialidad_requerida }}</td>
                 <td class="sol-td">
-                  <div v-if="s.diagnosticos?.length" class="sol-dx-cell">
-                    <span
-                      v-for="dx in s.diagnosticos.slice(0, 2)"
-                      :key="dx.id"
-                      class="sol-dx-tag"
-                    >
-                      <strong>{{ dx.codigo_cie10 }}</strong>
-                      <span class="sol-dx-desc">{{ dx.descripcion }}</span>
-                    </span>
-                    <span v-if="s.diagnosticos.length > 2" class="sol-dx-more">+{{ s.diagnosticos.length - 2 }}</span>
-                  </div>
+                  <p v-if="s.diagnosticos?.length" class="sol-dx-text">
+                    {{ descripcionSinCodigo(s.diagnosticos[0]) }}<span v-if="s.diagnosticos.length > 1" class="sol-dx-more"> +{{ s.diagnosticos.length - 1 }}</span>
+                  </p>
                   <p v-else-if="s.diagnostico" class="sol-dx-text">{{ s.diagnostico }}</p>
                   <span v-else class="sol-dx-none">—</span>
                 </td>
@@ -232,20 +245,116 @@
         <!-- Pagination -->
         <div class="sol-pagination">
           <span class="sol-pagination-info">
-            {{ (paginaActual - 1) * itemsPorPagina + 1 }}–{{ Math.min(paginaActual * itemsPorPagina, solicitudesFiltradas.length) }}
-            de {{ solicitudesFiltradas.length }}
+            Mostrando {{ (paginaActual - 1) * itemsPorPagina + 1 }}-{{ Math.min(paginaActual * itemsPorPagina, solicitudesFiltradas.length) }}
+            de {{ solicitudesFiltradas.length }} solicitudes
           </span>
           <div class="sol-pagination-controls">
             <button class="sol-pagination-btn" :disabled="paginaActual === 1" @click="paginaActual--">
               <component :is="ChevronLeftIcon" class="w-3.5 h-3.5" />
             </button>
-            <span class="sol-pagination-page">{{ paginaActual }} / {{ totalPaginas }}</span>
+            <template v-for="(p, idx) in paginasVisibles" :key="idx">
+              <button
+                v-if="p !== '…'"
+                class="sol-pagination-btn sol-page-num"
+                :class="{ 'sol-page-active': p === paginaActual }"
+                @click="paginaActual = p"
+              >{{ p }}</button>
+              <span v-else class="sol-page-ellipsis">…</span>
+            </template>
             <button class="sol-pagination-btn" :disabled="paginaActual === totalPaginas" @click="paginaActual++">
               <component :is="ChevronRightIcon" class="w-3.5 h-3.5" />
             </button>
           </div>
+          <el-select v-model="itemsPorPagina" size="small" class="sol-per-page">
+            <el-option v-for="n in [10, 15, 25, 50]" :key="n" :label="`${n} por página`" :value="n" />
+          </el-select>
         </div>
       </div>
+    </div>
+    </div>
+
+    <!-- ── Panel lateral derecho: salud de la cola ── -->
+    <aside class="sol-side">
+      <!-- Gauge: salud de la cola -->
+      <div class="sol-side-panel">
+        <div class="sol-side-head">
+          <component :is="GaugeIcon" class="w-3.5 h-3.5 sol-side-icon" />
+          <p class="sol-side-title">Salud de la cola</p>
+          <span class="sol-side-pill sol-side-pill-live"><span class="sol-live-dot"></span>En vivo</span>
+        </div>
+        <div class="sol-gauge-wrap">
+          <svg viewBox="0 0 120 120" class="sol-gauge">
+            <defs>
+              <linearGradient id="sol-gauge-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#22c55e" />
+                <stop offset="55%" stop-color="#3b82f6" />
+                <stop offset="100%" stop-color="#16468E" />
+              </linearGradient>
+            </defs>
+            <circle cx="60" cy="60" r="48" class="sol-gauge-track" />
+            <circle cx="60" cy="60" r="48" class="sol-gauge-prog" :stroke-dasharray="gaugeDash" />
+          </svg>
+          <div class="sol-gauge-center">
+            <span class="sol-gauge-num">{{ saludColaPct }}<small>%</small></span>
+            <span class="sol-gauge-sub">con &lt; 24h en cola</span>
+          </div>
+        </div>
+        <div class="sol-gauge-stats">
+          <div class="sol-gauge-stat">
+            <span class="sol-gauge-stat-num">{{ masAntiguaTxt }}</span>
+            <span class="sol-gauge-stat-label">Más antigua</span>
+          </div>
+          <div class="sol-gauge-stat">
+            <span class="sol-gauge-stat-num" :class="{ 'sol-gauge-stat-warn': colaCriticas > 0 }">{{ colaCriticas }}</span>
+            <span class="sol-gauge-stat-label">&gt; 24h</span>
+          </div>
+          <div class="sol-gauge-stat">
+            <span class="sol-gauge-stat-num">{{ resumen.pendientes }}</span>
+            <span class="sol-gauge-stat-label">Sin gestionar</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Antigüedad de la carga -->
+      <div class="sol-side-panel sol-side-panel-flex">
+        <div class="sol-side-head">
+          <component :is="TimerIcon" class="w-3.5 h-3.5 sol-side-icon" />
+          <p class="sol-side-title">Antigüedad de la carga</p>
+          <span class="sol-side-pill">{{ resumen.total }} activas</span>
+        </div>
+        <div class="sol-aging-list">
+          <div v-for="b in edadBuckets" :key="b.label" class="sol-aging-row">
+            <span class="sol-aging-label">{{ b.label }}</span>
+            <div class="sol-aging-bar">
+              <div class="sol-aging-fill" :style="{ width: Math.max(b.pct, b.total > 0 ? 4 : 0) + '%', background: b.color }"></div>
+            </div>
+            <span class="sol-aging-num" :style="{ color: b.total > 0 ? undefined : '#cbd5e1' }">{{ b.total }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Especialidades en cola -->
+      <div class="sol-side-panel sol-side-panel-flex">
+        <div class="sol-side-head">
+          <component :is="ActivityIcon" class="w-3.5 h-3.5 sol-side-icon" />
+          <p class="sol-side-title">Especialidades en cola</p>
+          <span class="sol-side-pill">Más requeridas</span>
+        </div>
+        <div class="sol-esp-list">
+          <div v-for="(e, i) in topEspecialidadesCola" :key="e.nombre" class="sol-esp-row">
+            <span class="sol-esp-rank" :class="`sol-esp-rank--${i + 1}`">{{ i + 1 }}</span>
+            <div class="sol-esp-info">
+              <p class="sol-esp-name">{{ e.nombre }}</p>
+              <div class="sol-esp-bar">
+                <div class="sol-esp-fill" :style="{ width: e.pct + '%', background: espColaColors[i % espColaColors.length] }"></div>
+              </div>
+            </div>
+            <span class="sol-esp-total">{{ e.total }}</span>
+          </div>
+          <p v-if="!topEspecialidadesCola.length" class="sol-esp-empty">Sin solicitudes activas</p>
+        </div>
+      </div>
+    </aside>
     </div>
 
     <!-- ── Modal: Detalle ── -->
@@ -643,44 +752,6 @@
       </template>
     </el-dialog>
 
-    <!-- ── Modal: Negar en lote ── -->
-    <el-dialog v-model="modalNegarLote" width="480px" class="accion-dialog" :show-close="false" align-center>
-      <div class="detalle-content">
-        <button type="button" class="detalle-close-btn" @click="modalNegarLote = false">
-          <component :is="XIcon" class="w-4 h-4" />
-        </button>
-        <div class="detalle-head">
-          <div class="detalle-head-pattern"></div>
-          <div class="detalle-head-icon accion-icon-danger">
-            <component :is="XIcon" class="w-6 h-6" />
-          </div>
-          <div class="detalle-head-info">
-            <p class="detalle-head-title">Negar {{ seleccionadas.size }} solicitud(es)</p>
-            <p class="detalle-head-sub">El motivo se aplica a todas las seleccionadas</p>
-          </div>
-        </div>
-
-        <div class="detalle-body">
-          <div class="detalle-card">
-            <div class="card-body accion-form-body">
-              <div>
-                <label class="accion-field-label">Motivo de negación <span class="accion-required">*</span></label>
-                <el-input v-model="formNegarLote.motivo_negacion" type="textarea" :rows="3" placeholder="Indique el motivo, aplica a todas las solicitudes seleccionadas..." />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="detalle-footer">
-          <button type="button" class="accion-cancelar-btn" @click="modalNegarLote = false">Cancelar</button>
-          <button type="button" class="accion-confirmar-btn accion-confirmar-danger" :disabled="procesandoLote" @click="confirmarNegarLote">
-            <component :is="procesandoLote ? Loader2Icon : XIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': procesandoLote }" />
-            Confirmar negación en lote
-          </button>
-        </div>
-      </div>
-    </el-dialog>
-
     <!-- ── Modal: Resultado de enviar a Gomedisys ── -->
     <el-dialog v-model="modalResultadoGomedisys" width="480px" class="accion-dialog" :show-close="false" align-center>
       <template v-if="solicitudSeleccionada">
@@ -794,7 +865,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { usePolling } from '@/lib/usePolling';
 import { actualizarSiCambio } from '@/lib/silentRefresh';
-import { useStorage, useDebounceFn } from '@vueuse/core';
+import { useStorage, useDebounceFn, onClickOutside } from '@vueuse/core';
 import { ElMessageBox } from 'element-plus';
 import notify from '@/plugins/toast';
 import { exportarSolicitudPdf } from '@/lib/exportarSolicitudPdf';
@@ -831,9 +902,14 @@ import {
   FileDown as FileDownIcon,
   RotateCcw as RotateCcwIcon,
   MoreVertical as MoreIcon,
+  SlidersHorizontal as SlidersIcon,
+  Gauge as GaugeIcon,
+  Timer as TimerIcon,
+  Activity as ActivityIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 import StatCard from '@/components/ui/StatCard.vue';
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue';
 import { autocompletarEnGomedisys } from '@/lib/gomedisys';
 import { useAuthStore } from '@/stores/auth';
 
@@ -906,7 +982,6 @@ if (tabActiva.value !== 'todas' && tabActiva.value !== 'pendiente' && tabActiva.
   tabActiva.value = 'todas';
 }
 
-const seleccionadas = ref<Set<number>>(new Set());
 const sortKey = ref<'paciente' | 'clinica' | 'especialidad' | 'fecha'>('fecha');
 // Más reciente arriba por defecto, igual que en Histórico (a propósito,
 // pidió explícitamente invertir el orden que se dejó ascendente antes).
@@ -914,7 +989,33 @@ const sortDir = ref<'asc' | 'desc'>('desc');
 const resaltarId = ref<number | null>(null);
 const idsActualizados = ref<Set<number>>(new Set());
 const paginaActual = ref(1);
-const itemsPorPagina = 15;
+const itemsPorPagina = ref(15);
+watch(itemsPorPagina, () => { paginaActual.value = 1; });
+
+// Filtros del botón "Filtros" (todos se aplican en cliente sobre la lista ya cargada).
+const filtrosAbiertos = ref(false);
+const filtrosWrap = ref<HTMLElement | null>(null);
+onClickOutside(filtrosWrap, () => { filtrosAbiertos.value = false; });
+const filtroClinica = ref<number | ''>('');
+const filtroEspecialidad = ref('');
+const rangoFechas = ref<[string, string] | null>(null);
+
+// Datos del panel lateral (dona, barras por día, top clínicas) y de los chips
+// de completadas/negadas — vienen del endpoint de stats del dashboard.
+interface DashStats {
+  solicitudes: { total: number; pendientes: number; en_espera: number; completadas: number; negadas: number };
+  filtros: { especialidades: string[]; eps: string[]; clinicas: { id: number; nombre: string }[] };
+  tendencia: { fecha: string; total: number }[];
+  tendencia_anterior: { fecha: string; total: number }[];
+  tendencia_pendientes: { fecha: string; total: number }[];
+  tendencia_pendientes_anterior: { fecha: string; total: number }[];
+  tendencia_en_espera: { fecha: string; total: number }[];
+  tendencia_en_espera_anterior: { fecha: string; total: number }[];
+  tendencia_completadas: { fecha: string; total: number }[];
+  tendencia_completadas_anterior: { fecha: string; total: number }[];
+  top_clinicas: { nombre: string; total: number; pct: number; serie: number[] }[];
+}
+const dash = ref<DashStats | null>(null);
 
 const modalDetalle = ref(false);
 const modalHistoriaClinica = ref(false);
@@ -932,9 +1033,7 @@ const adjuntoActivo = ref<{ id: number; nombre_original: string; mime_type: stri
 const formAceptar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', observaciones_respuesta: '' });
 const formNegar = ref({ fecha_respuesta: '', hora_respuesta: '', motivo_negacion: '', nombre_quien_responde: '', observaciones_respuesta: '' });
 
-const modalNegarLote = ref(false);
-const formNegarLote = ref({ motivo_negacion: '' });
-const procesandoLote = ref(false);
+
 
 interface PacienteGomedisys {
   fullname: string;
@@ -963,27 +1062,128 @@ const tabs = computed<{ label: string; value: 'todas' | 'pendiente' | 'en_espera
   { label: 'En espera', value: 'en_espera', count: resumen.value.enEspera },
 ]);
 
-/** Crecimiento real de solicitudes: conteo acumulado por corte de tiempo desde la primera registrada. */
-const crecimientoSolicitudes = computed(() => {
-  if (!solicitudes.value.length) return [];
-  const fechas = solicitudes.value
-    .map(s => s.created_at?.slice(0, 10))
-    .filter((f): f is string => !!f)
-    .sort();
-  if (!fechas.length) return [];
+/* ── Datos del panel lateral y stat cards (endpoint de stats del dashboard) ── */
+const statsSol = computed(() => dash.value?.solicitudes ?? { total: 0, pendientes: 0, en_espera: 0, completadas: 0, negadas: 0 });
+const clinicasFiltro = computed(() => dash.value?.filtros?.clinicas ?? []);
+const especialidadesFiltro = computed(() => dash.value?.filtros?.especialidades ?? []);
 
-  const desde = new Date(fechas[0]);
-  const hasta = new Date();
-  const dias = Math.max(1, Math.round((hasta.getTime() - desde.getTime()) / (1000 * 60 * 60 * 24)));
-  const puntos = Math.min(14, dias + 1);
+const serieTotal = computed(() => (dash.value?.tendencia ?? []).map(d => d.total));
+const seriePendientes = computed(() => (dash.value?.tendencia_pendientes ?? []).map(d => d.total));
+const serieEnEspera = computed(() => (dash.value?.tendencia_en_espera ?? []).map(d => d.total));
+const serieCompletadas = computed(() => (dash.value?.tendencia_completadas ?? []).map(d => d.total));
 
-  return Array.from({ length: puntos }, (_, i) => {
-    const corte = new Date(desde.getTime() + (dias * i) / (puntos - 1 || 1) * 24 * 60 * 60 * 1000);
-    return fechas.filter(f => new Date(f) <= corte).length;
+function deltaTexto(actual: number[], anterior: number[]): string {
+  const a = actual.reduce((x, y) => x + y, 0);
+  const b = anterior.reduce((x, y) => x + y, 0);
+  if (!b) return a > 0 ? '↑ Nuevo este período' : '= Sin cambio';
+  const d = Math.round(((a - b) / b) * 100);
+  if (d > 0) return `↑${d}% vs período anterior`;
+  if (d < 0) return `↓${Math.abs(d)}% vs período anterior`;
+  return '= 0% vs período anterior';
+}
+
+const deltaTotal = computed(() => deltaTexto(serieTotal.value, (dash.value?.tendencia_anterior ?? []).map(d => d.total)));
+const deltaPendientes = computed(() => deltaTexto(seriePendientes.value, (dash.value?.tendencia_pendientes_anterior ?? []).map(d => d.total)));
+const deltaEnEspera = computed(() => deltaTexto(serieEnEspera.value, (dash.value?.tendencia_en_espera_anterior ?? []).map(d => d.total)));
+const deltaCompletadas = computed(() => deltaTexto(serieCompletadas.value, (dash.value?.tendencia_completadas_anterior ?? []).map(d => d.total)));
+
+/* ── Salud de la cola: gauge + antigüedad + especialidades ── */
+function horasDesde(fechaIso: string): number {
+  return Math.abs(Date.now() - new Date(fechaIso).getTime()) / 3_600_000;
+}
+
+const EDAD_BANDAS = [
+  { label: '< 2 h', min: 0, max: 2, color: 'linear-gradient(90deg,#34d399,#22c55e)' },
+  { label: '2 – 6 h', min: 2, max: 6, color: 'linear-gradient(90deg,#a3e635,#84cc16)' },
+  { label: '6 – 24 h', min: 6, max: 24, color: 'linear-gradient(90deg,#fbbf24,#f59e0b)' },
+  { label: '1 – 3 días', min: 24, max: 72, color: 'linear-gradient(90deg,#fb923c,#f97316)' },
+  { label: '> 3 días', min: 72, max: Infinity, color: 'linear-gradient(90deg,#f87171,#ef4444)' },
+];
+
+const edadBuckets = computed(() => {
+  const tot = solicitudes.value.length || 1;
+  return EDAD_BANDAS.map(b => {
+    const total = solicitudes.value.filter(s => {
+      const h = horasDesde(s.created_at);
+      return h >= b.min && h < b.max;
+    }).length;
+    return { ...b, total, pct: Math.round((total / tot) * 100) };
   });
 });
 
-const displayStats = ref([0, 0, 0]);
+const saludColaPct = computed(() => {
+  if (!solicitudes.value.length) return 100;
+  const ok = solicitudes.value.filter(s => horasDesde(s.created_at) < 24).length;
+  return Math.round((ok / solicitudes.value.length) * 100);
+});
+
+/* Arco de 270° (75% de la circunferencia), hueco abajo — r=48. */
+const GAUGE_C = 2 * Math.PI * 48;
+const gaugeDash = computed(() => `${(GAUGE_C * 0.75 * saludColaPct.value / 100).toFixed(1)} ${GAUGE_C.toFixed(1)}`);
+
+const masAntiguaTxt = computed(() => {
+  if (!solicitudes.value.length) return '—';
+  const h = Math.max(...solicitudes.value.map(s => horasDesde(s.created_at)));
+  if (h < 1) return `${Math.max(1, Math.round(h * 60))}m`;
+  if (h < 24) return `${Math.floor(h)}h`;
+  return `${Math.floor(h / 24)}d`;
+});
+
+const colaCriticas = computed(() => solicitudes.value.filter(s => horasDesde(s.created_at) >= 24).length);
+
+const espColaColors = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#14b8a6'];
+const topEspecialidadesCola = computed(() => {
+  const mapa = new Map<string, number>();
+  solicitudes.value.forEach(s => {
+    const e = s.especialidad_requerida?.trim();
+    if (e) mapa.set(e, (mapa.get(e) ?? 0) + 1);
+  });
+  const tot = solicitudes.value.length || 1;
+  return [...mapa.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([nombre, total]) => ({ nombre, total, pct: Math.round((total / tot) * 100) }));
+});
+
+const hayFiltros = computed(() =>
+  !!filtro.value.buscar || tabActiva.value !== 'todas'
+  || filtroClinica.value !== '' || !!filtroEspecialidad.value || !!rangoFechas.value
+);
+/** Cuántos filtros del panel están activos (el tab de estado no cuenta — ya se ve en los chips). */
+const conteoFiltros = computed(() =>
+  [filtroClinica.value !== '', !!filtroEspecialidad.value, !!rangoFechas.value, !!filtro.value.buscar]
+    .filter(Boolean).length
+);
+
+function irAHistorico(estado: 'completado' | 'negado') {
+  router.push({ path: '/historico', query: { estado } });
+}
+
+/* ── Avatar de paciente con color determinístico por nombre ── */
+const AVATAR_TONES = [
+  { bg: '#dbeafe', fg: '#2563eb' }, { bg: '#dcfce7', fg: '#16a34a' },
+  { bg: '#fef3c7', fg: '#d97706' }, { bg: '#ede9fe', fg: '#7c3aed' },
+  { bg: '#fce7f3', fg: '#db2777' }, { bg: '#cffafe', fg: '#0891b2' },
+  { bg: '#fee2e2', fg: '#dc2626' }, { bg: '#e0e7ff', fg: '#4f46e5' },
+];
+function avatarStyle(s: Solicitud) {
+  const nombre = nombreCompleto(s);
+  let h = 0;
+  for (const ch of nombre) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const t = AVATAR_TONES[h % AVATAR_TONES.length];
+  return { background: t.bg, color: t.fg };
+}
+
+async function cargarStats() {
+  try {
+    const { data } = await http.get('/api/dashboard/stats');
+    dash.value = data.data;
+  } catch {
+    // El panel lateral es complementario — si falla no interrumpe la tabla.
+  }
+}
+
+const displayStats = ref([0, 0, 0, 0]);
 
 function animateCounters(targets: number[]) {
   const duration = 900;
@@ -1005,6 +1205,12 @@ function animateCounters(targets: number[]) {
 const solicitudesFiltradas = computed(() => {
   let result = solicitudes.value.filter(s => {
     if (tabActiva.value !== 'todas' && s.estado !== tabActiva.value) return false;
+    if (filtroClinica.value !== '' && s.clinica_id !== filtroClinica.value) return false;
+    if (filtroEspecialidad.value && s.especialidad_requerida !== filtroEspecialidad.value) return false;
+    if (rangoFechas.value) {
+      const dia = s.created_at?.slice(0, 10);
+      if (dia && (dia < rangoFechas.value[0] || dia > rangoFechas.value[1])) return false;
+    }
     const texto = buscarDebounced.value.toLowerCase();
     const coincideTexto = !texto ||
       nombreCompleto(s).toLowerCase().includes(texto) ||
@@ -1026,15 +1232,20 @@ const solicitudesFiltradas = computed(() => {
   return result;
 });
 
-const totalPaginas = computed(() => Math.max(1, Math.ceil(solicitudesFiltradas.value.length / itemsPorPagina)));
+const totalPaginas = computed(() => Math.max(1, Math.ceil(solicitudesFiltradas.value.length / itemsPorPagina.value)));
 const solicitudesPaginadas = computed(() => {
-  const start = (paginaActual.value - 1) * itemsPorPagina;
-  return solicitudesFiltradas.value.slice(start, start + itemsPorPagina);
+  const start = (paginaActual.value - 1) * itemsPorPagina.value;
+  return solicitudesFiltradas.value.slice(start, start + itemsPorPagina.value);
 });
 
-const todasSeleccionadas = computed(() => {
-  if (solicitudesPaginadas.value.length === 0) return false;
-  return solicitudesPaginadas.value.every(s => seleccionadas.value.has(s.id));
+/** Páginas numeradas con elipsis: 1 2 3 4 5 … 16 */
+const paginasVisibles = computed<(number | '…')[]>(() => {
+  const total = totalPaginas.value;
+  const cur = paginaActual.value;
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (cur <= 3) return [1, 2, 3, 4, 5, '…', total];
+  if (cur >= total - 2) return [1, '…', total - 4, total - 3, total - 2, total - 1, total];
+  return [1, '…', cur - 1, cur, cur + 1, '…', total];
 });
 
 function toggleSort(key: 'paciente' | 'clinica' | 'especialidad') {
@@ -1054,69 +1265,6 @@ function sortIcon(key: string) {
 function cambiarTab(tab: 'todas' | 'pendiente' | 'en_espera') {
   tabActiva.value = tab;
   paginaActual.value = 1;
-}
-
-function toggleSeleccion(id: number) {
-  const s = new Set(seleccionadas.value);
-  if (s.has(id)) s.delete(id);
-  else s.add(id);
-  seleccionadas.value = s;
-}
-
-function toggleSeleccionTodas() {
-  const s = new Set(seleccionadas.value);
-  if (todasSeleccionadas.value) {
-    solicitudesPaginadas.value.forEach(x => s.delete(x.id));
-  } else {
-    solicitudesPaginadas.value.forEach(x => s.add(x.id));
-  }
-  seleccionadas.value = s;
-}
-
-/** Reporta cuántos del lote quedaron bien y cuántos fallaron, en vez de abortar todo en el primer error. */
-function reportarLote(resultados: PromiseSettledResult<unknown>[], verbo: string): number {
-  const ok = resultados.filter(r => r.status === 'fulfilled').length;
-  const fallidas = resultados.length - ok;
-  if (ok > 0) notify.success(`${ok} solicitud(es) ${verbo}`);
-  if (fallidas > 0) notify.error(`${fallidas} solicitud(es) no se pudieron ${verbo === 'aceptadas' ? 'aceptar' : 'negar'}`);
-  return ok;
-}
-
-function abrirNegarLote() {
-  const ids = [...seleccionadas.value];
-  const lote = solicitudes.value.filter(s => ids.includes(s.id) && s.estado !== 'negado' && s.estado !== 'completado');
-  if (lote.length === 0) {
-    notify.warning('No hay solicitudes para negar');
-    return;
-  }
-  formNegarLote.value = { motivo_negacion: '' };
-  modalNegarLote.value = true;
-}
-
-async function confirmarNegarLote() {
-  if (!formNegarLote.value.motivo_negacion.trim()) {
-    notify.warning('Indique el motivo de la negación');
-    return;
-  }
-  const ids = [...seleccionadas.value];
-  const lote = solicitudes.value.filter(s => ids.includes(s.id) && s.estado !== 'negado' && s.estado !== 'completado');
-
-  procesandoLote.value = true;
-  try {
-    const resultados = await Promise.allSettled(lote.map(s => http.post(`/api/solicitudes-referencia/${s.id}/negar`, {
-      fecha_respuesta: fechaActual(),
-      hora_respuesta: horaActual(),
-      motivo_negacion: formNegarLote.value.motivo_negacion,
-      nombre_quien_responde: authStore.user?.full_name ?? '',
-      observaciones_respuesta: '',
-    })));
-    reportarLote(resultados, 'negadas');
-    seleccionadas.value = new Set();
-    modalNegarLote.value = false;
-    await cargar();
-  } finally {
-    procesandoLote.value = false;
-  }
 }
 
 function exportarExcel() {
@@ -1164,28 +1312,12 @@ function descripcionSinCodigo(dx: { codigo_cie10: string; descripcion: string })
 }
 
 function estadoLabel(estado: string) {
-  return { pendiente: 'Pendiente', en_espera: 'En espera', completado: 'Completado', negado: 'Negado' }[estado] ?? estado;
+  return { pendiente: 'Pendiente', en_espera: 'En espera', completado: 'Completada', negado: 'Negada' }[estado] ?? estado;
 }
 
 /** ID interno de la app (distinto del código REF que emite Gomedisys). */
 function idInterno(id: number): string {
   return 'ID' + String(id).padStart(6, '0');
-}
-
-function horasDesde(fechaIso: string): number {
-  return Math.abs(Date.now() - new Date(fechaIso).getTime()) / 3_600_000;
-}
-
-function edadTexto(s: Solicitud): string {
-  const horas = horasDesde(s.created_at);
-  if (horas < 1) return 'hace instantes';
-  if (horas < 24) return `hace ${Math.floor(horas)} h`;
-  return `hace ${Math.floor(horas / 24)} día(s)`;
-}
-
-function edadClase(s: Solicitud): string {
-  const horas = horasDesde(s.created_at);
-  return horas > 6 ? 'sol-age-danger' : horas > 2 ? 'sol-age-warning' : 'sol-age-ok';
 }
 
 function formatFecha(fecha: string) {
@@ -1381,6 +1513,9 @@ async function abrirAdjunto(adj: { id: number; nombre_original: string; mime_typ
 function limpiarFiltros() {
   filtro.value.buscar = '';
   tabActiva.value = 'todas';
+  filtroClinica.value = '';
+  filtroEspecialidad.value = '';
+  rangoFechas.value = null;
 }
 
 /** Resalta y hace scroll hasta la solicitud referenciada por la notificación de la campana (?resaltar=ID). */
@@ -1406,7 +1541,7 @@ async function cargar() {
     cargando.value = true;
     const { data } = await http.get('/api/solicitudes-referencia');
     solicitudes.value = data.data;
-    animateCounters([resumen.value.total, resumen.value.pendientes, resumen.value.enEspera]);
+    animateCounters([resumen.value.total, resumen.value.pendientes, resumen.value.enEspera, statsSol.value.completadas]);
   } catch {
     notify.error('Error al cargar las solicitudes');
   } finally {
@@ -1428,7 +1563,7 @@ async function cargarSilencioso() {
     setTimeout(() => { idsActualizados.value = new Set(); }, 3000);
 
     if (JSON.stringify(resumen.value) !== statsAntes) {
-      animateCounters([resumen.value.total, resumen.value.pendientes, resumen.value.enEspera]);
+      animateCounters([resumen.value.total, resumen.value.pendientes, resumen.value.enEspera, statsSol.value.completadas]);
     }
   } catch {
     // Refresco de fondo: si falla, se reintenta en el siguiente ciclo sin interrumpir al usuario.
@@ -1663,7 +1798,7 @@ async function negar() {
 
 
 onMounted(async () => {
-  await cargar();
+  await Promise.all([cargar(), cargarStats()]);
   await aplicarResaltado();
 });
 
@@ -1676,7 +1811,7 @@ watch(() => route.query.resaltar, (nuevo) => {
 });
 
 usePolling(() => {
-  if (!cargando.value && !modalDetalle.value && !modalAceptar.value && !modalNegar.value && !modalNegarLote.value && !modalPdf.value && !modalHistoriaClinica.value && !modalResultadoGomedisys.value && !modalConfirmarIngreso.value) cargarSilencioso();
+  if (!cargando.value && !modalDetalle.value && !modalAceptar.value && !modalNegar.value && !modalPdf.value && !modalHistoriaClinica.value && !modalResultadoGomedisys.value && !modalConfirmarIngreso.value) cargarSilencioso();
 }, 30000);
 </script>
 
@@ -1688,10 +1823,10 @@ usePolling(() => {
 /* ── Stat cards ── */
 .sol-stats-bar {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: .75rem;
 }
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .sol-stats-bar { grid-template-columns: repeat(2, 1fr); }
 }
 
@@ -1707,16 +1842,7 @@ usePolling(() => {
 .sol-tab-dot--completado { background: #22c55e; }
 .sol-tab-dot--negado { background: #ef4444; }
 
-/* ── Bulk actions bar ── */
-.sol-bulk-bar {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  background: linear-gradient(135deg, #eef2f9, #e0e8f5);
-  border: 1px solid #c4d4e8;
-  border-radius: 10px;
-  padding: .4rem .8rem;
-}
+/* ── Transición del panel de filtros ── */
 .bulk-slide-enter-active, .bulk-slide-leave-active {
   transition: all .25s ease;
 }
@@ -1725,17 +1851,6 @@ usePolling(() => {
   transform: translateY(-8px);
 }
 
-/* ── Checkbox ── */
-.sol-checkbox {
-  width: 16px; height: 16px;
-  border-radius: 4px;
-  border: 1.5px solid #cbd5e1;
-  cursor: pointer;
-  accent-color: #16468E;
-}
-.sol-th-check { width: 36px; text-align: center; }
-.sol-td-check { text-align: center; }
-
 /* ── Sortable headers ── */
 .sol-th-sortable {
   cursor: pointer;
@@ -1743,11 +1858,6 @@ usePolling(() => {
   transition: color .15s ease;
 }
 .sol-th-sortable:hover { color: #16468E; }
-
-/* ── Selected row ── */
-.sol-table-row-selected {
-  background: rgba(22,70,142,.04) !important;
-}
 
 /* ── Fila resaltada (llegó desde una notificación) ── */
 .sol-table-row-resaltada {
@@ -1825,6 +1935,192 @@ usePolling(() => {
   min-width: 60px;
   text-align: center;
 }
+.sol-page-num { font-size: 11px; font-weight: 700; font-family: inherit; }
+.sol-page-active {
+  background: linear-gradient(135deg, #0D2D6B, #16468E) !important;
+  border-color: #16468E !important;
+  color: #fff !important;
+  box-shadow: 0 3px 8px rgba(13,45,107,.3);
+}
+.sol-page-ellipsis { font-size: 11px; color: #94a3b8; padding: 0 2px; }
+.sol-per-page { width: 110px; }
+.sol-per-page :deep(.el-select__wrapper) { min-height: 26px; font-size: 11px; }
+
+/* ── Panel lateral derecho (todo cabe sin scroll: top clínicas toma el resto) ── */
+.sol-side {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  min-height: 0;
+  padding-bottom: 2px;
+}
+@media (max-width: 1050px) { .sol-side { display: none; } }
+.sol-side-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(22,70,142,.08);
+  padding: 9px 12px;
+  flex-shrink: 0;
+}
+.sol-side-panel-flex {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sol-side-panel-flex .sol-aging-list,
+.sol-side-panel-flex .sol-esp-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.sol-side-panel-flex .sol-aging-list::-webkit-scrollbar,
+.sol-side-panel-flex .sol-esp-list::-webkit-scrollbar { width: 4px; }
+.sol-side-panel-flex .sol-aging-list::-webkit-scrollbar-thumb,
+.sol-side-panel-flex .sol-esp-list::-webkit-scrollbar-thumb { background: #dbe3ee; border-radius: 4px; }
+.dark .sol-side-panel { background: #161b28; border-color: rgba(255,255,255,0.07); }
+.sol-side-head {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 8px;
+}
+.sol-side-icon { color: #16468E; flex-shrink: 0; }
+.dark .sol-side-icon { color: #a5b4fc; }
+.sol-side-title {
+  font-size: 11.5px; font-weight: 800; color: #1e293b;
+  margin: 0; flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dark .sol-side-title { color: #e2e8f0; }
+.sol-side-pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 9px; font-weight: 700; color: #64748b;
+  background: #f1f5f9; border: 1px solid #e2e8f0;
+  padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+}
+.dark .sol-side-pill { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.09); color: #94a3b8; }
+
+/* ── Gauge salud de la cola ── */
+.sol-side-pill-live { color: #15803d; background: #f0fdf4; border-color: #bbf7d0; }
+.sol-live-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #22c55e;
+  animation: solLivePulse 1.6s ease-in-out infinite;
+}
+@keyframes solLivePulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,.5); }
+  50% { opacity: .7; box-shadow: 0 0 0 3px rgba(34,197,94,0); }
+}
+.sol-gauge-wrap {
+  position: relative;
+  width: 150px; margin: 0 auto;
+}
+.sol-gauge { width: 100%; display: block; overflow: visible; }
+.sol-gauge-track, .sol-gauge-prog {
+  fill: none;
+  stroke-width: 11;
+  stroke-linecap: round;
+  transform: rotate(135deg);
+  transform-origin: 60px 60px;
+}
+.sol-gauge-track {
+  stroke: #eef2f7;
+  stroke-dasharray: 226.2 301.6;
+}
+.dark .sol-gauge-track { stroke: rgba(255,255,255,0.08); }
+.sol-gauge-prog {
+  stroke: url(#sol-gauge-grad);
+  filter: drop-shadow(0 2px 5px rgba(59,130,246,.45));
+  transition: stroke-dasharray .8s cubic-bezier(.22,1,.36,1);
+}
+.sol-gauge-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding-bottom: 14px;
+  pointer-events: none;
+}
+.sol-gauge-num {
+  font-size: 26px; font-weight: 800; color: #1e293b; line-height: 1;
+  background: linear-gradient(135deg, #0d2d5e, #2563eb);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.sol-gauge-num small { font-size: 14px; font-weight: 800; }
+.sol-gauge-sub { font-size: 8.5px; font-weight: 700; color: #94a3b8; margin-top: 3px; letter-spacing: .03em; }
+.dark .sol-gauge-num { background: linear-gradient(135deg, #e2e8f0, #93c5fd); -webkit-background-clip: text; background-clip: text; }
+.sol-gauge-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 6px; margin-top: 4px;
+}
+.sol-gauge-stat {
+  text-align: center; padding: 5px 2px;
+  background: #f8fafc; border: 1px solid #eef2f7; border-radius: 8px;
+}
+.dark .sol-gauge-stat { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.07); }
+.sol-gauge-stat-num { display: block; font-size: 12px; font-weight: 800; color: #1e293b; line-height: 1; }
+.dark .sol-gauge-stat-num { color: #e2e8f0; }
+.sol-gauge-stat-warn { color: #dc2626; }
+.dark .sol-gauge-stat-warn { color: #f87171; }
+.sol-gauge-stat-label { font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .04em; }
+
+/* ── Antigüedad de la carga ── */
+.sol-aging-list { display: flex; flex-direction: column; gap: 8px; justify-content: space-evenly; }
+.sol-aging-row { display: flex; align-items: center; gap: 8px; }
+.sol-aging-label {
+  width: 52px; flex-shrink: 0;
+  font-size: 9.5px; font-weight: 700; color: #64748b;
+}
+.dark .sol-aging-label { color: #94a3b8; }
+.sol-aging-bar {
+  flex: 1; height: 8px; border-radius: 999px;
+  background: #f1f5f9; overflow: hidden;
+}
+.dark .sol-aging-bar { background: rgba(255,255,255,0.07); }
+.sol-aging-fill {
+  height: 100%; border-radius: 999px;
+  transition: width .6s cubic-bezier(.22,1,.36,1);
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+.sol-aging-num {
+  width: 22px; flex-shrink: 0; text-align: right;
+  font-size: 11px; font-weight: 800; color: #1e293b;
+}
+.dark .sol-aging-num { color: #e2e8f0; }
+
+/* ── Especialidades en cola ── */
+.sol-esp-list { display: flex; flex-direction: column; gap: 9px; justify-content: space-evenly; }
+.sol-esp-row { display: flex; align-items: center; gap: 7px; }
+.sol-esp-rank {
+  width: 16px; height: 16px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8.5px; font-weight: 800;
+  background: #f1f5f9; color: #64748b; flex-shrink: 0;
+}
+.sol-esp-rank--1 { background: #fef3c7; color: #b45309; }
+.sol-esp-rank--2 { background: #e2e8f0; color: #475569; }
+.sol-esp-rank--3 { background: #ffedd5; color: #c2410c; }
+.sol-esp-info { flex: 1; min-width: 0; }
+.sol-esp-name {
+  font-size: 10px; font-weight: 700; color: #334155;
+  margin: 0 0 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dark .sol-esp-name { color: #cbd5e1; }
+.sol-esp-bar {
+  height: 5px; border-radius: 999px; background: #f1f5f9; overflow: hidden;
+}
+.dark .sol-esp-bar { background: rgba(255,255,255,0.07); }
+.sol-esp-fill {
+  height: 100%; border-radius: 999px;
+  transition: width .6s cubic-bezier(.22,1,.36,1);
+}
+.sol-esp-total {
+  flex-shrink: 0; min-width: 20px; text-align: right;
+  font-size: 11px; font-weight: 800; color: #1e293b;
+}
+.dark .sol-esp-total { color: #e2e8f0; }
+.sol-esp-empty { font-size: 10px; color: #94a3b8; text-align: center; margin: 12px 0; }
 
 /* ── Modal: Visor de adjunto ── */
 :deep(.pdf-dialog) { border-radius: 16px; overflow: hidden; box-shadow: 0 32px 80px rgba(11,35,73,.35); transition: width .3s ease, max-width .3s ease; }
@@ -2042,35 +2338,36 @@ usePolling(() => {
   font-size: 12px;
 }
 
-/* ── Header ── */
-.sol-header {
-  display: flex; align-items: center; gap: .75rem;
-  padding: .25rem 0;
-}
-.sol-header-icon {
-  width: 36px; height: 36px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
-  color: var(--rf-primary);
-  flex-shrink: 0;
-}
-.dark .sol-header-icon { background: rgba(99,102,241,0.15); color: #a5b4fc; }
-.sol-header-title {
-  font-size: 16px; font-weight: 800; color: #1e293b;
-  letter-spacing: 0.01em; white-space: nowrap;
-}
-.dark .sol-header-title { color: #e2e8f0; }
 .sol-header-spacer { flex: 1; }
+
+/* ── Acciones rápidas junto a los chips ── */
+.sol-chips-actions { display: flex; align-items: center; gap: 4px; margin-right: 4px; }
+.sol-icon-btn {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; border: 1px solid #e2e8f0; color: #475569;
+  cursor: pointer; transition: all .15s ease;
+}
+.sol-icon-btn:hover:not(:disabled) { border-color: #bfdbfe; color: var(--rf-primary); background: #eff6ff; }
+.sol-icon-btn:disabled { opacity: .45; cursor: not-allowed; }
+.sol-icon-btn-primary {
+  background: var(--rf-primary); border-color: var(--rf-primary); color: #fff;
+}
+.sol-icon-btn-primary:hover:not(:disabled) { background: #1d56b4; border-color: #1d56b4; color: #fff; }
+.dark .sol-icon-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
+.dark .sol-icon-btn-primary { background: var(--rf-primary); border-color: var(--rf-primary); color: #fff; }
 
 /* ── Filter bar ── */
 .sol-filter-bar {
   display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
-  padding: .65rem .9rem;
+  padding: .55rem .9rem;
   border-radius: 14px;
   background: linear-gradient(135deg, #f0f6ff 0%, #e6efff 50%, #f0f9ff 100%);
   border: 1px solid #b8c8e0;
   box-shadow: 0 3px 16px rgba(13, 45, 107, 0.07), inset 0 1px 0 rgba(255,255,255,0.6);
-  position: relative; overflow: hidden;
+  position: relative;
+  /* Stacking context: el panel de filtros queda siempre sobre el thead sticky */
+  z-index: 30;
   transition: box-shadow .3s ease, transform .3s ease;
 }
 .sol-filter-bar:hover {
@@ -2113,6 +2410,68 @@ usePolling(() => {
 }
 .sol-tab-active .sol-tab-count { background: rgba(255,255,255,.2); color: #fff; }
 
+/* Chips que navegan al histórico (completadas / negadas) */
+.sol-tab-link:hover { color: #16468E; }
+.sol-tab-link .sol-tab-count { background: rgba(13,45,107,.08); }
+
+/* Botón Filtros */
+.sol-filtros-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 30px; padding: 0 12px;
+  border-radius: 9px; border: 1px solid #d4deea;
+  background: rgba(255,255,255,0.7);
+  font-size: 11.5px; font-weight: 700; color: #475569;
+  cursor: pointer; transition: all .15s ease;
+  font-family: inherit;
+}
+.sol-filtros-btn:hover, .sol-filtros-btn-active {
+  border-color: #16468E; color: #16468E; background: #eef4ff;
+}
+.dark .sol-filtros-btn { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #cbd5e1; }
+
+/* ── Panel desplegable de filtros (abre el botón "Filtros") ── */
+.sol-filtros-wrap { position: relative; }
+.sol-filtros-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 15px; height: 15px; padding: 0 4px;
+  border-radius: 999px;
+  background: #16468E; color: #fff;
+  font-size: 8.5px; font-weight: 800;
+}
+.sol-filtros-btn-active .sol-filtros-badge { background: #fff; color: #16468E; }
+.sol-filtros-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 230px;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.14);
+  z-index: 60;
+  max-height: min(420px, calc(100vh - 240px));
+  overflow-y: auto;
+}
+.dark .sol-filtros-panel { background: #161b28; border-color: rgba(255,255,255,0.08); }
+.sol-filtros-panel .sol-select { width: 100%; }
+.sol-filtros-panel .sol-search { min-width: 0; max-width: none; width: 100%; }
+.sol-filtros-panel .drf { width: 100%; }
+.sol-filtros-panel :deep(.drf-trigger) { width: 100%; justify-content: flex-start; }
+.sol-filtros-panel :deep(.el-select__wrapper),
+.sol-filtros-panel :deep(.el-input__wrapper) {
+  border-radius: 9px !important;
+  min-height: 30px;
+}
+.sol-limpiar {
+  font-size: 11.5px; font-weight: 700; color: #dc2626;
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; padding: 4px 8px; border-radius: 7px;
+  transition: background .15s ease;
+}
+.sol-limpiar:hover { background: #fef2f2; }
+
 /* ── Search ── */
 .sol-search { flex: 1; min-width: 200px; max-width: 400px; }
 .sol-filter-bar :deep(.el-input__wrapper) {
@@ -2133,7 +2492,10 @@ usePolling(() => {
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(22,70,142,.08);
   padding: 4px;
+  display: flex;
+  flex-direction: column;
 }
+.dark .sol-table-panel { background: #161b28; border-color: rgba(255,255,255,0.07); }
 
 /* ── Table loading ── */
 .sol-table-loading {
@@ -2172,7 +2534,7 @@ usePolling(() => {
 .sol-table-row:hover { background: #f8fafc; box-shadow: inset 3px 0 0 var(--rf-primary); }
 .sol-table-row:hover .sol-table-status { transform: scale(1.06); }
 .sol-table-row:last-child td { border-bottom: none; }
-.sol-th-paciente { min-width: 220px; }
+.sol-th-paciente { min-width: 200px; }
 .sol-th-actions { text-align: right; }
 
 .sol-table-paciente { display: flex; align-items: center; gap: 10px; }
@@ -2187,22 +2549,9 @@ usePolling(() => {
   margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 200px;
 }
-.sol-table-clinica { font-size: 10px; color: #3b82f6; margin: 1px 0 0; font-weight: 600; }
 .sol-table-clinica-name { font-size: 12px; font-weight: 700; color: #1e40af; margin: 0; }
 .sol-table-remitente { font-size: 10px; color: #94a3b8; margin: 2px 0 0; }
 .sol-table-doc { font-size: 10px; color: #94a3b8; margin: 1px 0 0; }
-.sol-table-doc-inline { font-size: 10px; color: #94a3b8; font-weight: 400; }
-.sol-age-badge {
-  display: inline-block;
-  margin-left: 4px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  font-size: 9px;
-  font-weight: 700;
-}
-.sol-age-ok { background: #f0fdf4; color: #15803d; }
-.sol-age-warning { background: #fffbeb; color: #b45309; }
-.sol-age-danger { background: #fef2f2; color: #b91c1c; }
 .sol-table-status {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 10px; border-radius: 999px;

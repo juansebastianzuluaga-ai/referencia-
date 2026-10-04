@@ -8,7 +8,7 @@
     :style="{ background: layout.isDarkMode ? '#11151f' : 'linear-gradient(165deg, var(--rf-primary) 0%, var(--rf-primary-2) 100%)', borderRight: layout.isDarkMode ? '1px solid rgba(255,255,255,0.06)' : 'none', boxShadow: layout.isDarkMode ? 'none' : '2px 0 16px rgba(13,45,107,0.25)' }"
   >
     <!-- ── Branding ── -->
-    <div class="shrink-0 flex items-center gap-2.5 px-4 pt-4 pb-3 relative z-10" :class="{ 'md:justify-center md:px-2': layout.isSidebarCollapsed }">
+    <div class="shrink-0 flex items-center gap-2.5 px-4 pt-3 pb-2 relative z-10" :class="{ 'md:justify-center md:px-2': layout.isSidebarCollapsed }">
       <div class="w-10 h-10 shrink-0 rounded-full flex items-center justify-center overflow-hidden bg-white" style="box-shadow: 0 0 0 2px rgba(255,255,255,0.35);">
         <img :src="logoAvatar" alt="Santa Bárbara" class="w-8 h-8 object-contain" />
       </div>
@@ -19,12 +19,12 @@
       </div>
     </div>
 
-    <div class="sidebar-divider mb-3"></div>
+    <div class="sidebar-divider mb-2"></div>
 
-    <div class="py-1 flex-1 relative z-10 overflow-y-auto sidebar-scroll">
+    <div class="flex-1 relative z-10 overflow-y-auto sidebar-scroll">
 
       <!-- Gestión -->
-      <div class="mb-4">
+      <div class="mb-1">
         <div class="sidebar-label" :class="{ 'opacity-0': layout.isSidebarCollapsed }">Gestión</div>
         <AppSidebarItem
           to="/dashboard"
@@ -54,7 +54,7 @@
       <div class="sidebar-divider"></div>
 
       <!-- Análisis -->
-      <div class="mb-4 mt-4">
+      <div class="mb-1 mt-2">
         <div class="sidebar-label" :class="{ 'opacity-0': layout.isSidebarCollapsed }">Análisis</div>
         <AppSidebarItem
           to="/reportes"
@@ -67,7 +67,7 @@
       <div class="sidebar-divider"></div>
 
       <!-- Administración -->
-      <div class="mb-4 mt-4">
+      <div class="mb-1 mt-2">
         <div class="sidebar-label" :class="{ 'opacity-0': layout.isSidebarCollapsed }">Administración</div>
         <AppSidebarItem
           to="/usuarios"
@@ -100,24 +100,86 @@
         <p class="promo-card-sub">Comprometidos con la vida</p>
       </div>
       <div class="sidebar-divider mt-3 mb-3"></div>
-      <p v-if="!layout.isSidebarCollapsed" class="text-center leading-tight" style="color:rgba(255,255,255,0.35); font-size:9px; font-weight:500;">
-        v1.0 · Referencia de Paciente<br />CAC Santa Bárbara
-      </p>
-      <p v-else class="text-center hidden md:block" style="color:rgba(255,255,255,0.35); font-size:9px; font-weight:500;">v1.0</p>
+
+      <!-- Acciones rápidas (antes vivían en el header) -->
+      <div class="sidebar-actions" :class="{ 'sidebar-actions--collapsed': layout.isSidebarCollapsed }">
+        <NotificationCenter :light="false" scope="interno" />
+        <button class="sidebar-action-btn" :title="layout.isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'" @click="layout.toggleDarkMode">
+          <component :is="layout.isDarkMode ? SunIcon : MoonIcon" class="w-4 h-4" />
+        </button>
+        <button class="sidebar-action-btn hidden md:flex" title="Mostrar/ocultar sidebar" @click="layout.toggleSidebar">
+          <MenuIcon class="w-4 h-4" />
+        </button>
+      </div>
+
+      <!-- Usuario -->
+      <el-dropdown trigger="click" placement="top-end" @command="handleCommand">
+        <button class="sidebar-user" :class="{ 'sidebar-user--collapsed': layout.isSidebarCollapsed }">
+          <div class="sidebar-user-avatar">
+            <img :src="logoAvatarWhite" alt="Usuario" class="w-6 h-7 object-contain" />
+          </div>
+          <div v-if="!layout.isSidebarCollapsed" class="flex-1 min-w-0 text-left">
+            <p class="sidebar-user-name">{{ auth.user?.full_name || 'Usuario' }}</p>
+            <p class="sidebar-user-role">{{ auth.user?.job_title || 'Personal' }}</p>
+          </div>
+          <ChevronDownIcon v-if="!layout.isSidebarCollapsed" class="w-3.5 h-3.5 shrink-0" style="color:rgba(255,255,255,0.45);" />
+        </button>
+
+        <template #dropdown>
+          <el-dropdown-menu class="w-56">
+            <div class="px-4 py-3 bg-gray-50 flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-full bg-white flex items-center justify-center overflow-hidden">
+                <img :src="logoAvatar" alt="Usuario" class="w-8 h-8 object-contain" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[13px] font-semibold text-gray-900 truncate">{{ auth.user?.full_name }}</div>
+                <div class="text-[11.5px] text-gray-500 truncate">{{ auth.user?.user_name }}</div>
+              </div>
+            </div>
+            <el-dropdown-item divided command="profile" :icon="UserIcon">Mi perfil</el-dropdown-item>
+            <el-dropdown-item command="password" :icon="KeyIcon">Cambiar contrasena</el-dropdown-item>
+            <el-dropdown-item divided command="logout" :icon="LogOutIcon" class="!text-red-600 hover:!bg-red-50 hover:!text-red-700">Cerrar sesion</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router';
 import { useLayoutStore } from '@/stores/layout';
+import { useAuthStore } from '@/stores/auth';
 import AppSidebarItem from './AppSidebarItem.vue';
+import NotificationCenter from './NotificationCenter.vue';
+import {
+  ChevronDown as ChevronDownIcon,
+  Key as KeyIcon,
+  LogOut as LogOutIcon,
+  Menu as MenuIcon,
+  Moon as MoonIcon,
+  Sun as SunIcon,
+  User as UserIcon,
+} from '@lucide/vue';
 
 const layout = useLayoutStore();
+const auth = useAuthStore();
+const router = useRouter();
 
 // Public images served from /public — binding dinámico para que Vite no
 // intente resolverlas como imports en build.
 const logoAvatar = '/images/logo-avatar.png';
 const logoAvatarWhite = '/images/logo-avatar-w.png';
+
+function handleCommand(command: string): void {
+  if (command === 'logout') {
+    void auth.logout();
+  } else if (command === 'profile') {
+    void router.push({ name: 'profile', query: { tab: 'profile' } });
+  } else if (command === 'password') {
+    void router.push({ name: 'profile', query: { tab: 'password' } });
+  }
+}
 </script>
 
 <style scoped>
@@ -131,7 +193,7 @@ aside { position: relative; }
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(255,255,255,0.55);
-  padding: 0 16px 6px;
+  padding: 0 16px 4px;
   white-space: nowrap;
   overflow: hidden;
   transition: opacity 0.2s ease;
@@ -183,5 +245,81 @@ aside { position: relative; }
   font-size: 9.5px;
   color: rgba(255,255,255,0.55);
   margin: 4px 0 0;
+}
+
+/* ── Acciones rápidas del pie ── */
+.sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.sidebar-actions--collapsed {
+  flex-direction: column;
+}
+.sidebar-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.65);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.sidebar-action-btn:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+
+/* ── Usuario en el pie ── */
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 11px;
+  background: rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.sidebar-user:hover { background: rgba(255,255,255,0.14); }
+.sidebar-user--collapsed {
+  justify-content: center;
+  padding: 6px;
+}
+.sidebar-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sidebar-user-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-user-role {
+  font-size: 9.5px;
+  color: rgba(255,255,255,0.5);
+  margin: 1px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

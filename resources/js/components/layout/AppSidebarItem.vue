@@ -57,9 +57,9 @@ const resolvedIcon = computed(() => {
   display: flex;
   align-items: center;
   gap: .75rem;
-  padding: 10px 14px;
+  padding: 8px 14px;
   border-radius: 12px;
-  margin: 0 12px 4px;
+  margin: 0 12px 2px;
   cursor: pointer;
   transition: all .2s ease;
   position: relative;
@@ -137,8 +137,8 @@ const resolvedIcon = computed(() => {
 
 /* Collapsed state */
 .menu-item-collapsed {
-  margin: 0 8px 4px;
-  padding: 10px 0;
+  margin: 0 8px 2px;
+  padding: 8px 0;
   justify-content: center;
   gap: 0;
 }

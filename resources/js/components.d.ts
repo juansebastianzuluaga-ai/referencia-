@@ -16,6 +16,7 @@ declare module 'vue' {
     AppLayout: typeof import('./components/layout/AppLayout.vue')['default']
     AppSidebar: typeof import('./components/layout/AppSidebar.vue')['default']
     AppSidebarItem: typeof import('./components/layout/AppSidebarItem.vue')['default']
+    AppTopbar: typeof import('./components/layout/AppTopbar.vue')['default']
     Badge: typeof import('./components/ui/badge/Badge.vue')['default']
     BaseDrawer: typeof import('./components/ui/BaseDrawer.vue')['default']
     BaseModal: typeof import('./components/ui/BaseModal.vue')['default']
