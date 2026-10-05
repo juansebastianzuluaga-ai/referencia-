@@ -87,13 +87,25 @@ const compIcon = computed(() => {
   return Minus;
 });
 const comparacionTexto = computed(() => (props.comparacion ?? '').replace(/^[↑↓]/, ''));
+
+/** La tarjeta pastel toma el tinte del tono (degradado esquina → blanco) + borde coloreado. */
+const pastelCardStyle = computed(() => ({
+  borderColor: props.dark ? 'rgba(255,255,255,0.06)' : `color-mix(in srgb, ${pastelTone.value.solid} 30%, #e9eef6)`,
+  background: props.dark ? undefined : `linear-gradient(135deg, color-mix(in srgb, ${pastelTone.value.solid} 17%, #ffffff) 0%, color-mix(in srgb, ${pastelTone.value.solid} 7%, #ffffff) 55%, #ffffff 100%)`,
+}));
+
+/** La pill "flat" (sin flecha) se tiñe del color del tono en vez de gris. */
+const compStyle = computed(() => {
+  if (compClass.value !== 'stat-pastel-comp--flat') return undefined;
+  return { background: `color-mix(in srgb, ${pastelTone.value.solid} 13%, #fff)`, color: pastelTone.value.solid };
+});
 </script>
 
 <template>
   <div
     v-if="variant === 'pastel'"
     :class="cn('stat-card-pastel rounded-2xl relative overflow-hidden', props.class)"
-    :style="{ borderColor: dark ? 'rgba(255,255,255,0.06)' : undefined }"
+    :style="pastelCardStyle"
   >
     <!-- Franja superior del tono + halo decorativo -->
     <div class="stat-pastel-bar" :style="{ background: `linear-gradient(90deg, ${pastelTone.solid}, color-mix(in srgb, ${pastelTone.solid} 45%, #fff))` }"></div>
@@ -113,7 +125,7 @@ const comparacionTexto = computed(() => (props.comparacion ?? '').replace(/^[↑
           <span v-if="delta" class="stat-pastel-delta" :style="{ color: pastelTone.solid }">{{ delta }}</span>
         </div>
         <p class="stat-pastel-label">{{ label }}</p>
-        <span v-if="comparacion" class="stat-pastel-comp" :class="compClass">
+        <span v-if="comparacion" class="stat-pastel-comp" :class="compClass" :style="compStyle">
           <component :is="compIcon" class="w-2.5 h-2.5" />
           {{ comparacionTexto }}
         </span>
@@ -125,8 +137,8 @@ const comparacionTexto = computed(() => (props.comparacion ?? '').replace(/^[↑
       v-if="sparkline && sparkline.length > 1"
       :valores="sparkline"
       :color="pastelTone.solid"
-      :ancho="86"
-      :alto="32"
+      :ancho="96"
+      :alto="36"
       relleno
       class="stat-pastel-sparkline"
     />

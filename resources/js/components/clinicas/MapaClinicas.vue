@@ -103,10 +103,11 @@ let map: L.Map | null = null;
 let tileLayer: L.TileLayer | null = null;
 let markersLayer: L.LayerGroup | null = null;
 let focoMarker: L.Marker | null = null;
+let resizeObs: ResizeObserver | null = null;
 
-const TILE_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-const TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+const TILE_DARK = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+const TILE_LIGHT = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Esri';
 
 function crearIcono(color: string, count: number): L.DivIcon {
   const size = Math.min(56, 30 + count * 4);
@@ -141,7 +142,8 @@ function aplicarTile() {
   }
   tileLayer = L.tileLayer(layout.isDarkMode ? TILE_DARK : TILE_LIGHT, {
     attribution: ATTRIBUTION,
-    subdomains: 'abcd',
+    // OSM solo sirve a/b/c — 'd' devuelve tiles vacíos que se ven negros.
+    subdomains: 'abc',
     maxZoom: 19,
   });
   tileLayer.addTo(map);
@@ -163,9 +165,15 @@ onMounted(async () => {
   markersLayer = L.layerGroup().addTo(map);
   aplicarTile();
   pintarMarcadores();
+
+  // El contenedor es flex y cambia de alto (panel de estadísticas abajo):
+  // Leaflet necesita re-medirse o renderiza mal los tiles.
+  resizeObs = new ResizeObserver(() => map?.invalidateSize());
+  resizeObs.observe(mapEl.value);
 });
 
 onBeforeUnmount(() => {
+  resizeObs?.disconnect();
   map?.remove();
   map = null;
 });
@@ -227,27 +235,57 @@ defineExpose({ enfocarClinica, restablecerVista });
 
 .mapa-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 14px 8px;
+  padding: 9px 10px;
+  margin: 4px 4px 0;
+  border-radius: 9px;
+  background: #16468E;
+  border: 1px solid #123a78;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 3px 12px rgba(13,45,107,.22);
 }
-.mapa-title { font-size: 13px; font-weight: 800; color: #1e293b; }
-.dark .mapa-title { color: #e2e8f0; }
-.mapa-ciudad-select { width: 160px; }
+.mapa-title {
+  font-size: 12.5px; font-weight: 800; color: #fff;
+  letter-spacing: .02em; text-shadow: 0 1px 2px rgba(0,0,0,.25);
+}
+.mapa-ciudad-select { width: 150px; }
+.mapa-ciudad-select :deep(.el-select__wrapper) {
+  background: rgba(255,255,255,.1) !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  border-radius: 8px !important;
+  min-height: 26px !important;
+  box-shadow: none !important;
+}
+.mapa-ciudad-select :deep(.el-select__wrapper:hover) { background: rgba(255,255,255,.18) !important; }
+.mapa-ciudad-select :deep(.el-select__placeholder),
+.mapa-ciudad-select :deep(.el-select__selected-item) { color: rgba(255,255,255,.85) !important; font-size: 11px; font-weight: 600; }
+.mapa-ciudad-select :deep(.el-select__caret) { color: rgba(255,255,255,.7) !important; }
 
 .mapa-canvas {
   flex: 1;
   min-height: 320px;
-  background: #0b0e17;
+  background: #e8eef4;
 }
+.dark .mapa-canvas { background: #0b0e17; }
 
 .mapa-empty {
   position: absolute;
-  inset: 0;
-  top: 44px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  color: #94a3b8;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  color: #64748b;
   font-size: 12px; font-weight: 600;
-  background: rgba(11,14,23,0.85);
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(15,23,42,0.08);
+  border-radius: 12px;
+  padding: 14px 20px;
+  box-shadow: 0 4px 14px rgba(15,23,42,.12);
+  z-index: 500;
   pointer-events: none;
+}
+.dark .mapa-empty {
+  background: rgba(15,20,32,0.88);
+  border-color: rgba(255,255,255,0.1);
+  color: #94a3b8;
 }
 
 .mapa-legend {

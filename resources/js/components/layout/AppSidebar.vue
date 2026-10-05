@@ -53,19 +53,6 @@
 
       <div class="sidebar-divider"></div>
 
-      <!-- Análisis -->
-      <div class="mb-1 mt-2">
-        <div class="sidebar-label" :class="{ 'opacity-0': layout.isSidebarCollapsed }">Análisis</div>
-        <AppSidebarItem
-          to="/reportes"
-          icon="BarChart3"
-          text="Reportes"
-          permission="clinicas.view"
-        />
-      </div>
-
-      <div class="sidebar-divider"></div>
-
       <!-- Administración -->
       <div class="mb-1 mt-2">
         <div class="sidebar-label" :class="{ 'opacity-0': layout.isSidebarCollapsed }">Administración</div>
@@ -184,8 +171,7 @@ function handleCommand(command: string): void {
 
 <style scoped>
 aside { position: relative; }
-.sidebar-scroll::-webkit-scrollbar { width: 4px; }
-.sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
 
 .sidebar-label {
   font-size: 9px;

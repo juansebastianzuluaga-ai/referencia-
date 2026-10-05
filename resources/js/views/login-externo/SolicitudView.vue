@@ -1078,10 +1078,7 @@ async function guardar() {
   overflow-x: hidden;
   padding-right: 4px;
 }
-.rf-form-col::-webkit-scrollbar { width: 6px; }
-.rf-form-col::-webkit-scrollbar-thumb { background: #C7D5EA; border-radius: 999px; }
-.rf-form-col::-webkit-scrollbar-thumb:hover { background: #9FB4D8; }
-.rf-form-col::-webkit-scrollbar-track { background: transparent; }
+
 
 .rf-summary-card {
   flex-shrink: 0;

@@ -7,25 +7,25 @@
         variant="pastel" tone="info" solid-icon
         label="Solicitudes totales" :value="displayStats[0]"
         :comparacion="deltaTotal"
-        :icon="ClipboardListIcon" :sparkline="serieTotal"
+        :icon="ClipboardListIcon" :sparkline="ondular(serieTotal, 1)"
       />
       <StatCard
         variant="pastel" tone="warning" solid-icon
         label="Pendientes de gestión" :value="displayStats[1]"
         :comparacion="deltaPendientes"
-        :icon="ClockIcon" :sparkline="seriePendientes"
+        :icon="ClockIcon" :sparkline="ondular(seriePendientes, 3)"
       />
       <StatCard
         variant="pastel" tone="violet" solid-icon
         label="En espera" :value="displayStats[2]"
         :comparacion="deltaEnEspera"
-        :icon="HourglassIcon" :sparkline="serieEnEspera"
+        :icon="HourglassIcon" :sparkline="ondular(serieEnEspera, 5)"
       />
       <StatCard
         variant="pastel" tone="success" solid-icon
         label="Completadas" :value="displayStats[3]"
         :comparacion="deltaCompletadas"
-        :icon="CheckCircleIcon" :sparkline="serieCompletadas"
+        :icon="CheckCircleIcon" :sparkline="ondular(serieCompletadas, 7)"
       />
     </div>
 
@@ -282,53 +282,49 @@
           <p class="sol-side-title">Salud de la cola</p>
           <span class="sol-side-pill sol-side-pill-live"><span class="sol-live-dot"></span>En vivo</span>
         </div>
-        <div class="sol-gauge-wrap">
-          <svg viewBox="0 0 120 120" class="sol-gauge">
-            <defs>
-              <linearGradient id="sol-gauge-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#22c55e" />
-                <stop offset="55%" stop-color="#3b82f6" />
-                <stop offset="100%" stop-color="#16468E" />
-              </linearGradient>
-            </defs>
-            <circle cx="60" cy="60" r="48" class="sol-gauge-track" />
-            <circle cx="60" cy="60" r="48" class="sol-gauge-prog" :stroke-dasharray="gaugeDash" />
-          </svg>
-          <div class="sol-gauge-center">
-            <span class="sol-gauge-num">{{ saludColaPct }}<small>%</small></span>
-            <span class="sol-gauge-sub">con &lt; 24h en cola</span>
+        <!-- Resumen + barra segmentada por antigüedad de la cola -->
+        <div class="cola-resumen">
+          <span class="cola-resumen-num">{{ solicitudes.length }}</span>
+          <div class="cola-resumen-txt">
+            <span class="cola-resumen-label">activas en cola</span>
+            <span class="cola-resumen-badge" :class="saludColaPct >= 50 ? 'cola-resumen-badge--ok' : 'cola-resumen-badge--warn'">
+              {{ saludColaPct }}% &lt;24h
+            </span>
           </div>
         </div>
+        <div class="cola-bar">
+          <div
+            v-for="seg in colaTramos" :key="seg.id"
+            class="cola-seg" :class="{ 'cola-seg--on': edadCola === seg.id }"
+            :style="{ width: seg.pct + '%', background: seg.grad }"
+            :title="`${seg.label}: ${seg.total} solicitudes`"
+            @click="verTramo(seg.id)"
+          ></div>
+        </div>
+        <div class="cola-rows">
+          <button
+            v-for="seg in colaTramos" :key="seg.id"
+            type="button" class="cola-row" :class="{ 'cola-row--on': edadCola === seg.id }"
+            @click="verTramo(seg.id)"
+          >
+            <span class="cola-row-dot" :style="{ background: seg.color }"></span>
+            <span class="cola-row-label">{{ seg.label }}</span>
+            <span class="cola-row-track"><i :style="{ width: seg.pct + '%', background: seg.grad }"></i></span>
+            <span class="cola-row-num">{{ seg.total }}</span>
+          </button>
+        </div>
         <div class="sol-gauge-stats">
-          <div class="sol-gauge-stat">
+          <div class="sol-gauge-stat sol-gauge-stat--link" title="Ver la solicitud más antigua" @click="verMasAntigua">
             <span class="sol-gauge-stat-num">{{ masAntiguaTxt }}</span>
             <span class="sol-gauge-stat-label">Más antigua</span>
           </div>
-          <div class="sol-gauge-stat">
+          <div class="sol-gauge-stat sol-gauge-stat--link" title="Ver solicitudes con más de 24h en cola" @click="verCriticas">
             <span class="sol-gauge-stat-num" :class="{ 'sol-gauge-stat-warn': colaCriticas > 0 }">{{ colaCriticas }}</span>
             <span class="sol-gauge-stat-label">&gt; 24h</span>
           </div>
-          <div class="sol-gauge-stat">
+          <div class="sol-gauge-stat sol-gauge-stat--link" title="Ver solicitudes pendientes sin gestionar" @click="verSinGestionar">
             <span class="sol-gauge-stat-num">{{ resumen.pendientes }}</span>
             <span class="sol-gauge-stat-label">Sin gestionar</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Antigüedad de la carga -->
-      <div class="sol-side-panel sol-side-panel-flex">
-        <div class="sol-side-head">
-          <component :is="TimerIcon" class="w-3.5 h-3.5 sol-side-icon" />
-          <p class="sol-side-title">Antigüedad de la carga</p>
-          <span class="sol-side-pill">{{ resumen.total }} activas</span>
-        </div>
-        <div class="sol-aging-list">
-          <div v-for="b in edadBuckets" :key="b.label" class="sol-aging-row">
-            <span class="sol-aging-label">{{ b.label }}</span>
-            <div class="sol-aging-bar">
-              <div class="sol-aging-fill" :style="{ width: Math.max(b.pct, b.total > 0 ? 4 : 0) + '%', background: b.color }"></div>
-            </div>
-            <span class="sol-aging-num" :style="{ color: b.total > 0 ? undefined : '#cbd5e1' }">{{ b.total }}</span>
           </div>
         </div>
       </div>
@@ -904,7 +900,6 @@ import {
   MoreVertical as MoreIcon,
   SlidersHorizontal as SlidersIcon,
   Gauge as GaugeIcon,
-  Timer as TimerIcon,
   Activity as ActivityIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
@@ -1005,7 +1000,7 @@ const rangoFechas = ref<[string, string] | null>(null);
 interface DashStats {
   solicitudes: { total: number; pendientes: number; en_espera: number; completadas: number; negadas: number };
   filtros: { especialidades: string[]; eps: string[]; clinicas: { id: number; nombre: string }[] };
-  tendencia: { fecha: string; total: number }[];
+  tendencia: { label: string; total: number }[];
   tendencia_anterior: { fecha: string; total: number }[];
   tendencia_pendientes: { fecha: string; total: number }[];
   tendencia_pendientes_anterior: { fecha: string; total: number }[];
@@ -1072,6 +1067,24 @@ const seriePendientes = computed(() => (dash.value?.tendencia_pendientes ?? []).
 const serieEnEspera = computed(() => (dash.value?.tendencia_en_espera ?? []).map(d => d.total));
 const serieCompletadas = computed(() => (dash.value?.tendencia_completadas ?? []).map(d => d.total));
 
+/** Densifica la serie real (interpola entre días y suma una ondulación
+ * determinística) para que el sparkline tenga picos aunque los datos
+ * sean planos. Solo decorativa — los deltas usan las series reales. */
+function ondular(serie: number[], seed: number): number[] {
+  if (!serie.length) return serie;
+  const n = 24;
+  const max = Math.max(...serie, 1);
+  return Array.from({ length: n }, (_, i) => {
+    const pos = (i / (n - 1)) * (serie.length - 1);
+    const j = Math.min(Math.floor(pos), serie.length - 1);
+    const f = pos - j;
+    const base = (serie[j] ?? 0) + (((serie[j + 1] ?? serie[j]) ?? 0) - (serie[j] ?? 0)) * f;
+    const onda = max * 0.16 * (0.5 + 0.5 * Math.sin(i * 1.7 + seed))
+      + max * 0.07 * Math.sin(i * 3.9 + seed * 1.3);
+    return Math.max(0, base * 0.7 + onda);
+  });
+}
+
 function deltaTexto(actual: number[], anterior: number[]): string {
   const a = actual.reduce((x, y) => x + y, 0);
   const b = anterior.reduce((x, y) => x + y, 0);
@@ -1092,34 +1105,35 @@ function horasDesde(fechaIso: string): number {
   return Math.abs(Date.now() - new Date(fechaIso).getTime()) / 3_600_000;
 }
 
-const EDAD_BANDAS = [
-  { label: '< 2 h', min: 0, max: 2, color: 'linear-gradient(90deg,#34d399,#22c55e)' },
-  { label: '2 – 6 h', min: 2, max: 6, color: 'linear-gradient(90deg,#a3e635,#84cc16)' },
-  { label: '6 – 24 h', min: 6, max: 24, color: 'linear-gradient(90deg,#fbbf24,#f59e0b)' },
-  { label: '1 – 3 días', min: 24, max: 72, color: 'linear-gradient(90deg,#fb923c,#f97316)' },
-  { label: '> 3 días', min: 72, max: Infinity, color: 'linear-gradient(90deg,#f87171,#ef4444)' },
-];
-
-const edadBuckets = computed(() => {
-  const tot = solicitudes.value.length || 1;
-  return EDAD_BANDAS.map(b => {
-    const total = solicitudes.value.filter(s => {
-      const h = horasDesde(s.created_at);
-      return h >= b.min && h < b.max;
-    }).length;
-    return { ...b, total, pct: Math.round((total / tot) * 100) };
-  });
-});
-
 const saludColaPct = computed(() => {
   if (!solicitudes.value.length) return 100;
   const ok = solicitudes.value.filter(s => horasDesde(s.created_at) < 24).length;
   return Math.round((ok / solicitudes.value.length) * 100);
 });
 
-/* Arco de 270° (75% de la circunferencia), hueco abajo — r=48. */
-const GAUGE_C = 2 * Math.PI * 48;
-const gaugeDash = computed(() => `${(GAUGE_C * 0.75 * saludColaPct.value / 100).toFixed(1)} ${GAUGE_C.toFixed(1)}`);
+/* Antigüedad de la cola: 4 tramos de espera, de fresco a crítico.
+   Cada tramo es clicable y filtra la tabla por ese rango de edad. */
+const COLA_TRAMOS = [
+  { id: 'fresca', label: '< 24h', color: '#22c55e', grad: 'linear-gradient(180deg,#4ade80,#16a34a)', test: (h: number) => h < 24 },
+  { id: 'd1_3', label: '1–3 días', color: '#f59e0b', grad: 'linear-gradient(180deg,#fbbf24,#d97706)', test: (h: number) => h >= 24 && h < 72 },
+  { id: 'd3_7', label: '3–7 días', color: '#f97316', grad: 'linear-gradient(180deg,#fb923c,#ea580c)', test: (h: number) => h >= 72 && h < 168 },
+  { id: 'd7', label: '> 7 días', color: '#ef4444', grad: 'linear-gradient(180deg,#f87171,#dc2626)', test: (h: number) => h >= 168 },
+];
+
+const edadCola = ref<string | null>(null);
+
+const colaTramos = computed(() => {
+  const total = solicitudes.value.length || 1;
+  return COLA_TRAMOS.map(t => {
+    const n = solicitudes.value.filter(s => t.test(horasDesde(s.created_at))).length;
+    return { ...t, total: n, pct: Math.round((n / total) * 100) };
+  });
+});
+
+function verTramo(id: string) {
+  edadCola.value = edadCola.value === id ? null : id;
+  paginaActual.value = 1;
+}
 
 const masAntiguaTxt = computed(() => {
   if (!solicitudes.value.length) return '—';
@@ -1131,6 +1145,25 @@ const masAntiguaTxt = computed(() => {
 
 const colaCriticas = computed(() => solicitudes.value.filter(s => horasDesde(s.created_at) >= 24).length);
 
+/* Accesos directos desde el gauge de salud de la cola. */
+function verSinGestionar() {
+  cambiarTab('pendiente');
+}
+
+/** Las más viejas primero — las que ya pasaron las 24h. */
+function verCriticas() {
+  cambiarTab('todas');
+  sortKey.value = 'fecha';
+  sortDir.value = 'asc';
+}
+
+/** Abre directamente el detalle de la solicitud más antigua de la cola. */
+function verMasAntigua() {
+  if (!solicitudes.value.length) return;
+  const s = solicitudes.value.reduce((a, b) => (horasDesde(a.created_at) > horasDesde(b.created_at) ? a : b));
+  verDetalle(s);
+}
+
 const espColaColors = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#14b8a6'];
 const topEspecialidadesCola = computed(() => {
   const mapa = new Map<string, number>();
@@ -1141,13 +1174,14 @@ const topEspecialidadesCola = computed(() => {
   const tot = solicitudes.value.length || 1;
   return [...mapa.entries()]
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
+    .slice(0, 6)
     .map(([nombre, total]) => ({ nombre, total, pct: Math.round((total / tot) * 100) }));
 });
 
 const hayFiltros = computed(() =>
   !!filtro.value.buscar || tabActiva.value !== 'todas'
   || filtroClinica.value !== '' || !!filtroEspecialidad.value || !!rangoFechas.value
+  || !!edadCola.value
 );
 /** Cuántos filtros del panel están activos (el tab de estado no cuenta — ya se ve en los chips). */
 const conteoFiltros = computed(() =>
@@ -1210,6 +1244,10 @@ const solicitudesFiltradas = computed(() => {
     if (rangoFechas.value) {
       const dia = s.created_at?.slice(0, 10);
       if (dia && (dia < rangoFechas.value[0] || dia > rangoFechas.value[1])) return false;
+    }
+    if (edadCola.value) {
+      const tramo = COLA_TRAMOS.find(t => t.id === edadCola.value);
+      if (tramo && !tramo.test(horasDesde(s.created_at))) return false;
     }
     const texto = buscarDebounced.value.toLowerCase();
     const coincideTexto = !texto ||
@@ -1516,6 +1554,7 @@ function limpiarFiltros() {
   filtroClinica.value = '';
   filtroEspecialidad.value = '';
   rangoFechas.value = null;
+  edadCola.value = null;
 }
 
 /** Resalta y hace scroll hasta la solicitud referenciada por la notificación de la campana (?resaltar=ID). */
@@ -1971,40 +2010,38 @@ usePolling(() => {
   display: flex;
   flex-direction: column;
 }
-.sol-side-panel-flex .sol-aging-list,
 .sol-side-panel-flex .sol-esp-list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
 }
-.sol-side-panel-flex .sol-aging-list::-webkit-scrollbar,
-.sol-side-panel-flex .sol-esp-list::-webkit-scrollbar { width: 4px; }
-.sol-side-panel-flex .sol-aging-list::-webkit-scrollbar-thumb,
-.sol-side-panel-flex .sol-esp-list::-webkit-scrollbar-thumb { background: #dbe3ee; border-radius: 4px; }
 .dark .sol-side-panel { background: #161b28; border-color: rgba(255,255,255,0.07); }
 .sol-side-head {
   display: flex; align-items: center; gap: 6px;
-  margin-bottom: 8px;
+  margin: -2px -2px 8px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: #16468E;
+  border: 1px solid #123a78;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 3px 12px rgba(13,45,107,.22);
 }
-.sol-side-icon { color: #16468E; flex-shrink: 0; }
-.dark .sol-side-icon { color: #a5b4fc; }
+.sol-side-icon { color: rgba(255,255,255,.9); flex-shrink: 0; }
 .sol-side-title {
-  font-size: 11.5px; font-weight: 800; color: #1e293b;
+  font-size: 11.5px; font-weight: 800; color: #fff;
   margin: 0; flex: 1; min-width: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  letter-spacing: .02em; text-shadow: 0 1px 2px rgba(0,0,0,.25);
 }
-.dark .sol-side-title { color: #e2e8f0; }
 .sol-side-pill {
   display: inline-flex; align-items: center; gap: 3px;
-  font-size: 9px; font-weight: 700; color: #64748b;
-  background: #f1f5f9; border: 1px solid #e2e8f0;
+  font-size: 9px; font-weight: 700; color: rgba(255,255,255,.8);
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16);
   padding: 2px 7px; border-radius: 999px; white-space: nowrap;
 }
-.dark .sol-side-pill { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.09); color: #94a3b8; }
 
 /* ── Gauge salud de la cola ── */
-.sol-side-pill-live { color: #15803d; background: #f0fdf4; border-color: #bbf7d0; }
+.sol-side-pill-live { color: #86efac; background: rgba(34,197,94,.15); border-color: rgba(74,222,128,.25); }
 .sol-live-dot {
   width: 5px; height: 5px; border-radius: 50%;
   background: #22c55e;
@@ -2014,42 +2051,72 @@ usePolling(() => {
   0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,.5); }
   50% { opacity: .7; box-shadow: 0 0 0 3px rgba(34,197,94,0); }
 }
-.sol-gauge-wrap {
-  position: relative;
-  width: 150px; margin: 0 auto;
+/* ── Salud de la cola: resumen + barra segmentada por antigüedad ── */
+.cola-resumen {
+  display: flex; align-items: center; gap: 9px;
+  margin-bottom: 9px;
 }
-.sol-gauge { width: 100%; display: block; overflow: visible; }
-.sol-gauge-track, .sol-gauge-prog {
-  fill: none;
-  stroke-width: 11;
-  stroke-linecap: round;
-  transform: rotate(135deg);
-  transform-origin: 60px 60px;
-}
-.sol-gauge-track {
-  stroke: #eef2f7;
-  stroke-dasharray: 226.2 301.6;
-}
-.dark .sol-gauge-track { stroke: rgba(255,255,255,0.08); }
-.sol-gauge-prog {
-  stroke: url(#sol-gauge-grad);
-  filter: drop-shadow(0 2px 5px rgba(59,130,246,.45));
-  transition: stroke-dasharray .8s cubic-bezier(.22,1,.36,1);
-}
-.sol-gauge-center {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding-bottom: 14px;
-  pointer-events: none;
-}
-.sol-gauge-num {
+.cola-resumen-num {
   font-size: 26px; font-weight: 800; color: #1e293b; line-height: 1;
-  background: linear-gradient(135deg, #0d2d5e, #2563eb);
+  background: linear-gradient(135deg, #16468e, #2563eb);
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }
-.sol-gauge-num small { font-size: 14px; font-weight: 800; }
-.sol-gauge-sub { font-size: 8.5px; font-weight: 700; color: #94a3b8; margin-top: 3px; letter-spacing: .03em; }
-.dark .sol-gauge-num { background: linear-gradient(135deg, #e2e8f0, #93c5fd); -webkit-background-clip: text; background-clip: text; }
+.dark .cola-resumen-num { background: linear-gradient(135deg, #93c5fd, #60a5fa); -webkit-background-clip: text; background-clip: text; }
+.cola-resumen-txt { display: flex; flex-direction: column; gap: 3px; }
+.cola-resumen-label { font-size: 8.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; }
+.cola-resumen-badge {
+  align-self: flex-start;
+  font-size: 8.5px; font-weight: 800; padding: 2px 7px; border-radius: 999px;
+}
+.cola-resumen-badge--ok { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.cola-resumen-badge--warn { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.dark .cola-resumen-badge--ok { background: rgba(34,197,94,.14); color: #4ade80; border-color: rgba(34,197,94,.3); }
+.dark .cola-resumen-badge--warn { background: rgba(245,158,11,.14); color: #fbbf24; border-color: rgba(245,158,11,.3); }
+
+/* Barra segmentada verde→roja según cuánto lleva cada solicitud esperando */
+.cola-bar {
+  display: flex; gap: 3px;
+  height: 12px; width: 100%;
+  margin-bottom: 10px;
+}
+.cola-seg {
+  height: 100%; min-width: 3px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: width .6s cubic-bezier(.22,1,.36,1), transform .15s ease, filter .15s ease, opacity .2s ease;
+}
+.cola-seg:hover { transform: scaleY(1.25); filter: brightness(1.05); }
+.cola-seg--on { outline: 2px solid rgba(22,70,142,.35); outline-offset: 1px; }
+.dark .cola-seg--on { outline-color: rgba(147,197,253,.5); }
+
+/* Filas-leyenda clicables por tramo */
+.cola-rows { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+.cola-row {
+  display: flex; align-items: center; gap: 7px;
+  width: 100%;
+  background: transparent; border: 1px solid transparent; border-radius: 7px;
+  padding: 3px 5px; cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.cola-row:hover { background: #f1f5f9; }
+.dark .cola-row:hover { background: rgba(255,255,255,0.05); }
+.cola-row--on { background: #eef4ff; border-color: #bfdbfe; }
+.dark .cola-row--on { background: rgba(59,130,246,0.12); border-color: rgba(96,165,250,0.35); }
+.cola-row-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.cola-row-label { font-size: 9.5px; font-weight: 700; color: #475569; min-width: 44px; text-align: left; }
+.dark .cola-row-label { color: #cbd5e1; }
+.cola-row-track {
+  flex: 1; height: 5px; border-radius: 3px;
+  background: #eef2f7; overflow: hidden;
+}
+.dark .cola-row-track { background: rgba(255,255,255,0.08); }
+.cola-row-track i {
+  display: block; height: 100%; border-radius: 3px;
+  transition: width .6s cubic-bezier(.22,1,.36,1);
+}
+.cola-row-num { font-size: 10.5px; font-weight: 800; color: #1e293b; min-width: 22px; text-align: right; }
+.dark .cola-row-num { color: #e2e8f0; }
+
 .sol-gauge-stats {
   display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 6px; margin-top: 4px;
@@ -2059,43 +2126,22 @@ usePolling(() => {
   background: #f8fafc; border: 1px solid #eef2f7; border-radius: 8px;
 }
 .dark .sol-gauge-stat { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.07); }
+.sol-gauge-stat--link { cursor: pointer; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+.sol-gauge-stat--link:hover { background: #eef4ff; border-color: #bfdbfe; transform: translateY(-1px); }
+.dark .sol-gauge-stat--link:hover { background: rgba(59,130,246,0.12); border-color: rgba(96,165,250,0.35); }
 .sol-gauge-stat-num { display: block; font-size: 12px; font-weight: 800; color: #1e293b; line-height: 1; }
 .dark .sol-gauge-stat-num { color: #e2e8f0; }
 .sol-gauge-stat-warn { color: #dc2626; }
 .dark .sol-gauge-stat-warn { color: #f87171; }
 .sol-gauge-stat-label { font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .04em; }
 
-/* ── Antigüedad de la carga ── */
-.sol-aging-list { display: flex; flex-direction: column; gap: 8px; justify-content: space-evenly; }
-.sol-aging-row { display: flex; align-items: center; gap: 8px; }
-.sol-aging-label {
-  width: 52px; flex-shrink: 0;
-  font-size: 9.5px; font-weight: 700; color: #64748b;
-}
-.dark .sol-aging-label { color: #94a3b8; }
-.sol-aging-bar {
-  flex: 1; height: 8px; border-radius: 999px;
-  background: #f1f5f9; overflow: hidden;
-}
-.dark .sol-aging-bar { background: rgba(255,255,255,0.07); }
-.sol-aging-fill {
-  height: 100%; border-radius: 999px;
-  transition: width .6s cubic-bezier(.22,1,.36,1);
-  box-shadow: 0 1px 4px rgba(0,0,0,.15);
-}
-.sol-aging-num {
-  width: 22px; flex-shrink: 0; text-align: right;
-  font-size: 11px; font-weight: 800; color: #1e293b;
-}
-.dark .sol-aging-num { color: #e2e8f0; }
-
 /* ── Especialidades en cola ── */
-.sol-esp-list { display: flex; flex-direction: column; gap: 9px; justify-content: space-evenly; }
-.sol-esp-row { display: flex; align-items: center; gap: 7px; }
+.sol-esp-list { display: flex; flex-direction: column; gap: 12px; justify-content: space-evenly; }
+.sol-esp-row { display: flex; align-items: center; gap: 9px; }
 .sol-esp-rank {
-  width: 16px; height: 16px; border-radius: 50%;
+  width: 20px; height: 20px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 8.5px; font-weight: 800;
+  font-size: 9.5px; font-weight: 800;
   background: #f1f5f9; color: #64748b; flex-shrink: 0;
 }
 .sol-esp-rank--1 { background: #fef3c7; color: #b45309; }
@@ -2103,21 +2149,22 @@ usePolling(() => {
 .sol-esp-rank--3 { background: #ffedd5; color: #c2410c; }
 .sol-esp-info { flex: 1; min-width: 0; }
 .sol-esp-name {
-  font-size: 10px; font-weight: 700; color: #334155;
-  margin: 0 0 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 11px; font-weight: 700; color: #334155;
+  margin: 0 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .dark .sol-esp-name { color: #cbd5e1; }
 .sol-esp-bar {
-  height: 5px; border-radius: 999px; background: #f1f5f9; overflow: hidden;
+  height: 7px; border-radius: 999px; background: #f1f5f9; overflow: hidden;
 }
 .dark .sol-esp-bar { background: rgba(255,255,255,0.07); }
 .sol-esp-fill {
   height: 100%; border-radius: 999px;
   transition: width .6s cubic-bezier(.22,1,.36,1);
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
 }
 .sol-esp-total {
-  flex-shrink: 0; min-width: 20px; text-align: right;
-  font-size: 11px; font-weight: 800; color: #1e293b;
+  flex-shrink: 0; min-width: 24px; text-align: right;
+  font-size: 12px; font-weight: 800; color: #1e293b;
 }
 .dark .sol-esp-total { color: #e2e8f0; }
 .sol-esp-empty { font-size: 10px; color: #94a3b8; text-align: center; margin: 12px 0; }
@@ -2516,9 +2563,10 @@ usePolling(() => {
   text-align: left;
   font-size: 10px; font-weight: 700;
   text-transform: uppercase; letter-spacing: .05em;
-  color: #64748b;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  color: rgba(255,255,255,.85);
+  background: #16468E;
+  border-bottom: 1px solid #123a78;
+  text-shadow: 0 1px 2px rgba(0,0,0,.25);
 }
 .sol-th:first-child { border-radius: 8px 0 0 8px; }
 .sol-th:last-child { border-radius: 0 8px 8px 0; }
@@ -2605,9 +2653,7 @@ usePolling(() => {
 }
 
 /* ── Scrollbar ── */
-.custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+/* El estilo del scroll es global en tailwind.css (invisible hasta hover, tipo Element Plus) */
 
 /* ── Animaciones ── */
 .anim-row-in { animation: rowIn 0.4s cubic-bezier(.22,1,.36,1) both; }
@@ -2637,9 +2683,7 @@ usePolling(() => {
   overflow-y: auto;
   overflow-x: hidden;
 }
-:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar { width: 5px; }
-:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
-:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar-track { background: transparent; }
+
 :deep(.el-overlay) { background-color: rgba(8, 27, 58, .56); backdrop-filter: blur(4px); }
 
 .detalle-content { padding: 0; position: relative; background: #F8FAFC; }

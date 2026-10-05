@@ -200,7 +200,6 @@ const mainItems: NavItem[] = [
   { to: '/solicitudes-referencia', icon: 'ClipboardList', text: 'Solicitudes', permission: 'clinicas.view' },
   { to: '/clinicas', icon: 'Hospital', text: 'Clínicas', permission: 'clinicas.view' },
   { to: '/historico', icon: 'History', text: 'Historial', permission: 'clinicas.view' },
-  { to: '/reportes', icon: 'BarChart3', text: 'Reportes', permission: 'clinicas.view' },
 ];
 
 const adminItems: NavItem[] = [

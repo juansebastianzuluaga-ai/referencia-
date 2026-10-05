@@ -43,26 +43,26 @@
 
       <!-- Tendencia -->
       <div class="panel-card-ui p-3.5 flex flex-col lg:col-span-6 min-h-0">
-        <div class="panel-head">
+        <div class="panel-head panel-head--navy">
           <div class="panel-head-icon">
             <component :is="BarChart3Icon" class="w-3.5 h-3.5" />
           </div>
-          <p class="panel-head-title">Solicitudes por día</p>
+          <p class="panel-head-title">Tendencia de solicitudes</p>
           <div class="chart-legend">
-            <span class="chart-legend-pill chart-legend-pill--actual">
-              <span class="chart-legend-dot" style="background:#2563eb"></span>Este período
-            </span>
-            <span class="chart-legend-pill chart-legend-pill--anterior">
-              <span class="chart-legend-dot" style="background:#cbd5e1"></span>Período anterior
-            </span>
-            <span v-if="diaPromedio > 0" class="chart-legend-pill chart-legend-pill--prom">
-              <span class="chart-legend-dash"></span>Prom. {{ diaPromedio }}
+            <span class="chart-legend-pill">
+              <span class="chart-legend-dot" style="background:#8fb5f5"></span>Actual
             </span>
           </div>
-          <span class="panel-head-pill">Últimos 14 días <i class="pill-caret">▾</i></span>
+          <div class="gran-seg">
+            <button
+              v-for="g in [['dia', 'Día'], ['mes', 'Mes'], ['anio', 'Año']] as const" :key="g[0]"
+              class="gran-seg-btn" :class="{ 'gran-seg-btn--on': granularidad === g[0] }"
+              @click="cambiarGranularidad(g[0])"
+            >{{ g[1] }}</button>
+          </div>
         </div>
         <div class="flex-1 min-h-0">
-          <apexchart type="line" height="100%" :options="diaChartOptions" :series="diaChartSeries" />
+          <apexchart :key="'tend-' + granularidad" type="line" height="100%" :options="diaChartOptions" :series="diaChartSeries" />
         </div>
       </div>
 
@@ -299,7 +299,7 @@
       style="animation-duration: 0.4s; animation-delay: 0.32s; animation-fill-mode: both;">
 
       <!-- Recientes -->
-      <div class="panel-card-ui p-3 flex flex-col lg:col-span-7 min-h-0">
+      <div class="panel-card-ui p-3 flex flex-col lg:col-span-6 min-h-0">
       <div class="panel-head">
         <div class="panel-head-icon">
           <component :is="ClipboardListIcon" class="w-3.5 h-3.5" />
@@ -362,7 +362,7 @@
       </div>
 
       <!-- Mapa de calor: día × hora -->
-      <div class="panel-card-ui p-3 flex flex-col lg:col-span-5 min-h-0">
+      <div class="panel-card-ui p-3 flex flex-col lg:col-span-3 min-h-0">
         <div class="panel-head">
           <div class="panel-head-icon">
             <component :is="CalClockIcon" class="w-3.5 h-3.5" />
@@ -390,6 +390,23 @@
           <span>Menos</span>
           <i v-for="s in 5" :key="s" class="heatmap-cell" :style="{ background: heatScale((s - 1) / 4) }"></i>
           <span>Más</span>
+        </div>
+      </div>
+
+      <!-- Mapa de calor: especialidad × mes -->
+      <div class="panel-card-ui p-3 flex flex-col lg:col-span-3 min-h-0">
+        <div class="panel-head">
+          <div class="panel-head-icon">
+            <component :is="GridIcon" class="w-3.5 h-3.5" />
+          </div>
+          <p class="panel-head-title">Mapa de calor</p>
+          <span class="panel-head-pill">6 meses</span>
+        </div>
+        <div v-if="espMesSeries.length" class="flex-1 min-h-0">
+          <apexchart type="heatmap" height="100%" :options="espMesOptions" :series="espMesSeries" />
+        </div>
+        <div v-else class="flex-1 min-h-0 flex items-center justify-center text-[10px] text-slate-400">
+          Sin datos de especialidades
         </div>
       </div>
 
@@ -444,6 +461,7 @@ import {
   Eye as EyeIcon,
   FileDown as FileDownIcon,
   CalendarClock as CalClockIcon,
+  Grid3x3 as GridIcon,
   MoreHorizontal as MoreIcon,
   X as XIcon,
   AlertTriangle as AlertTriangleIcon,
@@ -480,8 +498,8 @@ const stats = ref({
   usuarios: { total: 0, activos: 0 },
   solicitudes_recientes: [] as any[],
   filtros: { especialidades: [] as string[], eps: [] as string[], clinicas: [] as Array<{ id: number; nombre: string }> },
-  tendencia: [] as Array<{ fecha: string; total: number }>,
-  tendencia_anterior: [] as Array<{ fecha: string; total: number }>,
+  tendencia: [] as Array<{ label: string; total: number }>,
+  tendencia_anterior: [] as Array<{ label: string; total: number }>,
   tendencia_clinicas: [] as Array<{ fecha: string; total: number }>,
   tendencia_usuarios: [] as Array<{ fecha: string; total: number }>,
   tendencia_pendientes: [] as Array<{ fecha: string; total: number }>,
@@ -491,6 +509,7 @@ const stats = ref({
   sla: { bandas: [] as Array<{ etiqueta: string; total: number; pct: number }>, dentro_pct: 0, total: 0 },
   sla_diario: { dias: [], promedio: null, promedio_min: null, promedio_delta: null } as SlaDiario,
   por_dia_hora: [] as Array<{ dia: string; hora: string; total: number }>,
+  heatmap_especialidad_mes: [] as Array<{ especialidad: string; mes: string; total: number }>,
   actividad: [] as ActividadEvento[],
 });
 
@@ -659,34 +678,19 @@ const estadoDonutOptions = computed(() => ({
   tooltip: { enabled: false },
 }));
 
-/** Área: solicitudes por día con la línea punteada del período anterior. */
-const diaCats = computed(() => stats.value.tendencia.map(t => {
-  const d = new Date(t.fecha + 'T00:00:00');
-  const mes = d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '');
-  return `${d.getDate()} ${mes}`;
-}));
+/** Granularidad del gráfico de tendencia (día / mes / año). */
+const granularidad = ref<'dia' | 'mes' | 'anio'>('dia');
+function cambiarGranularidad(g: 'dia' | 'mes' | 'anio') {
+  if (granularidad.value === g) return;
+  granularidad.value = g;
+  cargarStats();
+}
 
-/** Índice del día pico del período actual (para la anotación del gráfico). */
-const diaPico = computed(() => {
-  const arr = stats.value.tendencia;
-  if (!arr.length) return null;
-  let maxI = 0;
-  arr.forEach((t, i) => { if (t.total > arr[maxI].total) maxI = i; });
-  // La etiqueta solo se muestra si el pico no está pegado a los bordes,
-  // donde se montaría sobre las etiquetas del eje.
-  return { cat: diaCats.value[maxI], total: arr[maxI].total, seguro: maxI >= 2 && maxI <= arr.length - 3 };
-});
-
-/** Promedio diario del período (línea de referencia punteada). */
-const diaPromedio = computed(() => {
-  const arr = stats.value.tendencia;
-  if (!arr.length) return 0;
-  return Math.round(arr.reduce((a, t) => a + t.total, 0) / arr.length);
-});
+/** Área: solicitudes por período con la línea punteada del período anterior. */
+const diaCats = computed(() => stats.value.tendencia.map(t => t.label));
 
 const diaChartSeries = computed(() => [
-  { name: 'Este período', type: 'area', data: stats.value.tendencia.map(t => t.total) },
-  { name: 'Período anterior', type: 'line', data: stats.value.tendencia_anterior.map(t => t.total) },
+  { name: 'Actual', type: 'area', data: stats.value.tendencia.map(t => t.total) },
 ]);
 const diaChartOptions = computed(() => ({
   chart: {
@@ -694,59 +698,33 @@ const diaChartOptions = computed(() => ({
     toolbar: { show: false },
     animations: { enabled: true, speed: 600 },
     zoom: { enabled: false },
-    dropShadow: { enabled: true, enabledOnSeries: [0], top: 4, left: 0, blur: 6, color: '#2563eb', opacity: 0.35 },
+    dropShadow: { enabled: true, enabledOnSeries: [0], top: 4, left: 0, blur: 6, color: '#16468e', opacity: 0.35 },
     events: {
-      dataPointMouseEnter: (e: MouseEvent, _ctx: unknown, config: { dataPointIndex?: number; seriesIndex?: number }) => {
-        const i = config.dataPointIndex ?? -1;
-        const esActual = config.seriesIndex !== 1;
-        const lista = esActual ? stats.value.tendencia : stats.value.tendencia_anterior;
-        const punto = lista[i];
-        if (!punto) return;
-        const fechaTxt = new Date(punto.fecha + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
-        const rows: TipRow[] = [
-          { color: '#2563eb', label: 'Este período:', value: stats.value.tendencia[i]?.total ?? 0 },
-          { color: '#9ca3af', label: 'Período anterior:', value: stats.value.tendencia_anterior[i]?.total ?? 0 },
-        ];
-        showTip(e.clientX, e.clientY - 12, fechaTxt, rows);
+      mouseMove: (e: MouseEvent, _ctx: unknown, config: { dataPointIndex?: number }) => {
+        const i = config?.dataPointIndex ?? -1;
+        const punto = stats.value.tendencia[i];
+        if (i < 0 || !punto) { hideTip(); return; }
+        showTip(e.clientX, e.clientY - 12, punto.label, [
+          { color: '#16468e', label: 'Solicitudes:', value: stats.value.tendencia[i]?.total ?? 0 },
+        ]);
       },
-      dataPointMouseLeave: hideTip,
       mouseLeave: hideTip,
     },
   },
-  colors: ['#2563eb', '#9ca3af'],
-  stroke: { curve: 'smooth' as const, width: [3, 2.25], dashArray: [0, 6], lineCap: 'round' as const },
+  colors: ['#16468e'],
+  stroke: { curve: 'smooth' as const, width: [3], lineCap: 'round' as const },
   fill: {
     type: 'gradient',
     gradient: { shade: 'light', type: 'vertical', gradientToColors: ['#60a5fa'], opacityFrom: 0.42, opacityTo: 0.02, stops: [0, 85, 100] },
   },
   markers: {
-    size: [4.5, 3],
-    colors: ['#fff', '#fff'],
-    strokeColors: ['#2563eb', '#9ca3af'],
-    strokeWidth: [2.5, 2],
-    hover: { sizeOffset: 3 },
+    size: [0],
+    colors: ['#fff'],
+    strokeColors: ['#16468e'],
+    strokeWidth: [2.5],
+    hover: { sizeOffset: 4 },
   },
   dataLabels: { enabled: false },
-  annotations: {
-    points: diaPico.value ? [{
-      x: diaPico.value.cat,
-      y: diaPico.value.total,
-      marker: { size: 6, fillColor: '#fff', strokeColor: '#2563eb', strokeWidth: 2.5, radius: 50 },
-      label: diaPico.value.seguro ? {
-        text: `Pico ${diaPico.value.total}`,
-        borderColor: '#2563eb',
-        offsetY: -6,
-        style: { background: '#2563eb', color: '#fff', fontSize: '9px', fontWeight: 700, padding: { left: 7, right: 7, top: 3, bottom: 3 } },
-      } : { text: '', borderWidth: 0, style: { background: 'transparent', color: 'transparent', fontSize: '1px' } },
-    }] : [],
-    yaxis: diaPromedio.value > 0 ? [{
-      y: diaPromedio.value,
-      borderColor: '#f59e0b',
-      strokeDashArray: 5,
-      borderWidth: 1.5,
-      opacity: 0.7,
-    }] : [],
-  },
   xaxis: {
     categories: diaCats.value,
     labels: { style: { fontSize: '9.5px', colors: '#94a3b8' }, rotate: 0, hideOverlappingLabels: true },
@@ -768,7 +746,15 @@ const diaChartOptions = computed(() => ({
     padding: { top: 0, right: 8, bottom: 0, left: 8 },
   },
   legend: { show: false },
-  tooltip: { enabled: false },
+  /* El tooltip debe estar habilitado para que Apex calcule el
+     dataPointIndex del hover — se devuelve vacío y se oculta por CSS;
+     el tooltip visible es el flotante teleportado a <body>. */
+  tooltip: {
+    enabled: true,
+    shared: true,
+    intersect: false,
+    custom: () => '',
+  },
 }));
 
 /** Tabla de especialidades: icono + color propio por fila, como el mockup. */
@@ -917,6 +903,85 @@ function heatTip(e: MouseEvent, dia: string, hora: string): void {
   ]);
 }
 
+/* ── Mapa de calor: especialidad × mes (últimos 6 meses) ── */
+const espMesSeries = computed(() => {
+  const esps: string[] = [];
+  for (const c of stats.value.heatmap_especialidad_mes) {
+    if (!esps.includes(c.especialidad)) esps.push(c.especialidad);
+  }
+  return esps.map(esp => ({
+    name: esp,
+    data: stats.value.heatmap_especialidad_mes
+      .filter(c => c.especialidad === esp)
+      .map(c => ({ x: c.mes, y: c.total })),
+  })).reverse();
+});
+
+const espMesMax = computed(() =>
+  Math.max(1, ...espMesSeries.value.flatMap(s => s.data.map(d => d.y)))
+);
+
+/** Escala violeta: del tinte base del tema al #7048e8 puro. */
+function espMesColor(t: number): string {
+  return `color-mix(in srgb, #7048e8 ${Math.round(10 + t * 90)}%, ${isDark.value ? '#1e2536' : '#f4f2ff'})`;
+}
+
+/* colorScale.ranges apaga el sombreado automático de Apex — así los
+   "0" se ven del color del tema (oscuro en dark mode) en vez de
+   quedar siempre casi blancos. */
+const espMesRanges = computed(() => {
+  const steps = 6;
+  const max = espMesMax.value;
+  return Array.from({ length: steps }, (_, i) => ({
+    from: Math.round((max * i) / steps),
+    to: Math.round((max * (i + 1)) / steps),
+    color: espMesColor(i / (steps - 1)),
+    name: '',
+  }));
+});
+
+const espMesOptions = computed(() => ({
+  chart: {
+    type: 'heatmap' as const,
+    fontFamily: 'inherit',
+    toolbar: { show: false },
+    events: {
+      dataPointMouseEnter: (e: MouseEvent, _ctx: unknown, opts: { seriesIndex: number; dataPointIndex: number }) => {
+        const esp = espMesSeries.value[opts.seriesIndex]?.name;
+        const celda = espMesSeries.value[opts.seriesIndex]?.data[opts.dataPointIndex];
+        if (esp && celda) {
+          showTip(e.clientX, e.clientY - 12, `${esp} · ${celda.x}`, [
+            { color: '#7048e8', label: 'Solicitudes:', value: celda.y },
+          ]);
+        }
+      },
+      dataPointMouseLeave: hideTip,
+    },
+  },
+  dataLabels: { enabled: false },
+  legend: { show: false },
+  colors: ['#7048e8'],
+  theme: { mode: isDark.value ? 'dark' : 'light' },
+  xaxis: {
+    labels: { style: { fontSize: '8px', colors: isDark.value ? '#64748b' : '#94a3b8' }, rotate: 0 },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  },
+  yaxis: { labels: { style: { fontSize: '8px', colors: isDark.value ? '#94a3b8' : '#475569' }, maxWidth: 80 } },
+  grid: {
+    borderColor: isDark.value ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
+    padding: { left: 2, right: 2 },
+  },
+  plotOptions: {
+    heatmap: {
+      radius: 4,
+      enableShades: false,
+      colorScale: { ranges: espMesRanges.value, min: 0, max: espMesMax.value },
+    },
+  },
+  tooltip: { enabled: false },
+}));
+
 /** Icono/colores por tipo de evento del feed de actividad. */
 function actividadTono(tipo: string): { icon: typeof ActivityIcon; color: string; bg: string } {
   switch (tipo) {
@@ -986,7 +1051,7 @@ async function descargarPdf(id: number) {
 async function cargarStats() {
   try {
     cargando.value = true;
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = { granularidad: granularidad.value };
     if (filtros.value.desde) params.desde = filtros.value.desde;
     if (filtros.value.hasta) params.hasta = filtros.value.hasta;
     if (filtros.value.estado && filtros.value.estado !== 'todas') params.estado = filtros.value.estado;
@@ -1215,15 +1280,64 @@ usePolling(() => {
 .dark .chart-legend-pill--actual { background: rgba(37,99,235,0.15); color: #93c5fd; border-color: rgba(37,99,235,0.3); }
 .dark .chart-legend-pill--anterior { background: rgba(255,255,255,0.06); color: #94a3b8; border-color: rgba(255,255,255,0.1); }
 
+/* El tooltip nativo del chart de tendencia va oculto (custom vacío) —
+   el visible es el flotante .sla-tip teleportado a <body>. */
+:deep(.apexcharts-tooltip) { display: none !important; }
+
+/* ── Cabecera navy del gráfico de tendencia (como los headers de módulo) ── */
+.panel-head--navy {
+  background: #16468e;
+  border: 1px solid #123a78;
+  border-radius: 10px;
+  padding: 6px 9px;
+  margin-bottom: 9px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 3px 8px rgba(13,45,107,.22);
+}
+.panel-head--navy .panel-head-title { color: #fff; font-size: 12px; }
+.panel-head--navy .panel-head-icon {
+  width: 22px; height: 22px;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.25);
+  box-shadow: none;
+}
+.panel-head--navy .chart-legend-pill {
+  color: rgba(255,255,255,.82);
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.16);
+  padding: 2px 8px;
+  font-size: 9px;
+}
+/* Selector Día · Mes · Año en vidrio sobre el navy */
+.gran-seg {
+  display: flex; align-items: center; gap: 2px;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 999px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+.gran-seg-btn {
+  font-size: 9px; font-weight: 800;
+  padding: 2.5px 9px; border-radius: 999px;
+  color: rgba(255,255,255,.72);
+  background: transparent; border: none; cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+  white-space: nowrap;
+}
+.gran-seg-btn:hover { color: #fff; }
+.gran-seg-btn--on { background: #fff; color: #16468e; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
+
 /* ── Dona de estados ── */
 /* La dona llena el alto disponible de la tarjeta — se adapta a cualquier
    pantalla sin salirse del contenedor. */
 .estado-donut-wrap { position: relative; flex: 1; min-width: 0; height: 100%; min-height: 0; }
 .estado-donut-wrap :deep(.apexcharts-canvas) { margin: 0 auto; }
-.estado-donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
-.estado-donut-num { font-size: 22px; font-weight: 800; color: #1e293b; }
+/* El contenido central se acota al hueco real de la dona (~60% del ancho)
+   para que las etiquetas no se monten sobre el anillo. */
+.estado-donut-center { position: absolute; inset: 0; padding: 0 20%; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.estado-donut-num { font-size: 20px; font-weight: 800; color: #1e293b; line-height: 1.1; }
 .dark .estado-donut-num { color: #e2e8f0; }
-.estado-donut-label { font-size: 10px; color: #94a3b8; font-weight: 600; }
+.estado-donut-label { font-size: 9px; color: #94a3b8; font-weight: 600; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dark .estado-donut-label { color: #64748b; }
 
 /* Leyenda lateral de la dona */
@@ -1460,7 +1574,6 @@ usePolling(() => {
   border-radius: 9px;
   padding: 6px 9px;
   box-shadow: 0 8px 20px rgba(15,23,42,0.14);
-  z-index: 20;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -1605,8 +1718,6 @@ usePolling(() => {
 
 /* ── Tabla de recientes: header pegado al hacer scroll interno ── */
 .recientes-scroll { scrollbar-width: thin; }
-.recientes-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
-.recientes-scroll::-webkit-scrollbar-thumb { background: #dbe3ee; border-radius: 999px; }
 .dash-table--recientes thead th {
   position: sticky;
   top: 0;
@@ -1627,8 +1738,6 @@ usePolling(() => {
 
 /* ── Actividad reciente ── */
 .activity-list { scrollbar-width: thin; }
-.activity-list::-webkit-scrollbar { width: 5px; }
-.activity-list::-webkit-scrollbar-thumb { background: #dbe3ee; border-radius: 999px; }
 .activity-row {
   display: flex;
   align-items: center;

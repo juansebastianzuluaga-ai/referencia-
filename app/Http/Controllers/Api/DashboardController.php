@@ -11,27 +11,33 @@ use Illuminate\Support\Carbon;
 
 class DashboardController extends BaseController
 {
+    private const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
     public function stats(Request $request): JsonResponse
     {
-        $query = SolicitudReferencia::query();
+        // Filtros de dimensión (estado/especialidad/eps/clínica) — se aplican
+        // tanto al query principal como a las tendencias, que llevan su propia
+        // ventana de fechas.
+        $queryDims = SolicitudReferencia::query();
+        if ($request->filled('estado') && $request->input('estado') !== 'todas') {
+            $queryDims->where('solicitudes_referencia.estado', $request->input('estado'));
+        }
+        if ($request->filled('especialidad')) {
+            $queryDims->where('especialidad_requerida', $request->input('especialidad'));
+        }
+        if ($request->filled('eps')) {
+            $queryDims->where('eps', $request->input('eps'));
+        }
+        if ($request->filled('clinica')) {
+            $queryDims->where('clinica_id', $request->input('clinica'));
+        }
 
+        $query = (clone $queryDims);
         if ($request->filled('desde')) {
             $query->whereDate('created_at', '>=', $request->input('desde'));
         }
         if ($request->filled('hasta')) {
             $query->whereDate('created_at', '<=', $request->input('hasta'));
-        }
-        if ($request->filled('estado ') && $request->input('estado') !== 'todas') {
-            $query->where('solicitudes_referencia.estado', $request->input('estado'));
-        }
-        if ($request->filled('especialidad')) {
-            $query->where('especialidad_requerida', $request->input('especialidad'));
-        }
-        if ($request->filled('eps')) {
-            $query->where('eps', $request->input('eps'));
-        }
-        if ($request->filled('clinica')) {
-            $query->where('clinica_id', $request->input('clinica'));
         }
 
         $solicitudesTotal = (clone $query)->count();
@@ -105,16 +111,19 @@ class DashboardController extends BaseController
             ->filter()
             ->values();
 
-        $tendencia = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14);
-        $tendenciaAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, null, 14);
+        $granularidad = in_array($request->input('granularidad'), ['dia', 'mes', 'anio'], true)
+            ? $request->input('granularidad')
+            : 'dia';
+        $tendencia = $this->tendenciaPeriodo(clone $queryDims, $granularidad);
+        $tendenciaAnterior = $this->tendenciaPeriodo(clone $queryDims, $granularidad, anterior: true);
         $tendenciaClinicas = $this->tendenciaUltimosDias(Clinica::class, 14);
         $tendenciaUsuarios = $this->tendenciaUltimosDias(User::class, 14);
-        $tendenciaPendientes = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'pendiente'), 0);
-        $tendenciaPendientesAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'pendiente'), 14);
-        $tendenciaEnEspera = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'en_espera'), 0);
-        $tendenciaEnEsperaAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'en_espera'), 14);
-        $tendenciaCompletadas = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'completado'), 0);
-        $tendenciaCompletadasAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'completado'), 14);
+        $tendenciaPendientes = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'pendiente'), 0, $queryDims);
+        $tendenciaPendientesAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'pendiente'), 14, $queryDims);
+        $tendenciaEnEspera = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'en_espera'), 0, $queryDims);
+        $tendenciaEnEsperaAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'en_espera'), 14, $queryDims);
+        $tendenciaCompletadas = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'completado'), 0, $queryDims);
+        $tendenciaCompletadasAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'completado'), 14, $queryDims);
 
         // Hace cuánto está esperando revisión la solicitud pendiente más
         // antigua — el volumen total no dice si el personal va al día o si
@@ -141,6 +150,7 @@ class DashboardController extends BaseController
         $tasaAceptacion = $resueltas > 0 ? round(($solicitudesAceptadas / $resueltas) * 100) : 0;
 
         $porDiaHora = $this->porDiaHora();
+        $heatmapEspMes = $this->heatmapEspecialidadMes();
         $sla = $this->slaRespuesta(clone $query);
         $slaDiario = $this->slaDiario(14);
         $actividad = $this->actividadReciente(clone $query);
@@ -207,6 +217,7 @@ class DashboardController extends BaseController
             'top_especialidades' => $topEspecialidades,
             'tasa_aceptacion' => $tasaAceptacion,
             'por_dia_hora' => $porDiaHora,
+            'heatmap_especialidad_mes' => $heatmapEspMes,
             'por_clinica' => $porClinica,
             'por_eps' => $porEps,
             'sla' => $sla,
@@ -262,6 +273,119 @@ class DashboardController extends BaseController
     }
 
     /**
+     * Mapa de calor: especialidad × mes calendario (top 6 por volumen,
+     * últimos 6 meses del histórico).
+     *
+     * @return array<int, array{especialidad: string, mes: string, total: int}>
+     */
+    private function heatmapEspecialidadMes(): array
+    {
+        $hasta = now();
+        $desde = $hasta->copy()->subMonths(5)->startOfMonth();
+
+        $especialidades = SolicitudReferencia::select('especialidad_requerida')
+            ->selectRaw('COUNT(*) as total')
+            ->whereNotNull('especialidad_requerida')
+            ->groupBy('especialidad_requerida')
+            ->orderByDesc('total')
+            ->limit(6)
+            ->pluck('especialidad_requerida');
+
+        if ($especialidades->isEmpty()) {
+            return [];
+        }
+
+        $conteos = SolicitudReferencia::whereBetween('created_at', [$desde, $hasta])
+            ->whereIn('especialidad_requerida', $especialidades)
+            ->selectRaw("especialidad_requerida, DATE_FORMAT(created_at, '%Y-%m') as bucket, COUNT(*) as total")
+            ->groupBy('especialidad_requerida', 'bucket')
+            ->get()
+            ->groupBy('especialidad_requerida');
+
+        $meses = [];
+        $cursor = $desde->copy();
+        $fin = $hasta->copy()->startOfMonth();
+        while ($cursor->lte($fin)) {
+            $meses[] = $cursor->format('Y-m');
+            $cursor->addMonth();
+        }
+
+        $resultado = [];
+        foreach ($especialidades as $especialidad) {
+            $porMes = ($conteos[$especialidad] ?? collect())->pluck('total', 'bucket');
+            foreach ($meses as $mesKey) {
+                [$anio, $mes] = explode('-', $mesKey);
+                $resultado[] = [
+                    'especialidad' => $especialidad,
+                    'mes' => self::MESES[((int) $mes) - 1].' '.substr($anio, 2),
+                    'total' => (int) ($porMes[$mesKey] ?? 0),
+                ];
+            }
+        }
+
+        return $resultado;
+    }
+
+    /**
+     * Tendencia del gráfico principal agrupada por día/mes/año según la
+     * granularidad elegida, con ventanas de 30 días, 12 meses o 5 años.
+     * El período anterior es la misma ventana corrida justo atrás.
+     *
+     * @return array<int, array{label: string, total: int}>
+     */
+    private function tendenciaPeriodo($base, string $granularidad, bool $anterior = false): array
+    {
+        $hasta = now();
+        if ($granularidad === 'mes') {
+            $desde = $hasta->copy()->subMonths(11)->startOfMonth();
+            $fmt = '%Y-%m';
+            $paso = 'addMonth';
+            $clave = 'Y-m';
+        } elseif ($granularidad === 'anio') {
+            $desde = $hasta->copy()->subYears(4)->startOfYear();
+            $fmt = '%Y';
+            $paso = 'addYear';
+            $clave = 'Y';
+        } else {
+            $desde = $hasta->copy()->subDays(29)->startOfDay();
+            $fmt = '%Y-%m-%d';
+            $paso = 'addDay';
+            $clave = 'Y-m-d';
+        }
+
+        if ($anterior) {
+            $hasta = $desde->copy()->subDay()->endOfDay();
+            $desde = match ($granularidad) {
+                'mes' => $desde->copy()->subMonths(12),
+                'anio' => $desde->copy()->subYears(5),
+                default => $desde->copy()->subDays(30),
+            };
+        }
+
+        $conteos = $base
+            ->whereBetween('created_at', [$desde, $hasta])
+            ->selectRaw("DATE_FORMAT(created_at, '{$fmt}') as bucket, COUNT(*) as total")
+            ->groupBy('bucket')
+            ->pluck('total', 'bucket');
+
+        $resultado = [];
+        $cursor = $desde->copy();
+        while ($cursor->lte($hasta)) {
+            $resultado[] = [
+                'label' => match ($granularidad) {
+                    'mes' => self::MESES[$cursor->month - 1].' '.$cursor->format('y'),
+                    'anio' => $cursor->format('Y'),
+                    default => $cursor->day.' '.self::MESES[$cursor->month - 1],
+                },
+                'total' => (int) ($conteos[$cursor->format($clave)] ?? 0),
+            ];
+            $cursor->{$paso}();
+        }
+
+        return $resultado;
+    }
+
+    /**
      * Conteo diario de registros nuevos de $modelClass en los últimos $dias
      * días (opcionalmente acotado con $scope, ej. solo estado 'pendiente').
      * Genérico para poder graficar la misma tendencia sobre Solicitudes,
@@ -270,12 +394,15 @@ class DashboardController extends BaseController
      * @param  class-string  $modelClass
      * @return array<int, array{fecha: string, total: int}>
      */
-    private function tendenciaUltimosDias(string $modelClass, int $dias, ?\Closure $scope = null, int $offsetDias = 0): array
+    private function tendenciaUltimosDias(string $modelClass, int $dias, ?\Closure $scope = null, int $offsetDias = 0, $base = null): array
     {
         $desde = now()->subDays($dias - 1 + $offsetDias)->startOfDay();
         $hasta = now()->subDays($offsetDias)->endOfDay();
 
-        $query = $modelClass::query()->whereBetween('created_at', [$desde, $hasta]);
+        // $base permite partir del query ya filtrado por dimensión
+        // (estado/especialidad/clínica) — la ventana de fechas siempre
+        // la pone esta función.
+        $query = ($base ? clone $base : $modelClass::query())->whereBetween('created_at', [$desde, $hasta]);
         if ($scope) {
             $scope($query);
         }

@@ -1221,9 +1221,7 @@ usePolling(() => {
   overflow-y: auto;
   overflow-x: hidden;
 }
-:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar { width: 5px; }
-:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
-:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar-track { background: transparent; }
+
 :deep(.el-overlay) { background-color: rgba(8, 27, 58, .56); backdrop-filter: blur(4px); }
 
 .detalle-content { padding: 0; position: relative; background: #F8FAFC; }

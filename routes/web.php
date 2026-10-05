@@ -10,7 +10,6 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\IdentificationTypeController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PermissionController;
-use App\Http\Controllers\Api\ReportesController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\SolicitudReferenciaController;
@@ -56,9 +55,6 @@ Route::prefix('api')->name('api.')->group(function (): void {
     Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
         Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
         Route::get('search', [DashboardController::class, 'search'])->name('search');
-
-        Route::get('reportes/stats', [ReportesController::class, 'stats'])->name('reportes.stats');
-        Route::get('reportes/exportar', [ReportesController::class, 'exportar'])->name('reportes.exportar');
 
         Route::get('user', CurrentUserController::class)->name('user');
         Route::put('user/profile', [CurrentUserController::class, 'updateProfile'])->name('user.profile.update');

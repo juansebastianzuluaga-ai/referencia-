@@ -31,9 +31,7 @@ defineProps<{
 </script>
 
 <style scoped>
-.custom-scrollbar::-webkit-scrollbar { width: 5px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+
 
 .animate-fade-in {
   animation: fadeIn 0.2s ease both;

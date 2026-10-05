@@ -743,15 +743,7 @@ usePolling(() => {
 </script>
 
 <style scoped>
-/*
- * A esta vista le faltaba la regla base de `.custom-scrollbar` que sí
- * tienen sus hermanas (DashboardView.vue, UsersView.vue, RolesView.vue...):
- * sin ella, en modo claro cae al scrollbar nativo del SO en vez del
- * delgado y temático. `tailwind.css` solo trae el override para `.dark`.
- */
-.custom-scrollbar::-webkit-scrollbar { width: 5px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+/* El estilo del scroll es global en tailwind.css (invisible hasta hover, tipo Element Plus) */
 
 /* ════════════════════════════════════════════════════════════════
    NUEVO FORMULARIO PROFESIONAL — Sistema de Referencia
@@ -1418,9 +1410,7 @@ usePolling(() => {
   overflow-x: hidden;
   background: #F8FAFC;
 }
-:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar { width: 5px; }
-:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
-:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar-track { background: transparent; }
+
 
 .detalle-content { padding: 0; position: relative; }
 .detalle-content > .grid,

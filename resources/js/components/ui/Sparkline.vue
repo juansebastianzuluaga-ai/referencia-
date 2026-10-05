@@ -45,11 +45,11 @@ const puntosArea = computed(() => `0,${props.alto} ${puntos.value} ${props.ancho
   <svg :viewBox="`0 0 ${ancho} ${alto}`" :width="ancho" :height="alto" preserveAspectRatio="none" class="shrink-0">
     <defs>
       <linearGradient :id="gradId" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" :stop-color="color" stop-opacity="0.35" />
-        <stop offset="100%" :stop-color="color" stop-opacity="0.02" />
+        <stop offset="0%" :stop-color="color" stop-opacity="0.45" />
+        <stop offset="100%" :stop-color="color" stop-opacity="0.04" />
       </linearGradient>
     </defs>
     <polygon v-if="relleno" :points="puntosArea" :fill="`url(#${gradId})`" />
-    <polyline :points="puntos" fill="none" :stroke="color" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+    <polyline :points="puntos" fill="none" :stroke="color" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" />
   </svg>
 </template>

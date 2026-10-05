@@ -629,9 +629,7 @@ onMounted(async () => {
 }
 
 /* ── Scrollbar ── */
-.custom-scrollbar::-webkit-scrollbar { width: 5px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+
 
 @media (max-width: 768px) {
   .roles-stats-bar { grid-template-columns: repeat(2, 1fr); }

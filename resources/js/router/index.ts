@@ -93,7 +93,7 @@ const router = createRouter({
         {
           path: 'reportes',
           name: 'reportes',
-          component: () => import('@/views/ReportesView.vue'),
+          redirect: '/',
           meta: { permissions: ['clinicas.view'] },
         },
         {

@@ -1,43 +1,25 @@
 <template>
   <div class="ph-solicitudes h-full flex flex-col gap-2 p-3 sm:p-4 overflow-hidden">
 
-    <!-- ── Header ── -->
-    <div class="sol-header shrink-0 animate-fade-in-up"
-      style="animation-duration: 0.4s; animation-fill-mode: both;">
-      <div class="sol-header-icon">
-        <component :is="ClipboardListIcon" class="w-5 h-5" />
-      </div>
-      <h1 class="sol-header-title">Histórico</h1>
-      <div class="sol-header-spacer"></div>
-      <el-button type="primary" size="small" @click="cargar">
-        <component :is="RefreshIcon" class="w-3.5 h-3.5 mr-1" :class="{ 'animate-spin': cargando }" />
-        Actualizar
-      </el-button>
-      <el-button size="small" @click="exportarExcel" :disabled="solicitudesFiltradas.length === 0">
-        <component :is="DownloadIcon" class="w-3.5 h-3.5 mr-1" />
-        Exportar
-      </el-button>
-    </div>
-
     <!-- ── Stat cards ── -->
     <div class="sol-stats-bar sol-stats-bar-historico shrink-0">
       <StatCard
-        variant="pastel" tone="info"
+        variant="pastel" tone="violet" solid-icon
         label="Total histórico" :value="displayStats[0]"
-        :comparacion="resumen.total ? `${resumen.total} resueltas` : 'sin registros'"
-        :icon="HistoryIcon" :sparkline="crecimientoSolicitudes"
+        :comparacion="deltaTotal"
+        :icon="HistoryIcon" :sparkline="serieDiasTotal"
       />
       <StatCard
-        variant="pastel" tone="violet"
+        variant="pastel" tone="success" solid-icon
         label="Completadas" :value="displayStats[1]"
-        :comparacion="resumen.completadas ? `${resumen.completadas} atendidas` : 'sin completadas'"
-        :icon="CheckCircleIcon"
+        :comparacion="deltaCompletadas"
+        :icon="CheckCircleIcon" :sparkline="serieDiasCompletadas"
       />
       <StatCard
-        variant="pastel" tone="danger"
+        variant="pastel" tone="danger" solid-icon
         label="Negadas" :value="displayStats[2]"
-        :comparacion="resumen.negadas ? `${resumen.negadas} rechazadas` : 'sin rechazos'"
-        :icon="XCircleIcon"
+        :comparacion="deltaNegadas"
+        :icon="XCircleIcon" :sparkline="serieDiasNegadas"
       />
     </div>
 
@@ -56,22 +38,55 @@
           <span class="sol-tab-count">{{ tab.count }}</span>
         </button>
       </div>
-      <div class="sol-filter-divider"></div>
-      <el-input
-        v-model="filtro.buscar"
-        placeholder="Buscar paciente, EPS, especialidad..."
-        class="sol-search"
-        clearable
-        size="small"
-      >
-        <template #prefix>
-          <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
-        </template>
-      </el-input>
-      <el-button v-if="filtro.buscar || tabActiva !== 'todas'" type="danger" size="small" round @click="limpiarFiltros">
-        <component :is="RefreshIcon" class="w-3.5 h-3.5 mr-1" />
-        Borrar filtros
-      </el-button>
+      <div class="sol-filter-spacer"></div>
+      <div class="sol-chips-actions">
+        <el-tooltip content="Actualizar" placement="top">
+          <button class="sol-icon-btn" @click="cargar">
+            <component :is="RefreshIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': cargando }" />
+          </button>
+        </el-tooltip>
+        <el-tooltip content="Exportar CSV" placement="top">
+          <button class="sol-icon-btn" :disabled="solicitudesFiltradas.length === 0" @click="exportarExcel">
+            <component :is="DownloadIcon" class="w-3.5 h-3.5" />
+          </button>
+        </el-tooltip>
+      </div>
+      <div ref="filtrosWrap" class="sol-filtros-wrap">
+        <button class="sol-filtros-btn" :class="{ 'sol-filtros-btn-active': filtrosAbiertos || conteoFiltros > 0 }" @click="filtrosAbiertos = !filtrosAbiertos">
+          <component :is="SlidersIcon" class="w-3.5 h-3.5" />
+          Filtros
+          <span v-if="conteoFiltros > 0" class="sol-filtros-badge">{{ conteoFiltros }}</span>
+        </button>
+        <Transition name="bulk-slide">
+          <div v-if="filtrosAbiertos" class="sol-filtros-panel">
+            <DateRangeFilter v-model="rangoFechas" />
+            <el-select v-model="filtroClinica" placeholder="Todas las clínicas" clearable filterable size="small" class="sol-select">
+              <el-option v-for="c in clinicasUnicas" :key="c.id" :label="c.nombre" :value="c.id" />
+            </el-select>
+            <el-select v-model="filtroEspecialidad" placeholder="Todas las especialidades" clearable filterable size="small" class="sol-select">
+              <el-option v-for="e in especialidadesUnicas" :key="e" :label="e" :value="e" />
+            </el-select>
+            <el-select v-model="filtroEstado" placeholder="Todos los estados" clearable size="small" class="sol-select" @update:model-value="onEstadoSelect">
+              <el-option label="Completado" value="completado" />
+              <el-option label="Negado" value="negado" />
+              <el-option label="En espera" value="en_espera" />
+              <el-option label="Pendiente" value="pendiente" />
+            </el-select>
+            <el-input
+              v-model="filtro.buscar"
+              placeholder="Buscar paciente, EPS, especialidad..."
+              class="sol-search"
+              clearable
+              size="small"
+            >
+              <template #prefix>
+                <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
+              </template>
+            </el-input>
+            <button v-if="hayFiltrosActivos" class="sol-limpiar" @click="limpiarFiltros">Limpiar filtros</button>
+          </div>
+        </Transition>
+      </div>
     </div>
 
     <!-- ── Tabla ── -->
@@ -102,10 +117,14 @@
 
       <!-- Tabla real -->
       <div v-else class="flex flex-col h-full overflow-hidden">
-        <div class="overflow-y-auto custom-scrollbar flex-1">
+        <div class="overflow-auto custom-scrollbar flex-1">
           <table class="sol-table">
             <thead class="sol-table-thead">
               <tr>
+                <th class="sol-th sol-th-check">
+                  <el-checkbox :model-value="paginaSeleccionada" @change="toggleSeleccionPagina" />
+                </th>
+                <th class="sol-th sol-th-num">#</th>
                 <th class="sol-th sol-th-paciente sol-th-sortable" @click="toggleSort('paciente')">
                   Paciente
                   <component :is="sortIcon('paciente')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'paciente', 'opacity-30': sortKey !== 'paciente' }" />
@@ -119,18 +138,24 @@
                   <component :is="sortIcon('especialidad')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'especialidad', 'opacity-30': sortKey !== 'especialidad' }" />
                 </th>
                 <th class="sol-th">Diagnóstico</th>
+                <th class="sol-th">Fecha y hora</th>
                 <th class="sol-th">Estado</th>
+                <th class="sol-th">Tiempo</th>
                 <th class="sol-th sol-th-actions">Acciones</th>
               </tr>
             </thead>
             <TransitionGroup name="sol-row" tag="tbody">
               <tr
-                v-for="s in solicitudesPaginadas"
+                v-for="(s, i) in solicitudesPaginadas"
                 :id="`sol-row-${s.id}`"
                 :key="s.id"
                 class="sol-table-row"
                 :class="{ 'sol-table-row-resaltada': resaltarId === s.id || idsActualizados.has(s.id) }"
               >
+                <td class="sol-td sol-td-check">
+                  <el-checkbox :model-value="seleccionadas.has(s.id)" @change="toggleSeleccion(s.id)" />
+                </td>
+                <td class="sol-td sol-td-num">{{ (paginaActual - 1) * itemsPorPagina + i + 1 }}</td>
                 <td class="sol-td">
                   <div class="sol-table-paciente">
                     <div class="sol-table-avatar"
@@ -142,7 +167,7 @@
                     </div>
                     <div class="sol-table-paciente-info">
                       <p class="sol-table-name" :class="{ 'sol-table-name-resaltada': resaltarId === s.id }">{{ nombreCompleto(s) }}</p>
-                      <p class="sol-table-doc">{{ formatFecha(s.created_at) }} · {{ s.hora }}</p>
+                      <p class="sol-table-doc">{{ s.tipo_documento }} {{ s.numero_documento }}</p>
                     </div>
                   </div>
                 </td>
@@ -168,6 +193,10 @@
                   <p v-else-if="s.diagnostico" class="sol-dx-text">{{ s.diagnostico }}</p>
                   <span v-else class="sol-dx-none">—</span>
                 </td>
+                <td class="sol-td sol-td-fecha">
+                  <p class="sol-fecha">{{ formatFecha(s.created_at) }}</p>
+                  <p class="sol-hora">{{ horaDeFecha(s.created_at) }}</p>
+                </td>
                 <td class="sol-td">
                   <span class="sol-table-status" :class="{
                     'sol-status-pending': s.estado === 'pendiente',
@@ -179,6 +208,9 @@
                     {{ estadoLabel(s.estado) }}
                   </span>
                 </td>
+                <td class="sol-td sol-td-tiempo">
+                  <span class="sol-tiempo-chip" :class="{ 'sol-tiempo-chip--lento': tiempoLento(s) }">{{ tiempoResolucion(s) }}</span>
+                </td>
                 <td class="sol-td">
                   <div class="sol-table-actions">
                     <el-tooltip :key="`ver-${s.id}`" content="Ver detalle" placement="top" :popper-options="{ strategy: 'fixed' }">
@@ -186,6 +218,29 @@
                         <component :is="EyeIcon" class="w-3.5 h-3.5" />
                       </el-button>
                     </el-tooltip>
+                    <el-tooltip :key="`pdf-${s.id}`" content="Descargar PDF" placement="top" :popper-options="{ strategy: 'fixed' }">
+                      <el-button circle size="small" @click="exportarPdfFila(s)">
+                        <component :is="FileDownIcon" class="w-3.5 h-3.5" />
+                      </el-button>
+                    </el-tooltip>
+                    <el-dropdown trigger="click" placement="bottom-end">
+                      <el-button circle size="small">
+                        <component :is="MoreVerticalIcon" class="w-3.5 h-3.5" />
+                      </el-button>
+                      <template #dropdown>
+                        <el-dropdown-menu>
+                          <el-dropdown-item @click="verDetalle(s)">
+                            <component :is="EyeIcon" class="w-3.5 h-3.5 mr-1.5" /> Ver detalle
+                          </el-dropdown-item>
+                          <el-dropdown-item @click="verHistoria(s)">
+                            <component :is="FileTextIcon" class="w-3.5 h-3.5 mr-1.5" /> Historia clínica
+                          </el-dropdown-item>
+                          <el-dropdown-item @click="exportarPdfFila(s)">
+                            <component :is="FileDownIcon" class="w-3.5 h-3.5 mr-1.5" /> Descargar PDF
+                          </el-dropdown-item>
+                        </el-dropdown-menu>
+                      </template>
+                    </el-dropdown>
                   </div>
                 </td>
               </tr>
@@ -195,17 +250,28 @@
         <!-- Pagination -->
         <div class="sol-pagination">
           <span class="sol-pagination-info">
-            {{ (paginaActual - 1) * itemsPorPagina + 1 }}–{{ Math.min(paginaActual * itemsPorPagina, solicitudesFiltradas.length) }}
+            Mostrando {{ (paginaActual - 1) * itemsPorPagina + 1 }}–{{ Math.min(paginaActual * itemsPorPagina, solicitudesFiltradas.length) }}
             de {{ solicitudesFiltradas.length }}
           </span>
           <div class="sol-pagination-controls">
             <button class="sol-pagination-btn" :disabled="paginaActual === 1" @click="paginaActual--">
               <component :is="ChevronLeftIcon" class="w-3.5 h-3.5" />
             </button>
-            <span class="sol-pagination-page">{{ paginaActual }} / {{ totalPaginas }}</span>
+            <template v-for="(p, idx) in paginasVisibles" :key="idx">
+              <span v-if="p === '…'" class="sol-pagination-dots">…</span>
+              <button v-else class="sol-pagination-num" :class="{ 'sol-pagination-num-active': p === paginaActual }" @click="paginaActual = p">
+                {{ p }}
+              </button>
+            </template>
             <button class="sol-pagination-btn" :disabled="paginaActual === totalPaginas" @click="paginaActual++">
               <component :is="ChevronRightIcon" class="w-3.5 h-3.5" />
             </button>
+            <el-select v-model="itemsPorPagina" size="small" class="sol-por-pagina">
+              <el-option :value="10" label="10 por página" />
+              <el-option :value="15" label="15 por página" />
+              <el-option :value="25" label="25 por página" />
+              <el-option :value="50" label="50 por página" />
+            </el-select>
           </div>
         </div>
       </div>
@@ -454,7 +520,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { usePolling } from '@/lib/usePolling';
 import { actualizarSiCambio } from '@/lib/silentRefresh';
-import { useStorage, useDebounceFn } from '@vueuse/core';
+import { useStorage, useDebounceFn, onClickOutside } from '@vueuse/core';
 import notify from '@/plugins/toast';
 import { exportarSolicitudPdf } from '@/lib/exportarSolicitudPdf';
 import {
@@ -487,9 +553,12 @@ import {
   Hourglass as HourglassIcon,
   FileDown as FileDownIcon,
   History as HistoryIcon,
+  SlidersHorizontal as SlidersIcon,
+  MoreVertical as MoreVerticalIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 import StatCard from '@/components/ui/StatCard.vue';
+import DateRangeFilter from '@/components/ui/DateRangeFilter.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -540,6 +609,7 @@ interface Solicitud {
   adjuntos?: { id: number; nombre_original: string; mime_type: string; tamano: number }[];
   eventos?: { id: number; tipo: string; titulo: string; created_at: string }[];
   created_at: string;
+  updated_at?: string;
 }
 
 const solicitudes = ref<Solicitud[]>([]);
@@ -555,7 +625,21 @@ const sortDir = ref<'asc' | 'desc'>('desc');
 const resaltarId = ref<number | null>(null);
 const idsActualizados = ref<Set<number>>(new Set());
 const paginaActual = ref(1);
-const itemsPorPagina = 15;
+const itemsPorPagina = ref(10);
+
+const filtrosAbiertos = ref(false);
+const filtrosWrap = ref<HTMLElement | null>(null);
+onClickOutside(filtrosWrap, () => { filtrosAbiertos.value = false; });
+
+const rangoFechas = ref<[string, string] | null>(null);
+const filtroClinica = ref<number | ''>('');
+const filtroEspecialidad = ref('');
+const filtroEstado = ref<'' | 'completado' | 'negado' | 'en_espera' | 'pendiente'>('');
+const seleccionadas = ref<Set<number>>(new Set());
+
+watch([itemsPorPagina, rangoFechas, filtroClinica, filtroEspecialidad, filtroEstado, buscarDebounced], () => {
+  paginaActual.value = 1;
+});
 
 const modalDetalle = ref(false);
 const modalHistoriaClinica = ref(false);
@@ -575,25 +659,56 @@ const tabs = computed<{ label: string; value: 'todas' | 'completado' | 'negado';
   { label: 'Negadas', value: 'negado', count: resumen.value.negadas },
 ]);
 
-/** Crecimiento real de solicitudes: conteo acumulado por corte de tiempo desde la primera registrada. */
-const crecimientoSolicitudes = computed(() => {
-  if (!solicitudes.value.length) return [];
-  const fechas = solicitudes.value
-    .map(s => s.created_at?.slice(0, 10))
-    .filter((f): f is string => !!f)
-    .sort();
-  if (!fechas.length) return [];
+const isoDia = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-  const desde = new Date(fechas[0]);
-  const hasta = new Date();
-  const dias = Math.max(1, Math.round((hasta.getTime() - desde.getTime()) / (1000 * 60 * 60 * 24)));
-  const puntos = Math.min(14, dias + 1);
+interface EvoBucket { cat: string; completadas: number; negadas: number; }
 
-  return Array.from({ length: puntos }, (_, i) => {
-    const corte = new Date(desde.getTime() + (dias * i) / (puntos - 1 || 1) * 24 * 60 * 60 * 1000);
-    return fechas.filter(f => new Date(f) <= corte).length;
+/** Conteo real de completadas/negadas por día en los últimos 14 días. */
+function bucketsEvolucion(): EvoBucket[] {
+  const ahora = new Date();
+  const DIAS = 14;
+  const keys = Array.from({ length: DIAS }, (_, i) => {
+    const d = new Date(ahora); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (DIAS - 1 - i));
+    return { key: isoDia(d), cat: d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }) };
   });
-});
+  const buckets: EvoBucket[] = keys.map(k => ({ cat: k.cat, completadas: 0, negadas: 0 }));
+  const idx = new Map(keys.map((k, i) => [k.key, i]));
+  for (const s of solicitudes.value) {
+    if (!s.created_at) continue;
+    const f = new Date(s.created_at);
+    if (isNaN(f.getTime())) continue;
+    const i = idx.get(isoDia(f));
+    if (i == null) continue;
+    if (s.estado === 'completado') buckets[i].completadas++;
+    else if (s.estado === 'negado') buckets[i].negadas++;
+  }
+  return buckets;
+}
+
+const evolucionDia = computed(() => bucketsEvolucion());
+
+const serieDiasTotal = computed(() => evolucionDia.value.map(b => b.completadas + b.negadas));
+const serieDiasCompletadas = computed(() => evolucionDia.value.map(b => b.completadas));
+const serieDiasNegadas = computed(() => evolucionDia.value.map(b => b.negadas));
+
+/** Variación últimos 7 días vs los 7 anteriores (por created_at). */
+function deltaUltimos7(estado?: 'completado' | 'negado'): string {
+  const SEMANA = 7 * 24 * 60 * 60 * 1000;
+  const ahora = Date.now();
+  let act = 0, prev = 0;
+  for (const s of solicitudes.value) {
+    if (estado && s.estado !== estado) continue;
+    const diff = ahora - new Date(s.created_at).getTime();
+    if (diff >= 0 && diff < SEMANA) act++;
+    else if (diff >= SEMANA && diff < 2 * SEMANA) prev++;
+  }
+  if (!prev) return act ? `↑ ${act} últimos 7 días` : 'Sin movimiento';
+  const pct = Math.round(((act - prev) / prev) * 100);
+  return `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}% vs. período anterior`;
+}
+const deltaTotal = computed(() => deltaUltimos7());
+const deltaCompletadas = computed(() => deltaUltimos7('completado'));
+const deltaNegadas = computed(() => deltaUltimos7('negado'));
 
 const displayStats = ref([0, 0, 0]);
 
@@ -614,9 +729,45 @@ function animateCounters(targets: number[]) {
   }, interval);
 }
 
+const clinicasUnicas = computed(() => {
+  const map = new Map<number, string>();
+  for (const s of solicitudes.value) {
+    if (s.clinica) map.set(s.clinica.id, s.clinica.nombre);
+  }
+  return [...map.entries()].map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+});
+
+const especialidadesUnicas = computed(() =>
+  [...new Set(solicitudes.value.map(s => s.especialidad_requerida).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+);
+
+const hayFiltrosActivos = computed(() =>
+  !!filtro.value.buscar || tabActiva.value !== 'todas' || !!rangoFechas.value ||
+  filtroClinica.value !== '' || filtroEspecialidad.value !== '' || filtroEstado.value !== ''
+);
+
+/** Cuántos filtros del panel están activos (el tab de estado no cuenta — ya se ve en los chips). */
+const conteoFiltros = computed(() =>
+  [filtroClinica.value !== '', filtroEspecialidad.value !== '', !!rangoFechas.value, filtroEstado.value !== '', !!filtro.value.buscar]
+    .filter(Boolean).length
+);
+
+/** El select de estados excluye al chip activo: elegir un estado vuelve a "Todas" los chips. */
+function onEstadoSelect(v: string | undefined) {
+  filtroEstado.value = (v ?? '') as typeof filtroEstado.value;
+  if (v) tabActiva.value = 'todas';
+}
+
 const solicitudesFiltradas = computed(() => {
   let result = solicitudes.value.filter(s => {
     if (tabActiva.value !== 'todas' && s.estado !== tabActiva.value) return false;
+    if (filtroEstado.value !== '' && s.estado !== filtroEstado.value) return false;
+    if (filtroClinica.value !== '' && s.clinica_id !== filtroClinica.value) return false;
+    if (filtroEspecialidad.value !== '' && s.especialidad_requerida !== filtroEspecialidad.value) return false;
+    if (rangoFechas.value) {
+      const f = s.created_at?.slice(0, 10) ?? '';
+      if (f < rangoFechas.value[0] || f > rangoFechas.value[1]) return false;
+    }
     const texto = buscarDebounced.value.toLowerCase();
     const coincideTexto = !texto ||
       nombreCompleto(s).toLowerCase().includes(texto) ||
@@ -638,11 +789,84 @@ const solicitudesFiltradas = computed(() => {
   return result;
 });
 
-const totalPaginas = computed(() => Math.max(1, Math.ceil(solicitudesFiltradas.value.length / itemsPorPagina)));
+const totalPaginas = computed(() => Math.max(1, Math.ceil(solicitudesFiltradas.value.length / itemsPorPagina.value)));
 const solicitudesPaginadas = computed(() => {
-  const start = (paginaActual.value - 1) * itemsPorPagina;
-  return solicitudesFiltradas.value.slice(start, start + itemsPorPagina);
+  const start = (paginaActual.value - 1) * itemsPorPagina.value;
+  return solicitudesFiltradas.value.slice(start, start + itemsPorPagina.value);
 });
+
+/** Páginas numeradas con elipsis: 1 2 … p-1 p p+1 … t-1 t */
+const paginasVisibles = computed<(number | string)[]>(() => {
+  const t = totalPaginas.value, p = paginaActual.value;
+  if (t <= 7) return Array.from({ length: t }, (_, i) => i + 1);
+  const set = new Set([1, 2, p - 1, p, p + 1, t - 1, t].filter(n => n >= 1 && n <= t));
+  const arr = [...set].sort((a, b) => a - b);
+  const out: (number | string)[] = [];
+  let prev = 0;
+  for (const n of arr) {
+    if (n - prev > 1) out.push('…');
+    out.push(n);
+    prev = n;
+  }
+  return out;
+});
+
+const paginaSeleccionada = computed(() =>
+  solicitudesPaginadas.value.length > 0 && solicitudesPaginadas.value.every(s => seleccionadas.value.has(s.id))
+);
+
+function toggleSeleccion(id: number) {
+  const s = new Set(seleccionadas.value);
+  if (s.has(id)) s.delete(id); else s.add(id);
+  seleccionadas.value = s;
+}
+
+function toggleSeleccionPagina() {
+  const s = new Set(seleccionadas.value);
+  if (paginaSeleccionada.value) {
+    solicitudesPaginadas.value.forEach(x => s.delete(x.id));
+  } else {
+    solicitudesPaginadas.value.forEach(x => s.add(x.id));
+  }
+  seleccionadas.value = s;
+}
+
+/** Tiempo real hasta resolución: evento completado/negada, o updated_at como respaldo. */
+function tiempoLento(s: Solicitud): boolean {
+  return minutosResolucion(s) >= 24 * 60;
+}
+
+function minutosResolucion(s: Solicitud): number {
+  const ini = new Date(s.created_at).getTime();
+  if (isNaN(ini)) return NaN;
+  const ev = s.eventos?.find(e => e.tipo === 'completado' || e.tipo === 'negada' || e.tipo === 'negado');
+  const fin = ev ? new Date(ev.created_at).getTime() : (s.updated_at ? new Date(s.updated_at).getTime() : NaN);
+  if (isNaN(fin) || fin <= ini) return NaN;
+  return Math.round((fin - ini) / 60000);
+}
+
+function tiempoResolucion(s: Solicitud): string {
+  const min = minutosResolucion(s);
+  if (isNaN(min)) return '—';
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60), m = min % 60;
+  if (h < 24) return m ? `${h}h ${m}m` : `${h}h`;
+  const d = Math.floor(h / 24), rh = h % 24;
+  return rh ? `${d}d ${rh}h` : `${d}d`;
+}
+
+async function exportarPdfFila(s: Solicitud) {
+  try {
+    await exportarSolicitudPdf(s);
+  } catch {
+    notify.error('No se pudo generar el PDF. Intente de nuevo.');
+  }
+}
+
+function verHistoria(s: Solicitud) {
+  solicitudSeleccionada.value = s;
+  abrirHistoriaClinica();
+}
 
 function toggleSort(key: 'paciente' | 'clinica' | 'especialidad') {
   if (sortKey.value === key) {
@@ -660,11 +884,14 @@ function sortIcon(key: string) {
 
 function cambiarTab(tab: 'todas' | 'completado' | 'negado') {
   tabActiva.value = tab;
+  filtroEstado.value = '';
   paginaActual.value = 1;
 }
 
 function exportarExcel() {
-  const rows = solicitudesFiltradas.value;
+  const rows = seleccionadas.value.size
+    ? solicitudesFiltradas.value.filter(s => seleccionadas.value.has(s.id))
+    : solicitudesFiltradas.value;
   const headers = ['ID', 'Paciente', 'Documento', 'EPS', 'Clínica', 'Especialidad', 'Diagnóstico', 'Estado', 'Fecha', 'Hora', 'Remitente', 'Teléfono'];
   const csv = [
     headers.join('\t'),
@@ -891,6 +1118,10 @@ async function abrirAdjunto(adj: { id: number; nombre_original: string; mime_typ
 function limpiarFiltros() {
   filtro.value.buscar = '';
   tabActiva.value = 'todas';
+  rangoFechas.value = null;
+  filtroClinica.value = '';
+  filtroEspecialidad.value = '';
+  filtroEstado.value = '';
 }
 
 /** Resalta y hace scroll hasta la solicitud referenciada por la notificación de la campana (?resaltar=ID). */
@@ -1026,6 +1257,122 @@ usePolling(() => {
 .sol-stats-bar-historico {
   grid-template-columns: repeat(3, 1fr);
 }
+
+/* ── Botón Filtros + panel desplegable ── */
+.sol-filter-spacer { flex: 1; }
+.sol-chips-actions { display: flex; align-items: center; gap: 4px; margin-right: 4px; }
+.sol-icon-btn {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; border: 1px solid #e2e8f0; color: #475569;
+  cursor: pointer; transition: all .15s ease;
+}
+.sol-icon-btn:hover:not(:disabled) { border-color: #bfdbfe; color: var(--rf-primary); background: #eff6ff; }
+.sol-icon-btn:disabled { opacity: .45; cursor: not-allowed; }
+.dark .sol-icon-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
+.sol-filtros-wrap { position: relative; }
+.sol-filtros-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 30px; padding: 0 12px;
+  border-radius: 9px; border: 1px solid #d4deea;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 11.5px; font-weight: 700; color: #475569;
+  cursor: pointer; transition: all .15s ease;
+  font-family: inherit;
+}
+.sol-filtros-btn:hover, .sol-filtros-btn-active {
+  border-color: #16468E; color: #16468E; background: #eef4ff;
+}
+.dark .sol-filtros-btn { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.1); color: #cbd5e1; }
+.sol-filtros-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 15px; height: 15px; padding: 0 4px;
+  border-radius: 999px;
+  background: #16468E; color: #fff;
+  font-size: 8.5px; font-weight: 800;
+}
+.sol-filtros-btn-active .sol-filtros-badge { background: #fff; color: #16468E; }
+.sol-filtros-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 230px;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.14);
+  z-index: 60;
+  max-height: min(420px, calc(100vh - 240px));
+  overflow-y: auto;
+}
+.dark .sol-filtros-panel { background: #161b28; border-color: rgba(255, 255, 255, 0.08); }
+.sol-filtros-panel .sol-select { width: 100%; }
+.sol-filtros-panel .sol-search { min-width: 0; max-width: none; width: 100%; }
+.sol-filtros-panel .drf { width: 100%; }
+.sol-filtros-panel :deep(.drf-trigger) { width: 100%; justify-content: flex-start; }
+.sol-filtros-panel :deep(.el-select__wrapper),
+.sol-filtros-panel :deep(.el-input__wrapper) {
+  border-radius: 9px !important;
+  min-height: 30px;
+}
+.sol-limpiar {
+  font-size: 11.5px; font-weight: 700; color: #dc2626;
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; padding: 4px 8px; border-radius: 7px;
+  transition: background .15s ease;
+}
+.sol-limpiar:hover { background: #fef2f2; }
+
+/* ── Transición del panel de filtros ── */
+.bulk-slide-enter-active, .bulk-slide-leave-active {
+  transition: all .25s ease;
+}
+.bulk-slide-enter-from, .bulk-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* ── Columnas nuevas de la tabla ── */
+.sol-th-check, .sol-td-check { width: 34px; text-align: center; }
+.sol-th-num, .sol-td-num { width: 36px; text-align: center; color: #94a3b8; font-weight: 600; }
+.dark .sol-th-num, .dark .sol-td-num { color: #64748b; }
+.sol-td-fecha { white-space: nowrap; }
+.sol-fecha { margin: 0; font-size: 11px; font-weight: 600; color: #334155; }
+.dark .sol-fecha { color: #cbd5e1; }
+.sol-hora { margin: 0; font-size: 10px; color: #94a3b8; }
+.sol-td-tiempo { white-space: nowrap; }
+.sol-tiempo-chip {
+  display: inline-block;
+  padding: 2px 8px; border-radius: 999px;
+  background: #f1f5f9; color: #475569;
+  font-size: 10px; font-weight: 700;
+}
+.dark .sol-tiempo-chip { background: #1e293b; color: #94a3b8; }
+.sol-tiempo-chip--lento { background: #fef3c7; color: #b45309; }
+.dark .sol-tiempo-chip--lento { background: rgba(245, 158, 11, .15); color: #fbbf24; }
+
+/* ── Paginación numerada ── */
+.sol-pagination-num {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 26px; height: 26px; padding: 0 4px;
+  border: 1px solid #e2e8f0; border-radius: 6px;
+  background: #fff; color: #64748b;
+  font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all .15s ease;
+}
+.dark .sol-pagination-num { background: #151b26; border-color: #2b3242; color: #94a3b8; }
+.sol-pagination-num:hover { border-color: #16468E; color: #16468E; background: #f0f5ff; }
+.dark .sol-pagination-num:hover { border-color: #3b82f6; color: #93c5fd; background: rgba(59, 130, 246, .08); }
+.sol-pagination-num-active,
+.sol-pagination-num-active:hover {
+  background: #16468E; border-color: #16468E; color: #fff;
+}
+.sol-pagination-dots { color: #94a3b8; font-size: 11px; padding: 0 2px; align-self: center; }
+.sol-por-pagina { width: 108px; margin-left: .4rem; }
+
+/* ── Header con subtítulo ── */
 @media (max-width: 1180px) {
   .sol-stats-bar { grid-template-columns: repeat(3, 1fr); }
 }
@@ -1051,7 +1398,7 @@ usePolling(() => {
   user-select: none;
   transition: color .15s ease;
 }
-.sol-th-sortable:hover { color: #16468E; }
+.sol-th-sortable:hover { color: #fff; }
 
 /* ── Fila resaltada (llegó desde una notificación) ── */
 .sol-table-row-resaltada {
@@ -1347,25 +1694,6 @@ usePolling(() => {
 }
 
 /* ── Header ── */
-.sol-header {
-  display: flex; align-items: center; gap: .75rem;
-  padding: .25rem 0;
-}
-.sol-header-icon {
-  width: 36px; height: 36px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
-  color: var(--rf-primary);
-  flex-shrink: 0;
-}
-.dark .sol-header-icon { background: rgba(99,102,241,0.15); color: #a5b4fc; }
-.sol-header-title {
-  font-size: 16px; font-weight: 800; color: #1e293b;
-  letter-spacing: 0.01em; white-space: nowrap;
-}
-.dark .sol-header-title { color: #e2e8f0; }
-.sol-header-spacer { flex: 1; }
-
 /* ── Filter bar ── */
 .sol-filter-bar {
   display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
@@ -1374,7 +1702,8 @@ usePolling(() => {
   background: linear-gradient(135deg, #f0f6ff 0%, #e6efff 50%, #f0f9ff 100%);
   border: 1px solid #b8c8e0;
   box-shadow: 0 3px 16px rgba(13, 45, 107, 0.07), inset 0 1px 0 rgba(255,255,255,0.6);
-  position: relative; overflow: hidden;
+  position: relative; overflow: visible;
+  z-index: 30;
   transition: box-shadow .3s ease, transform .3s ease;
 }
 .sol-filter-bar:hover {
@@ -1452,15 +1781,16 @@ usePolling(() => {
 }
 
 /* ── Table ── */
-.sol-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.sol-table { width: 100%; min-width: 1120px; border-collapse: separate; border-spacing: 0; }
 .sol-th {
   padding: 8px 12px;
   text-align: left;
   font-size: 10px; font-weight: 700;
   text-transform: uppercase; letter-spacing: .05em;
-  color: #64748b;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  color: rgba(255,255,255,.85);
+  background: #16468E;
+  border-bottom: 1px solid #123a78;
+  text-shadow: 0 1px 2px rgba(0,0,0,.25);
 }
 .sol-th:first-child { border-radius: 8px 0 0 8px; }
 .sol-th:last-child { border-radius: 0 8px 8px 0; }
@@ -1549,9 +1879,7 @@ usePolling(() => {
 }
 
 /* ── Scrollbar ── */
-.custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+
 
 /* ── Animaciones ── */
 .anim-row-in { animation: rowIn 0.4s cubic-bezier(.22,1,.36,1) both; }
@@ -1581,9 +1909,7 @@ usePolling(() => {
   overflow-y: auto;
   overflow-x: hidden;
 }
-:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar { width: 5px; }
-:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
-:deep(.detalle-dialog .el-dialog__body)::-webkit-scrollbar-track { background: transparent; }
+
 :deep(.el-overlay) { background-color: rgba(8, 27, 58, .56); backdrop-filter: blur(4px); }
 
 .detalle-content { padding: 0; position: relative; background: #F8FAFC; }

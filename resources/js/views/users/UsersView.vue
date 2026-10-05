@@ -929,10 +929,7 @@ usePolling(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.custom-scrollbar::-webkit-scrollbar { width: 6px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
 
 @media (max-width: 768px) {
   .users-search { width: 100%; }

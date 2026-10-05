@@ -546,9 +546,43 @@
 }
 .dark .accion-dialog .el-input__inner { color: #e2e8f0 !important; }
 
-/* Dark mode: custom scrollbar */
-.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155 !important; }
-.dark .custom-scrollbar::-webkit-scrollbar-track { background: transparent !important; }
+/* ── Scrollbars estilo Element Plus: invisibles hasta hover ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: rgba(144, 147, 153, .45) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 6px;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(144, 147, 153, .35);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(144, 147, 153, .55);
+}
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Dark mode: scrollbars */
+.dark *:hover {
+  scrollbar-color: rgba(148, 163, 184, .4) transparent;
+}
+.dark *:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, .3);
+}
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, .5);
+}
 
 /* Dark mode: ClinicasView */
 .dark .clinic-page {

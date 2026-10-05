@@ -1,89 +1,28 @@
 <template>
   <div class="h-full flex flex-col gap-2 p-3 sm:p-4 overflow-hidden clinic-page">
 
-    <!-- ── Header ── -->
-    <div class="clinic-header shrink-0 animate-fade-in-up"
-      style="animation-duration: 0.4s; animation-fill-mode: both;">
-      <div class="clinic-header-icon">
-        <component :is="BuildingIcon" class="w-5 h-5" />
-      </div>
-      <h1 class="clinic-header-title">Clínicas registradas</h1>
-      <div class="clinic-header-spacer"></div>
-      <el-tooltip content="Actualizar" placement="top">
-        <el-button circle size="small" @click="cargar">
-          <component :is="RefreshIcon" class="w-3.5 h-3.5" />
-        </el-button>
-      </el-tooltip>
-      <el-button size="small" @click="exportarExcel" :disabled="clinicasFiltradas.length === 0">
-        <component :is="DownloadIcon" class="w-3.5 h-3.5 mr-1" />
-        Exportar
-      </el-button>
-      <div class="clinic-header-divider"></div>
-      <el-button plain size="small" @click="abrirCargaMasiva">
-        <component :is="UploadIcon" class="w-3.5 h-3.5 mr-1" />
-        Carga masiva
-      </el-button>
-      <el-button type="primary" size="small" @click="abrirNuevaClinica">
-        <component :is="PlusIcon" class="w-3.5 h-3.5 mr-1" />
-        Nueva clínica
-      </el-button>
-    </div>
-
     <!-- ── Stat cards ── -->
     <div class="clinic-stats-bar shrink-0">
       <StatCard
-        variant="pastel" tone="info"
-        label="Total clínicas" :value="clinicas.length" comparacion="Registradas"
+        variant="pastel" tone="info" solid-icon
+        label="Total de clínicas" :value="displayStats[0]" :comparacion="deltaTotal"
         :icon="HospitalIcon" :sparkline="crecimientoClinicas"
       />
       <StatCard
-        variant="pastel" tone="warning"
-        label="Pendientes" :value="resumen.pendientes" comparacion="En revisión"
-        :icon="ClockIcon"
+        variant="pastel" tone="warning" solid-icon
+        label="Pendientes" :value="displayStats[1]" comparacion="= En revisión"
+        :icon="ClockIcon" :sparkline="seriePendientes"
       />
       <StatCard
-        variant="pastel" tone="success"
-        label="Activas" :value="resumen.activas" comparacion="Aprobadas"
-        :icon="ShieldCheck"
+        variant="pastel" tone="success" solid-icon
+        label="Activas" :value="displayStats[2]" :comparacion="deltaActivas"
+        :icon="ShieldCheck" :sparkline="serieActivas"
       />
       <StatCard
-        variant="pastel" tone="danger"
-        label="Rechazadas" :value="resumen.rechazadas" comparacion="Rechazadas"
-        :icon="AlertTriangle"
+        variant="pastel" tone="danger" solid-icon
+        label="Rechazadas" :value="displayStats[3]" :comparacion="deltaRechazadas"
+        :icon="AlertTriangle" :sparkline="serieRechazadas"
       />
-    </div>
-
-    <!-- ── Tabs + Búsqueda ── -->
-    <div class="clinic-filter-bar shrink-0">
-      <div class="clinic-tabs">
-      <button
-        v-for="tab in tabs"
-        :key="tab.value"
-        class="clinic-tab"
-        :class="{ 'clinic-tab-active': tabActiva === tab.value }"
-        @click="cambiarTab(tab.value)"
-      >
-        <span v-if="tab.value !== 'todas'" class="clinic-tab-dot" :class="'clinic-tab-dot--' + tab.value"></span>
-        {{ tab.label }}
-        <span class="clinic-tab-count">{{ tab.count }}</span>
-      </button>
-      </div>
-      <div class="clinic-filter-divider"></div>
-      <el-input
-        v-model="filtroBuscar"
-        placeholder="Buscar por NIT, ciudad, nombre..."
-        class="clinic-search"
-        clearable
-        size="small"
-      >
-        <template #prefix>
-          <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
-        </template>
-      </el-input>
-      <el-button v-if="filtroBuscar || tabActiva !== 'todas'" type="danger" size="small" round @click="limpiarFiltros">
-        <component :is="XIcon" class="w-3 h-3 mr-1" />
-        Borrar filtros
-      </el-button>
     </div>
 
     <!-- ── Bulk actions bar ── -->
@@ -100,10 +39,106 @@
       </div>
     </Transition>
 
-    <!-- ── Mapa + Tabla ── -->
+    <!-- ── Mapa + Estadísticas + Tabla ── -->
     <div class="flex-1 flex gap-2 overflow-hidden">
-    <MapaClinicas ref="mapaRef" :clinicas="clinicas" class="clinic-map-col shrink-0" />
-    <div class="flex-1 overflow-hidden clinic-table-panel">
+    <div class="clinic-map-col shrink-0 flex flex-col gap-2 min-h-0">
+      <MapaClinicas ref="mapaRef" :clinicas="clinicas" class="flex-1 min-h-0" />
+
+      <!-- Estadísticas por ciudad -->
+      <div class="clinic-city-panel shrink-0">
+        <div class="clinic-city-head">
+          <component :is="BarChartIcon" class="w-3.5 h-3.5 clinic-city-icon" />
+          <p class="clinic-city-title">Estadísticas por ciudad</p>
+        </div>
+        <div class="clinic-city-list">
+          <div v-for="(c, i) in estadisticasCiudad.lista" :key="c.ciudad" class="clinic-city-row">
+            <span class="clinic-city-name">{{ c.ciudad }}</span>
+            <div class="clinic-city-track">
+              <div class="clinic-city-bar" :style="{ width: `${(c.total / estadisticasCiudad.max) * 100}%`, background: CIUDAD_COLORS[i % CIUDAD_COLORS.length] }"></div>
+            </div>
+            <span class="clinic-city-count">{{ c.total }}</span>
+          </div>
+          <p v-if="!estadisticasCiudad.lista.length" class="clinic-city-empty">Sin datos por ciudad</p>
+        </div>
+      </div>
+    </div>
+    <div class="flex-1 overflow-hidden clinic-table-panel flex flex-col">
+      <!-- Encabezado del listado -->
+      <div class="clinic-list-head shrink-0">
+        <component :is="BuildingIcon" class="w-3.5 h-3.5 clinic-list-head-icon" />
+        <p class="clinic-list-title">Listado de clínicas</p>
+        <div class="clinic-tabs">
+          <button
+            v-for="tab in tabs"
+            :key="tab.value"
+            class="clinic-tab"
+            :class="{ 'clinic-tab-active': tabActiva === tab.value }"
+            @click="cambiarTab(tab.value)"
+          >
+            <span v-if="tab.value !== 'todas'" class="clinic-tab-dot" :class="'clinic-tab-dot--' + tab.value"></span>
+            {{ tab.label }}
+            <span class="clinic-tab-count">{{ tab.count }}</span>
+          </button>
+        </div>
+        <div class="clinic-head-actions">
+          <el-tooltip content="Actualizar" placement="top">
+            <button class="clinic-head-btn clinic-head-btn-icon" @click="cargar">
+              <component :is="RefreshIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': cargando }" />
+            </button>
+          </el-tooltip>
+          <button class="clinic-head-btn" :disabled="clinicasFiltradas.length === 0" @click="exportarExcel">
+            <component :is="DownloadIcon" class="w-3.5 h-3.5" /> Exportar
+          </button>
+          <button class="clinic-head-btn" @click="abrirCargaMasiva">
+            <component :is="UploadIcon" class="w-3.5 h-3.5" /> Carga masiva
+          </button>
+          <button class="clinic-head-btn clinic-head-btn-primary" @click="abrirNuevaClinica">
+            <component :is="PlusIcon" class="w-3.5 h-3.5" /> Nueva clínica
+          </button>
+        </div>
+        <div ref="filtrosWrap" class="clinic-filtros-wrap">
+          <button class="clinic-filtros-btn" :class="{ 'clinic-filtros-btn-active': filtrosAbiertos || conteoFiltros > 0 }" @click="toggleFiltros">
+            <component :is="SlidersIcon" class="w-3.5 h-3.5" />
+            Filtros
+            <span v-if="conteoFiltros > 0" class="clinic-filtros-badge">{{ conteoFiltros }}</span>
+          </button>
+
+          <!-- ── Panel desplegable de filtros (teleport: el panel de la tabla tiene overflow:hidden) ── -->
+          <Teleport to="body">
+            <Transition name="bulk-slide">
+            <div v-if="filtrosAbiertos" ref="filtrosPanel" class="clinic-filtros-panel" :style="{ top: filtrosPanelPos.top + 'px', left: filtrosPanelPos.left + 'px' }">
+              <el-select v-model="filtroCiudad" placeholder="Todas las ciudades" clearable filterable size="small" class="clinic-select">
+                <el-option v-for="c in ciudadesUnicas" :key="c" :label="c" :value="c" />
+              </el-select>
+              <el-select
+                :model-value="tabActiva"
+                placeholder="Todos los estados"
+                size="small"
+                class="clinic-select"
+                @update:model-value="(v: string) => cambiarTab(v as 'todas' | 'pendiente' | 'activa' | 'rechazada')"
+              >
+                <el-option label="Todos los estados" value="todas" />
+                <el-option label="Activas" value="activa" />
+                <el-option label="Pendientes" value="pendiente" />
+                <el-option label="Rechazadas" value="rechazada" />
+              </el-select>
+              <el-input
+                v-model="filtroBuscar"
+                placeholder="Buscar por NIT, clínica, ciudad, contacto..."
+                class="clinic-search"
+                clearable
+                size="small"
+              >
+                <template #prefix>
+                  <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
+                </template>
+              </el-input>
+              <button v-if="hayFiltros" class="clinic-limpiar" @click="limpiarFiltros">Limpiar filtros</button>
+            </div>
+            </Transition>
+          </Teleport>
+        </div>
+      </div>
       <!-- Loading -->
       <div v-if="cargando" class="clinic-table-loading">
         <div v-for="i in 6" :key="i" class="clinic-table-row-skeleton">
@@ -139,6 +174,7 @@
                 <th class="clinic-table-th clinic-table-th-check">
                   <input type="checkbox" :checked="todasSeleccionadas" @change="toggleSeleccionTodas" class="clinic-checkbox" />
                 </th>
+                <th class="clinic-table-th clinic-th-num">#</th>
                 <th class="clinic-table-th clinic-table-th-clinica clinic-th-sortable" @click="toggleSort('nombre')">
                   Clínica
                   <component :is="sortIcon('nombre')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'nombre', 'opacity-30': sortKey !== 'nombre' }" />
@@ -151,7 +187,10 @@
                   Ciudad
                   <component :is="sortIcon('ciudad')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'ciudad', 'opacity-30': sortKey !== 'ciudad' }" />
                 </th>
+                <th class="clinic-table-th">Contacto</th>
                 <th class="clinic-table-th">Estado</th>
+                <th class="clinic-table-th clinic-th-right">Solicitudes</th>
+                <th class="clinic-table-th">Última actividad</th>
                 <th class="clinic-table-th clinic-table-th-actions">Acciones</th>
               </tr>
             </thead>
@@ -165,6 +204,7 @@
                 <td class="clinic-table-td clinic-table-td-check">
                   <input type="checkbox" :checked="seleccionadas.has(clinica.id)" @change="toggleSeleccion(clinica.id)" class="clinic-checkbox" />
                 </td>
+                <td class="clinic-table-td clinic-td-num">{{ (paginaActual - 1) * itemsPorPagina + idx + 1 }}</td>
                 <td class="clinic-table-td">
                   <div class="clinic-table-clinica">
                     <div class="clinic-table-avatar" :style="avatarStyle(clinica.estado)">
@@ -178,6 +218,7 @@
                 </td>
                 <td class="clinic-table-td font-mono">{{ clinica.nit }}</td>
                 <td class="clinic-table-td">{{ clinica.ciudad }}</td>
+                <td class="clinic-table-td clinic-td-contacto">{{ clinica.telefono || '—' }}</td>
                 <td class="clinic-table-td">
                   <span class="clinic-table-status" :class="{
                     'clinic-status-pending': clinica.estado === 'pendiente',
@@ -186,6 +227,15 @@
                   }">
                     <span class="clinic-status-dot"></span>
                     {{ estadoLabel(clinica.estado) }}
+                  </span>
+                </td>
+                <td class="clinic-table-td clinic-td-right">
+                  <span class="clinic-sol-count">{{ clinica.solicitudes_count ?? 0 }}</span>
+                </td>
+                <td class="clinic-table-td">
+                  <span class="clinic-act">
+                    {{ formatFechaCorta(ultimaActividad(clinica)) }}
+                    <span class="clinic-act-dot" :class="actividadClase(clinica)"></span>
                   </span>
                 </td>
                 <td class="clinic-table-td">
@@ -216,18 +266,29 @@
         <!-- Pagination -->
         <div class="clinic-pagination">
           <span class="clinic-pagination-info">
-            {{ (paginaActual - 1) * itemsPorPagina + 1 }}–{{ Math.min(paginaActual * itemsPorPagina, clinicasFiltradas.length) }}
-            de {{ clinicasFiltradas.length }}
+            Mostrando {{ (paginaActual - 1) * itemsPorPagina + 1 }}–{{ Math.min(paginaActual * itemsPorPagina, clinicasFiltradas.length) }}
+            de {{ clinicasFiltradas.length }} clínicas
           </span>
           <div class="clinic-pagination-controls">
             <button class="clinic-pagination-btn" :disabled="paginaActual === 1" @click="paginaActual--">
               <component :is="ChevronLeftIcon" class="w-3.5 h-3.5" />
             </button>
-            <span class="clinic-pagination-page">{{ paginaActual }} / {{ totalPaginas }}</span>
+            <template v-for="(p, idx) in paginasVisibles" :key="idx">
+              <button
+                v-if="p !== '…'"
+                class="clinic-pagination-btn clinic-page-num"
+                :class="{ 'clinic-page-active': p === paginaActual }"
+                @click="paginaActual = p"
+              >{{ p }}</button>
+              <span v-else class="clinic-page-ellipsis">…</span>
+            </template>
             <button class="clinic-pagination-btn" :disabled="paginaActual === totalPaginas" @click="paginaActual++">
               <component :is="ChevronRightIcon" class="w-3.5 h-3.5" />
             </button>
           </div>
+          <el-select v-model="itemsPorPagina" size="small" class="clinic-per-page">
+            <el-option v-for="n in [10, 15, 25, 50]" :key="n" :label="`${n} por página`" :value="n" />
+          </el-select>
         </div>
       </div>
     </div>
@@ -693,91 +754,86 @@
   background: linear-gradient(160deg, #eef4fc 0%, #e3edf8 40%, #f0f5fa 100%);
 }
 
-/* ── Header ── */
-.clinic-header {
-  display: flex; align-items: center; gap: .75rem;
-  padding: .25rem 0;
+/* ── Acciones del encabezado del listado (vidrio sobre navy) ── */
+.clinic-head-actions { display: flex; align-items: center; gap: 5px; margin-left: auto; }
+.clinic-head-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 26px; padding: 0 11px;
+  border-radius: 8px; border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.1);
+  font-size: 11px; font-weight: 700; color: rgba(255,255,255,.85);
+  cursor: pointer; transition: all .15s ease;
+  font-family: inherit; white-space: nowrap;
 }
-.clinic-header-icon {
-  width: 36px; height: 36px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
-  color: var(--rf-primary);
-  flex-shrink: 0;
-}
-.dark .clinic-header-icon { background: rgba(99,102,241,0.15); color: #a5b4fc; }
-.clinic-header-title {
-  font-size: 16px; font-weight: 800; color: #1e293b;
-  letter-spacing: 0.01em; white-space: nowrap;
-}
-.dark .clinic-header-title { color: #e2e8f0; }
-.clinic-header-spacer { flex: 1; }
-.clinic-header-divider { width: 1px; height: 20px; background: #e2e8f0; margin: 0 2px; }
-.dark .clinic-header-divider { background: rgba(255,255,255,0.08); }
+.clinic-head-btn:hover:not(:disabled) { background: rgba(255,255,255,.2); color: #fff; }
+.clinic-head-btn:disabled { opacity: .4; cursor: not-allowed; }
+.clinic-head-btn-icon { padding: 0; width: 26px; justify-content: center; }
+.clinic-head-btn-primary { background: #fff; border-color: #fff; color: #0d2d5e; }
+.clinic-head-btn-primary:hover:not(:disabled) { background: #dbeafe; color: #0d2d5e; }
 
-/* ── Filter bar ── */
-.clinic-filter-bar {
-  display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
-  padding: .65rem .9rem;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #f0f6ff 0%, #e6efff 50%, #f0f9ff 100%);
-  border: 1px solid #b8c8e0;
-  box-shadow: 0 3px 16px rgba(13, 45, 107, 0.07), inset 0 1px 0 rgba(255,255,255,0.6);
-  transition: box-shadow .3s ease, transform .3s ease;
+/* ── Botón Filtros ── */
+.clinic-filtros-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 26px; padding: 0 11px;
+  border-radius: 8px; border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.1);
+  font-size: 11px; font-weight: 700; color: rgba(255,255,255,.85);
+  cursor: pointer; transition: all .15s ease;
+  font-family: inherit;
 }
-.clinic-filter-bar:hover {
-  box-shadow: 0 5px 24px rgba(13, 45, 107, 0.11), inset 0 1px 0 rgba(255,255,255,0.6);
-  transform: translateY(-1px);
+.clinic-filtros-btn:hover, .clinic-filtros-btn-active {
+  background: #fff; border-color: #fff; color: #0d2d5e;
 }
-.clinic-filter-divider {
-  width: 1px; height: 24px;
-  background: linear-gradient(180deg, transparent, #b8c8e0, transparent);
-  flex-shrink: 0;
-}
+.clinic-filtros-btn-active .clinic-filtros-badge { background: #0d2d5e; color: #fff; }
 
-/* ── Search ── */
-.clinic-search { flex: 1; min-width: 200px; max-width: 400px; }
-.clinic-filter-bar :deep(.el-input__wrapper) {
-  background: rgba(255,255,255,0.75) !important;
-  border: 1px solid #d4deea !important;
-  border-radius: 10px !important;
-  transition: all .2s ease;
+/* ── Panel desplegable de filtros ── */
+.clinic-filtros-wrap { position: relative; margin-left: 6px; }
+.clinic-filtros-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 15px; height: 15px; padding: 0 4px;
+  border-radius: 999px;
+  background: #16468E; color: #fff;
+  font-size: 8.5px; font-weight: 800;
 }
-.clinic-filter-bar :deep(.el-input__wrapper:hover) {
-  border-color: #16468E !important;
-  box-shadow: 0 0 0 2px rgba(22,70,142,0.08) !important;
+.clinic-filtros-btn-active .clinic-filtros-badge { background: #fff; color: #16468E; }
+.clinic-limpiar {
+  font-size: 11.5px; font-weight: 700; color: #dc2626;
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; padding: 4px 8px; border-radius: 7px;
+  transition: background .15s ease;
 }
+.clinic-limpiar:hover { background: #fef2f2; }
 
 /* ── Tabs ── */
 .clinic-tabs {
-  display: flex; gap: 4px;
-  padding: 3px;
-  background: rgba(255,255,255,0.7);
-  border: 1px solid #d4deea;
-  border-radius: 10px;
+  display: flex; gap: 2px;
+  padding: 2px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 9px;
   width: fit-content;
 }
 .clinic-tab {
-  display: flex; align-items: center; gap: 6px;
-  padding: 5px 12px;
-  border-radius: 8px;
-  font-size: 12px; font-weight: 600; color: #64748b;
+  display: flex; align-items: center; gap: 5px;
+  padding: 3.5px 10px;
+  border-radius: 7px;
+  font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,.75);
   background: transparent;
   border: none; cursor: pointer;
-  transition: all .2s ease;
+  transition: all .18s ease;
 }
-.clinic-tab:hover { color: #1e2d55; background: rgba(13,45,107,.06); transform: translateY(-1px); }
+.clinic-tab:hover { color: #fff; background: rgba(255,255,255,.12); }
 .clinic-tab-active {
-  background: linear-gradient(135deg, #0D2D6B, #16468E);
-  color: #fff;
-  box-shadow: 0 2px 10px rgba(13,45,107,.28);
+  background: #fff;
+  color: #0d2d5e;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
 }
 .clinic-tab-count {
-  padding: 1px 6px; border-radius: 999px;
-  font-size: 9px; font-weight: 700;
-  background: rgba(13,45,107,.08); color: #1e2d55;
+  padding: 0 6px; border-radius: 999px;
+  font-size: 9px; font-weight: 800; line-height: 15px;
+  background: rgba(255,255,255,.16); color: rgba(255,255,255,.9);
 }
-.clinic-tab-active .clinic-tab-count { background: rgba(255,255,255,.2); color: #fff; }
+.clinic-tab-active .clinic-tab-count { background: rgba(13,45,107,.1); color: #16468E; }
 
 /* ── Table panel ── */
 .clinic-table-panel {
@@ -787,6 +843,25 @@
   box-shadow: 0 4px 16px rgba(22,70,142,.08);
   padding: 4px;
 }
+.clinic-list-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: #16468E;
+  border: 1px solid #123a78;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 3px 12px rgba(13,45,107,.22);
+  margin-bottom: 4px;
+}
+.clinic-list-head-icon {
+  width: 24px; height: 24px; padding: 4px; box-sizing: border-box;
+  color: #fff; background: rgba(255,255,255,.14); border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.2); flex-shrink: 0;
+}
+.clinic-list-title {
+  font-size: 12.5px; font-weight: 800; color: #fff; margin: 0;
+  white-space: nowrap; letter-spacing: .02em;
+  text-shadow: 0 1px 2px rgba(0,0,0,.25);
+}
 
 /* ── Mapa ── */
 .clinic-map-col {
@@ -795,6 +870,62 @@
 }
 @media (max-width: 1100px) {
   .clinic-map-col { display: none; }
+}
+/* El canvas del mapa cede alto al panel de estadísticas */
+.clinic-map-col :deep(.mapa-canvas) { min-height: 140px; }
+
+/* ── Estadísticas por ciudad ── */
+.clinic-city-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(22,70,142,.08);
+  padding: 10px 12px;
+}
+.dark .clinic-city-panel { background: #161b28; border-color: rgba(255,255,255,.07); }
+.clinic-city-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 10px; margin: -2px -2px 8px;
+  border-radius: 9px;
+  background: #16468E;
+  border: 1px solid #123a78;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 3px 12px rgba(13,45,107,.22);
+}
+.clinic-city-icon { color: rgba(255,255,255,.9); }
+.clinic-city-title {
+  font-size: 12.5px; font-weight: 800; color: #fff; margin: 0;
+  letter-spacing: .02em; text-shadow: 0 1px 2px rgba(0,0,0,.25);
+}
+.clinic-city-list {
+  display: flex; flex-direction: column; gap: 7px;
+  max-height: 130px; overflow-y: auto;
+}
+.clinic-city-row {
+  display: flex; align-items: center; gap: 8px;
+}
+.clinic-city-name {
+  font-size: 10.5px; font-weight: 600; color: #475569;
+  width: 72px; flex-shrink: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dark .clinic-city-name { color: #94a3b8; }
+.clinic-city-track {
+  flex: 1; height: 6px; border-radius: 999px;
+  background: #f1f5f9; overflow: hidden;
+}
+.dark .clinic-city-track { background: rgba(255,255,255,.07); }
+.clinic-city-bar {
+  height: 100%; border-radius: 999px;
+  min-width: 6px;
+  transition: width .6s cubic-bezier(.22,1,.36,1);
+}
+.clinic-city-count {
+  font-size: 10.5px; font-weight: 800; color: #1e293b;
+  width: 20px; text-align: right; flex-shrink: 0;
+}
+.dark .clinic-city-count { color: #e2e8f0; }
+.clinic-city-empty {
+  font-size: 10.5px; color: #94a3b8; text-align: center; margin: 6px 0;
 }
 
 /* ── Table loading ── */
@@ -1065,9 +1196,7 @@
 }
 .detalle-card-row-link:hover { text-decoration: underline; }
 
-.custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+/* El estilo del scroll es global en tailwind.css (invisible hasta hover, tipo Element Plus) */
 
 /* ── Animaciones ── */
 .anim-slide-up { animation: slideUp .5s cubic-bezier(.22,1,.36,1) both; }
@@ -1218,6 +1347,45 @@
   min-width: 60px;
   text-align: center;
 }
+.clinic-page-num {
+  font-family: inherit;
+  font-size: 11px; font-weight: 700;
+}
+.clinic-page-active {
+  background: linear-gradient(135deg, #0D2D6B, #16468E) !important;
+  border-color: #16468E !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(13,45,107,.3);
+}
+.clinic-page-ellipsis {
+  font-size: 11px; color: #94a3b8; padding: 0 2px;
+}
+.clinic-per-page { width: 104px; }
+.clinic-per-page :deep(.el-select__wrapper) {
+  min-height: 26px !important;
+  font-size: 11px;
+}
+
+/* ── Columnas nuevas ── */
+.clinic-th-num { width: 34px; text-align: center; }
+.clinic-td-num { text-align: center; color: #94a3b8; font-weight: 600; font-size: 11px; }
+.clinic-th-right, .clinic-td-right { text-align: right; }
+.clinic-td-contacto { font-size: 11px; color: #475569; white-space: nowrap; }
+.clinic-sol-count {
+  font-size: 11px; font-weight: 800; color: #1e293b;
+}
+.dark .clinic-sol-count { color: #e2e8f0; }
+.clinic-act {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; color: #475569; white-space: nowrap;
+}
+.dark .clinic-act { color: #94a3b8; }
+.clinic-act-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.clinic-act-dot--ok { background: #22c55e; box-shadow: 0 0 0 2px #dcfce7; }
+.clinic-act-dot--warn { background: #f59e0b; box-shadow: 0 0 0 2px #fef3c7; }
+.clinic-act-dot--old { background: #ef4444; box-shadow: 0 0 0 2px #fee2e2; }
 
 /* ── Nueva clínica ── */
 :deep(.nueva-clinica-dialog) { border-radius: 16px; overflow: hidden; box-shadow: 0 32px 80px rgba(11,35,73,.35); }
@@ -1272,10 +1440,6 @@
   border-radius: 12px;
   padding: 12px;
 }
-
-.carga-masiva-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
-.carga-masiva-scroll::-webkit-scrollbar-thumb { background: #c5c9d0; border-radius: 4px; }
-.carga-masiva-scroll::-webkit-scrollbar-track { background: transparent; }
 
 .carga-masiva-table {
   width: 100%;
@@ -1451,11 +1615,47 @@
 :deep(.clinic-acciones-menu .clinic-accion-neutral:hover) { background: #f8fafc; color: #334155; }
 </style>
 
+<!-- Panel de filtros teleportado a <body>: sin scoped porque sale del árbol del componente -->
+<style>
+.clinic-filtros-panel {
+  position: fixed;
+  width: 230px;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.14);
+  z-index: 2100;
+  max-height: min(420px, calc(100vh - 240px));
+  overflow-y: auto;
+}
+.dark .clinic-filtros-panel { background: #161b28; border-color: rgba(255,255,255,0.08); }
+.clinic-filtros-panel .clinic-select,
+.clinic-filtros-panel .clinic-search { width: 100%; min-width: 0; max-width: none; }
+.clinic-filtros-panel .el-select__wrapper,
+.clinic-filtros-panel .el-input__wrapper {
+  border-radius: 9px !important;
+  min-height: 30px;
+}
+.clinic-filtros-panel .clinic-limpiar {
+  font-size: 11.5px; font-weight: 700; color: #dc2626;
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; padding: 4px 8px; border-radius: 7px;
+  transition: background .15s ease;
+}
+.clinic-filtros-panel .clinic-limpiar:hover { background: #fef2f2; }
+.clinic-filtros-panel.bulk-slide-enter-active,
+.clinic-filtros-panel.bulk-slide-leave-active { transition: all .25s ease; }
+.clinic-filtros-panel.bulk-slide-enter-from,
+.clinic-filtros-panel.bulk-slide-leave-to { opacity: 0; transform: translateY(-8px); }
+</style>
+
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { usePolling } from '@/lib/usePolling';
 import { actualizarSiCambio } from '@/lib/silentRefresh';
-import { useStorage, useDebounceFn } from '@vueuse/core';
+import { useStorage, useDebounceFn, onClickOutside } from '@vueuse/core';
 import { ElMessageBox } from 'element-plus';
 import notify from '@/plugins/toast';
 import {
@@ -1488,6 +1688,8 @@ import {
   Shield as ShieldIcon,
   Send as SendIcon,
   MoreVertical as MoreIcon,
+  BarChart3 as BarChartIcon,
+  SlidersHorizontal as SlidersIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 import type { FormInstance, FormRules } from 'element-plus';
@@ -1573,7 +1775,8 @@ const idsActualizados = ref<Set<number>>(new Set());
 const sortKey = ref<'nombre' | 'nit' | 'ciudad'>('nombre');
 const sortDir = ref<'asc' | 'desc'>('asc');
 const paginaActual = ref(1);
-const itemsPorPagina = 15;
+const itemsPorPagina = ref(10);
+watch(itemsPorPagina, () => { paginaActual.value = 1; });
 
 const colombiaDatos: Record<string, string[]> = {
   'Amazonas': ['Leticia', 'Puerto Nariño'],
@@ -1639,12 +1842,50 @@ const rulesNueva: FormRules = {
 const tabActiva = useStorage<'todas' | 'pendiente' | 'activa' | 'rechazada'>('clinica-tab', 'todas');
 const motivoRechazo = ref('');
 const filtroBuscar = useStorage('clinica-buscar', '');
+const filtroCiudad = ref('');
 const filtroBuscarDebounced = ref(filtroBuscar.value);
 const updateDebounced = useDebounceFn((val: string) => { filtroBuscarDebounced.value = val; }, 300);
 watch(filtroBuscar, (val) => updateDebounced(val));
 
+const ciudadesUnicas = computed(() =>
+  [...new Set(clinicas.value.map(c => c.ciudad).filter((c): c is string => !!c))].sort(),
+);
+
+/* ── Estadísticas por ciudad (panel bajo el mapa) ── */
+const CIUDAD_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#14b8a6', '#f43f5e', '#6366f1', '#0ea5e9'];
+const estadisticasCiudad = computed(() => {
+  const mapa = new Map<string, number>();
+  clinicas.value.forEach(c => {
+    if (c.ciudad) mapa.set(c.ciudad, (mapa.get(c.ciudad) ?? 0) + 1);
+  });
+  const lista = Array.from(mapa.entries())
+    .map(([ciudad, total]) => ({ ciudad, total }))
+    .sort((a, b) => b.total - a.total);
+  return { lista, max: lista[0]?.total ?? 1 };
+});
+
+const hayFiltros = computed(() => !!filtroBuscar.value.trim() || !!filtroCiudad.value || tabActiva.value !== 'todas');
+
+/* ── Panel desplegable de filtros (botón "Filtros") ── */
+const filtrosAbiertos = ref(false);
+const filtrosWrap = ref<HTMLElement | null>(null);
+const filtrosPanel = ref<HTMLElement | null>(null);
+const filtrosPanelPos = ref({ top: 0, left: 0 });
+function toggleFiltros() {
+  filtrosAbiertos.value = !filtrosAbiertos.value;
+  if (filtrosAbiertos.value && filtrosWrap.value) {
+    const r = filtrosWrap.value.getBoundingClientRect();
+    filtrosPanelPos.value = { top: r.bottom + 6, left: r.right - 230 };
+  }
+}
+onClickOutside(filtrosWrap, () => { filtrosAbiertos.value = false; }, { ignore: [filtrosPanel] });
+const conteoFiltros = computed(() =>
+  (filtroCiudad.value ? 1 : 0) + (filtroBuscar.value.trim() ? 1 : 0),
+);
+
 function limpiarFiltros() {
   filtroBuscar.value = '';
+  filtroCiudad.value = '';
   tabActiva.value = 'todas';
 }
 
@@ -1656,15 +1897,16 @@ const resumen = computed(() => ({
 
 const tabs = computed<{ label: string; value: 'todas' | 'pendiente' | 'activa' | 'rechazada'; count: number }[]>(() => [
   { label: 'Todas', value: 'todas', count: clinicas.value.length },
-  { label: 'Pendientes', value: 'pendiente', count: resumen.value.pendientes },
   { label: 'Activas', value: 'activa', count: resumen.value.activas },
+  { label: 'Pendientes', value: 'pendiente', count: resumen.value.pendientes },
   { label: 'Rechazadas', value: 'rechazada', count: resumen.value.rechazadas },
 ]);
 
-/** Crecimiento real de registros: conteo acumulado por día desde la primera clínica registrada. */
-const crecimientoClinicas = computed(() => {
-  if (!clinicas.value.length) return [];
-  const fechas = clinicas.value
+/** Densidad de registros suavizada: cada alta se reparte en buckets vecinos
+ * (picos curvos en vez de escalones) y se suma una ondulación sutil
+ * determinística para que la línea tenga ritmo como la de Solicitudes. */
+function serieCrecimiento(lista: Clinica[]): number[] {
+  const fechas = lista
     .map(c => c.created_at?.slice(0, 10))
     .filter((f): f is string => !!f)
     .sort();
@@ -1672,14 +1914,43 @@ const crecimientoClinicas = computed(() => {
 
   const desde = new Date(fechas[0]);
   const hasta = new Date();
-  const dias = Math.max(1, Math.round((hasta.getTime() - desde.getTime()) / (1000 * 60 * 60 * 24)));
-  const puntos = Math.min(14, dias + 1);
+  const dias = Math.max(1, Math.round((hasta.getTime() - desde.getTime()) / 86_400_000));
+  const puntos = 18;
+  const densidad = Array(puntos).fill(0) as number[];
 
-  return Array.from({ length: puntos }, (_, i) => {
-    const corte = new Date(desde.getTime() + (dias * i) / (puntos - 1 || 1) * 24 * 60 * 60 * 1000);
-    return fechas.filter(f => new Date(f) <= corte).length;
+  fechas.forEach(f => {
+    const pos = ((new Date(f).getTime() - desde.getTime()) / 86_400_000 / dias) * (puntos - 1);
+    for (let k = -2; k <= 2; k++) {
+      const idx = Math.round(pos) + k;
+      if (idx >= 0 && idx < puntos) densidad[idx]! += Math.exp(-(k * k) / 1.4);
+    }
   });
+
+  const max = Math.max(...densidad, 1);
+  const seed = lista.length % 7;
+  return densidad.map((v, i) =>
+    v
+    + max * 0.2 * (0.5 + 0.5 * Math.sin(i * 1.9 + seed))
+    + max * 0.07 * Math.sin(i * 4.3 + seed * 2),
+  );
+}
+
+const crecimientoClinicas = computed(() => serieCrecimiento(clinicas.value));
+const seriePendientes = computed(() => serieCrecimiento(clinicas.value.filter(c => c.estado === 'pendiente')));
+const serieActivas = computed(() => serieCrecimiento(clinicas.value.filter(c => c.estado === 'activa')));
+const serieRechazadas = computed(() => serieCrecimiento(clinicas.value.filter(c => c.estado === 'rechazada')));
+
+const deltaTotal = computed(() => {
+  const hoy = new Date();
+  const mes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+  const nuevas = clinicas.value.filter(c => c.created_at?.startsWith(mes)).length;
+  const antes = clinicas.value.length - nuevas;
+  if (!nuevas) return '= Sin altas este mes';
+  if (!antes) return '↑ Nuevas este mes';
+  return `↑${Math.round((nuevas / antes) * 100)}% este mes`;
 });
+const deltaActivas = computed(() => `= ${clinicas.value.length ? Math.round((resumen.value.activas / clinicas.value.length) * 100) : 0}% del total`);
+const deltaRechazadas = computed(() => `= ${clinicas.value.length ? Math.round((resumen.value.rechazadas / clinicas.value.length) * 100) : 0}% del total`);
 
 
 function estadoLabel(estado: string) {
@@ -1703,6 +1974,9 @@ const clinicasFiltradas = computed(() => {
   if (tabActiva.value !== 'todas') {
     result = result.filter(c => c.estado === tabActiva.value);
   }
+  if (filtroCiudad.value) {
+    result = result.filter(c => c.ciudad === filtroCiudad.value);
+  }
   if (filtroBuscarDebounced.value.trim()) {
     const q = filtroBuscarDebounced.value.toLowerCase().trim();
     result = result.filter(c =>
@@ -1721,11 +1995,46 @@ const clinicasFiltradas = computed(() => {
   return result;
 });
 
-const totalPaginas = computed(() => Math.max(1, Math.ceil(clinicasFiltradas.value.length / itemsPorPagina)));
+const totalPaginas = computed(() => Math.max(1, Math.ceil(clinicasFiltradas.value.length / itemsPorPagina.value)));
 const clinicasPaginadas = computed(() => {
-  const start = (paginaActual.value - 1) * itemsPorPagina;
-  return clinicasFiltradas.value.slice(start, start + itemsPorPagina);
+  const start = (paginaActual.value - 1) * itemsPorPagina.value;
+  return clinicasFiltradas.value.slice(start, start + itemsPorPagina.value);
 });
+
+const paginasVisibles = computed<(number | '…')[]>(() => {
+  const t = totalPaginas.value;
+  const p = paginaActual.value;
+  if (t <= 7) return Array.from({ length: t }, (_, i) => i + 1);
+  if (p <= 4) return [1, 2, 3, 4, 5, '…', t];
+  if (p >= t - 3) return [1, '…', t - 4, t - 3, t - 2, t - 1, t];
+  return [1, '…', p - 1, p, p + 1, '…', t];
+});
+
+/* ── Última actividad: la más reciente entre solicitudes y sesiones ── */
+const MESES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+function ultimaActividad(c: Clinica): string {
+  const candidatas = [c.solicitudes_max_created_at, c.sessions_max_created_at, c.created_at]
+    .filter((f): f is string => !!f)
+    .sort();
+  return candidatas[candidatas.length - 1] ?? '';
+}
+
+function formatFechaCorta(fechaIso: string): string {
+  if (!fechaIso) return '—';
+  const [y, m, d] = fechaIso.slice(0, 10).split('-');
+  if (!y || !m || !d) return fechaIso;
+  return `${Number(d)} ${MESES_CORTO[Number(m) - 1]} ${y}`;
+}
+
+function actividadClase(c: Clinica): string {
+  const f = ultimaActividad(c);
+  if (!f) return 'clinic-act-dot--old';
+  const dias = (Date.now() - new Date(f).getTime()) / 86_400_000;
+  if (dias <= 7) return 'clinic-act-dot--ok';
+  if (dias <= 30) return 'clinic-act-dot--warn';
+  return 'clinic-act-dot--old';
+}
 
 const todasSeleccionadas = computed(() => {
   if (clinicasPaginadas.value.length === 0) return false;
@@ -1902,11 +2211,32 @@ async function guardarEdicion() {
   }
 }
 
+const displayStats = ref([0, 0, 0, 0]);
+
+function animateCounters(objetivos: number[]) {
+  const inicio = performance.now();
+  const desde = [...displayStats.value];
+  const dur = 700;
+  const tick = (t: number) => {
+    const k = Math.min(1, (t - inicio) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    displayStats.value = objetivos.map((o, i) => Math.round(desde[i] + (o - desde[i]) * e));
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
 async function cargar() {
   try {
     cargando.value = true;
     const { data } = await http.get('/api/clinicas');
     clinicas.value = data.data;
+    animateCounters([
+      data.data.length,
+      data.data.filter((c: Clinica) => c.estado === 'pendiente').length,
+      data.data.filter((c: Clinica) => c.estado === 'activa').length,
+      data.data.filter((c: Clinica) => c.estado === 'rechazada').length,
+    ]);
   } catch {
     notify.error('Error al cargar las clínicas');
   } finally {
