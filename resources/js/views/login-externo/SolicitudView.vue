@@ -10,6 +10,22 @@
         <h2>Nueva solicitud de referencia</h2>
         <p>Complete los datos del paciente y la remisión</p>
       </div>
+      <div class="rf-stepper-steps">
+        <div class="rf-step-pill" :class="{ done: resumenPacienteCompleto }">
+          <span class="rf-step-num"><component v-if="resumenPacienteCompleto" :is="CheckCircleIcon" class="w-3 h-3" /><template v-else>1</template></span>
+          Paciente
+        </div>
+        <span class="rf-step-line"></span>
+        <div class="rf-step-pill" :class="{ done: resumenRemisionCompleto }">
+          <span class="rf-step-num"><component v-if="resumenRemisionCompleto" :is="CheckCircleIcon" class="w-3 h-3" /><template v-else>2</template></span>
+          Remisión
+        </div>
+        <span class="rf-step-line"></span>
+        <div class="rf-step-pill">
+          <span class="rf-step-num">3</span>
+          Confirmación
+        </div>
+      </div>
       <div class="rf-stepper-progress">
         <div class="rf-stepper-progress-track">
           <div class="rf-stepper-progress-bar" :style="{ width: progresoFormulario + '%' }"></div>
@@ -28,6 +44,7 @@
           <div class="rf-section-header">
             <div class="rf-section-icon" style="background: linear-gradient(135deg,#dbeafe,#bfdbfe); color:#2563c4;">
               <component :is="UserIcon" class="w-4 h-4" />
+              <span class="rf-section-num">1</span>
             </div>
             <div class="rf-section-heading">
               <h3>Datos del paciente</h3>
@@ -96,6 +113,7 @@
           <div class="rf-section-header">
             <div class="rf-section-icon" style="background: linear-gradient(135deg,#dcfce7,#bbf7d0); color:#15966a;">
               <component :is="StethoscopeIcon" class="w-4 h-4" />
+              <span class="rf-section-num" style="background:#15966a;">2</span>
             </div>
             <div class="rf-section-heading">
               <h3>Datos de la remisión</h3>
@@ -992,33 +1010,32 @@ async function guardar() {
   background: linear-gradient(160deg, #F0F5FF 0%, #E0EAF7 40%, #F0F5FF 100%);
 }
 
-/* ── Stepper compacto ── */
+/* ── Stepper compacto (header navy) ── */
 .rf-stepper {
   display: flex;
   align-items: center;
   gap: .6rem;
   flex-shrink: 0;
-  background: linear-gradient(180deg, #FAFBFF 0%, #F5F8FE 100%);
-  border: 1px solid #DBE4F0;
+  background: linear-gradient(90deg, #16468e 0%, #1e5bbf 100%);
+  border: 1px solid #123a78;
   border-radius: 14px;
   padding: .55rem .9rem;
-  box-shadow: 0 4px 16px rgba(13, 45, 107, .08);
+  box-shadow: 0 6px 20px rgba(13, 45, 107, .28), inset 0 1px 0 rgba(255,255,255,.12);
 }
 .rf-stepper-back {
   display: grid;
   place-items: center;
   width: 36px; height: 36px;
   border-radius: 9px;
-  border: 1px solid #E2E8F0;
-  background: #fff;
-  color: #0D2D6B;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.12);
+  color: #fff;
   cursor: pointer;
   transition: all .2s ease;
   flex-shrink: 0;
 }
 .rf-stepper-back:hover {
-  background: #EFF6FF;
-  border-color: #BFDBFE;
+  background: rgba(255,255,255,.22);
 }
 .rf-stepper-title {
   flex: 1;
@@ -1027,14 +1044,14 @@ async function guardar() {
 .rf-stepper-title h2 {
   font-size: 1.05rem;
   font-weight: 800;
-  color: #0D2D6B;
+  color: #fff;
   margin: 0;
   line-height: 1.25;
 }
 .rf-stepper-title p {
   font-size: .74rem;
   font-weight: 500;
-  color: #8A9AB5;
+  color: rgba(255,255,255,.65);
   margin: 2px 0 0;
 }
 .rf-stepper-progress {
@@ -1045,21 +1062,71 @@ async function guardar() {
 .rf-stepper-progress-track {
   width: 80px; height: 6px;
   border-radius: 4px;
-  background: #E2E8F0;
+  background: rgba(255,255,255,.22);
   overflow: hidden;
 }
 .rf-stepper-progress-bar {
   height: 100%;
   border-radius: 4px;
-  background: linear-gradient(90deg, #16468E, #3B82F6);
+  background: linear-gradient(90deg, #7dd3fc, #38bdf8);
   transition: width .4s ease;
 }
 .rf-stepper-progress-label {
   font-size: .72rem;
   font-weight: 700;
-  color: #16468E;
+  color: #fff;
   min-width: 32px;
   text-align: right;
+}
+
+/* Pasos en vivo dentro del header navy */
+.rf-stepper-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.rf-step-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 4px 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.14);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: rgba(255,255,255,.75);
+  white-space: nowrap;
+  transition: all .25s ease;
+}
+.rf-step-num {
+  display: grid;
+  place-items: center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.16);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+}
+.rf-step-pill.done {
+  background: #fff;
+  border-color: #fff;
+  color: #16468e;
+  box-shadow: 0 3px 10px rgba(0,0,0,.18);
+}
+.rf-step-pill.done .rf-step-num {
+  background: #22c55e;
+  color: #fff;
+}
+.rf-step-line {
+  width: 14px; height: 1px;
+  background: rgba(255,255,255,.25);
+  flex-shrink: 0;
+}
+@media (max-width: 1280px) {
+  .rf-stepper-steps { display: none; }
 }
 
 /* ── Layout: 2 columnas ── */
@@ -1102,15 +1169,26 @@ async function guardar() {
 :deep(.rf-form-col .el-input__wrapper),
 :deep(.rf-form-col .el-select__wrapper),
 :deep(.rf-form-col .el-textarea__inner) {
-  box-shadow: 0 0 0 1px #CBD5E1 inset;
-  border-radius: 8px;
+  box-shadow: 0 0 0 1px #dbe3ef inset;
+  border-radius: 9px;
   background: #fff;
   transition: box-shadow .2s ease;
 }
 :deep(.rf-form-col .el-input__wrapper.is-focus),
-:deep(.rf-form-col .el-select__wrapper.is-focus) { box-shadow: 0 0 0 2px #0D2D6B inset; }
+:deep(.rf-form-col .el-select__wrapper.is-focus) {
+  box-shadow: 0 0 0 1.5px #2563eb inset, 0 0 0 4px rgba(37,99,235,.12);
+}
 :deep(.rf-form-col .el-input__wrapper:hover),
-:deep(.rf-form-col .el-select__wrapper:hover) { box-shadow: 0 0 0 1px #3B82F6 inset; }
+:deep(.rf-form-col .el-select__wrapper:hover) { box-shadow: 0 0 0 1px #93c5fd inset; }
+:deep(.rf-field.is-success .el-input__wrapper),
+:deep(.rf-field.is-success .el-select__wrapper),
+:deep(.rf-field.is-success .el-textarea__inner) {
+  box-shadow: 0 0 0 1px #bbf7d0 inset;
+}
+:deep(.rf-field.is-success .el-input__wrapper.is-focus),
+:deep(.rf-field.is-success .el-select__wrapper.is-focus) {
+  box-shadow: 0 0 0 1.5px #2563eb inset, 0 0 0 4px rgba(37,99,235,.12);
+}
 :deep(.rf-form-col .el-input__wrapper),
 :deep(.rf-form-col .el-select__wrapper) { min-height: 36px; }
 :deep(.rf-dx-block .el-input__wrapper),
@@ -1150,12 +1228,27 @@ async function guardar() {
   border-bottom: 1px solid #EEF2F9;
 }
 .rf-section-icon {
+  position: relative;
   display: grid;
   place-items: center;
   width: 38px;
   height: 38px;
   border-radius: 11px;
   flex-shrink: 0;
+}
+.rf-section-num {
+  position: absolute;
+  top: -5px; right: -5px;
+  display: grid;
+  place-items: center;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(37,99,235,.35);
 }
 .rf-section-heading h3 {
   font-size: 1rem;
@@ -1366,8 +1459,13 @@ async function guardar() {
   cursor: pointer;
   transition: all .2s ease;
 }
-.rf-gestante-btn:hover { border-color: #16468E; color: #16468E; }
-.rf-gestante-btn.active { background: #16468E; border-color: #16468E; color: #fff; }
+.rf-gestante-btn:hover { border-color: #2563eb; color: #2563eb; }
+.rf-gestante-btn.active {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: #2563eb;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(37,99,235,.3);
+}
 .dark .rf-gestante-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
 .dark .rf-gestante-btn:hover { border-color: #60a5fa; color: #93c5fd; }
 .dark .rf-gestante-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
@@ -1497,23 +1595,26 @@ async function guardar() {
   display: flex;
   align-items: center;
   gap: .5rem;
-  margin-bottom: .8rem;
-  padding-bottom: .6rem;
-  border-bottom: 1px solid #F1F5F9;
+  margin: -.75rem -.85rem .8rem;
+  padding: .6rem .85rem;
+  border-radius: 13px 13px 0 0;
+  background: linear-gradient(90deg, #16468e 0%, #1e5bbf 100%);
+  border-bottom: 1px solid #123a78;
 }
 .rf-summary-icon {
   display: grid;
   place-items: center;
-  width: 32px; height: 32px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
-  color: #0D2D6B;
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  background: rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.2);
+  color: #fff;
   flex-shrink: 0;
 }
 .rf-summary-header h3 {
   font-size: .82rem;
   font-weight: 800;
-  color: #0D2D6B;
+  color: #fff;
   margin: 0;
 }
 .rf-summary-progress {

@@ -4,68 +4,55 @@
     <!-- ══ Columna principal ═══════════════════════════════════════════════ -->
     <div class="flex-1 flex flex-col gap-2 p-2.5 sm:p-3 min-w-0 overflow-y-auto lg:overflow-hidden overflow-x-hidden custom-scrollbar">
 
-      <!-- ── Hero de bienvenida (centrado) ── -->
+      <!-- ── Hero de bienvenida ── -->
       <div class="landing-hero lg:flex-1 lg:min-h-0 animate-fade-in-up"
         style="animation-duration: 0.4s; animation-delay: 0.1s; animation-fill-mode: both;">
-        <div class="landing-blob landing-blob-left"></div>
-        <div class="landing-blob landing-blob-right"></div>
-        <div class="landing-blob landing-blob-bottom"></div>
-        <div class="landing-dots landing-dots-tr"></div>
-        <div class="landing-dots landing-dots-ml"></div>
+        <div class="landing-photo" aria-hidden="true"></div>
 
-        <!-- Iconos flotantes con conectores punteados -->
-        <div class="landing-float landing-float-l">
-          <component :is="FilePlusIcon" class="w-[22px] h-[22px]" />
-        </div>
-        <svg class="landing-dash landing-dash-l" viewBox="0 0 220 170" fill="none" aria-hidden="true">
-          <path d="M 78 12 C 40 55, 45 115, 195 160" stroke="#9cc2f7" stroke-width="1.6" stroke-dasharray="5 7" stroke-linecap="round" />
-        </svg>
-        <div class="landing-float landing-float-r">
-          <component :is="SendIcon" class="w-[22px] h-[22px]" />
-        </div>
-        <svg class="landing-dash landing-dash-r" viewBox="0 0 200 120" fill="none" aria-hidden="true">
-          <path d="M 55 108 C 20 70, 45 25, 180 8" stroke="#9cc2f7" stroke-width="1.6" stroke-dasharray="5 7" stroke-linecap="round" />
-        </svg>
+        <div class="landing-inner">
+          <div class="landing-brand">
+            <div class="landing-logo-circle">
+              <img :src="logoAvatar" alt="Clínica Santa Bárbara" />
+            </div>
+            <div class="landing-brand-text">
+              <strong>Santa Bárbara</strong>
+              <span>Sistema de referencia médica</span>
+            </div>
+          </div>
 
-        <div class="landing-center">
-          <div class="landing-logo-circle">
-            <img :src="logoAvatar" alt="Clínica Santa Bárbara" />
+          <div class="landing-main">
+            <h1 class="landing-title">Aquí puedes referir a tus<br><span>pacientes de forma rápida,</span><br>segura y confiable</h1>
+            <p class="landing-desc">Registra y envía las solicitudes de referencia médica a la Clínica Santa Bárbara con seguimiento en tiempo real.</p>
+            <button class="landing-cta" @click="abrirFormulario()">
+              <component :is="FilePlusIcon" class="w-[18px] h-[18px]" />
+              Nueva solicitud de referencia
+              <component :is="ArrowRightIcon" class="w-[18px] h-[18px] landing-cta-arrow" />
+            </button>
           </div>
-          <strong class="landing-brand-name">Santa Bárbara</strong>
-          <span class="landing-eyebrow">Sistema de referencia médica</span>
-          <h1 class="landing-title">Aquí puedes referir a tus<br><span>pacientes de forma rápida,<br>segura y confiable</span></h1>
-          <p class="landing-desc">Registra y envía las solicitudes de referencia médica a la Clínica Santa Bárbara con seguimiento en tiempo real.</p>
-          <button class="landing-cta" @click="abrirFormulario()">
-            <component :is="FilePlusIcon" class="w-[18px] h-[18px]" />
-            Nueva solicitud de referencia
-            <component :is="ArrowRightIcon" class="w-[18px] h-[18px] landing-cta-arrow" />
-          </button>
-        </div>
-      </div>
 
-      <!-- ── Opciones ── -->
-      <div class="feature-strip shrink-0 animate-fade-in-up"
-        style="animation-duration: 0.4s; animation-delay: 0.22s; animation-fill-mode: both;">
-        <button type="button" class="feature-item" @click="abrirFormulario()">
-          <div class="feature-icon" style="background:#e0ecff; color:#2563eb;">
-            <component :is="ClipboardListIcon" class="w-5 h-5" />
+          <div class="landing-cards">
+            <button type="button" class="landing-card" @click="abrirFormulario()">
+              <div class="landing-card-icon" style="background:#e0ecff; color:#2563eb;">
+                <component :is="ClipboardListIcon" class="w-4 h-4" />
+              </div>
+              <div class="landing-card-text">
+                <strong>Registra la solicitud</strong>
+                <span>Diligencia la información de tu paciente de forma completa y segura.</span>
+              </div>
+              <component :is="ChevronRightIcon" class="landing-card-arrow" />
+            </button>
+            <button type="button" class="landing-card" @click="irHistorial()">
+              <div class="landing-card-icon" style="background:#ede9fe; color:#7c3aed;">
+                <component :is="EyeIcon" class="w-4 h-4" />
+              </div>
+              <div class="landing-card-text">
+                <strong>Seguimiento en tiempo real</strong>
+                <span>Puedes consultar el estado de tu solicitud en cualquier momento.</span>
+              </div>
+              <component :is="ChevronRightIcon" class="landing-card-arrow" />
+            </button>
           </div>
-          <div class="feature-text">
-            <strong>Registra la solicitud</strong>
-            <span>Diligencia la información de tu paciente de forma completa y segura.</span>
-          </div>
-          <component :is="ArrowRightIcon" class="feature-arrow" />
-        </button>
-        <button type="button" class="feature-item" @click="irHistorial()">
-          <div class="feature-icon" style="background:#ede9fe; color:#7c3aed;">
-            <component :is="EyeIcon" class="w-5 h-5" />
-          </div>
-          <div class="feature-text">
-            <strong>Seguimiento en tiempo real</strong>
-            <span>Puedes consultar el estado de tu solicitud en cualquier momento.</span>
-          </div>
-          <component :is="ArrowRightIcon" class="feature-arrow" />
-        </button>
+        </div>
       </div>
 
     </div>
@@ -115,7 +102,6 @@ import {
   ChevronRight as ChevronRightIcon,
   ArrowRight as ArrowRightIcon,
   FilePlus as FilePlusIcon,
-  Send as SendIcon,
   Eye as EyeIcon,
   Paperclip as PaperclipIcon,
   UploadCloud as UploadCloudIcon,
@@ -1901,19 +1887,14 @@ usePolling(() => {
 }
 .donut-legend-dot { transition: transform 0.2s ease; }
 
-/* ── Landing de bienvenida (centrada) ── */
+/* ── Landing de bienvenida (foto de fondo) ── */
 .landing-hero {
   position: relative;
   border-radius: 18px;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(219,234,254,0.55), transparent 70%),
-    linear-gradient(160deg, #f4f8ff 0%, #ffffff 55%, #eff4fe 100%);
+  background: linear-gradient(160deg, #f4f8ff 0%, #ffffff 55%, #eff4fe 100%);
   border: 1px solid #e3eaf4;
   box-shadow: 0 10px 30px rgba(22,70,142,.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 .dark .landing-hero {
   background: #161b28;
@@ -1921,177 +1902,112 @@ usePolling(() => {
   box-shadow: 0 10px 30px rgba(0,0,0,.25);
 }
 
-/* Ondas suaves en los bordes */
-.landing-blob {
+/* Banner de la clínica de fondo completo con velo claro a la izquierda */
+.landing-photo {
   position: absolute;
+  inset: 0;
+  background: url('/images/clinica-hero-banner.png') center / cover no-repeat;
   pointer-events: none;
 }
-.landing-blob-left {
-  width: 420px; height: 420px;
-  top: -90px; left: -180px;
-  background: radial-gradient(closest-side, rgba(191,219,254,0.55), transparent);
-}
-.landing-blob-right {
-  width: 460px; height: 460px;
-  top: -140px; right: -160px;
-  background: radial-gradient(closest-side, rgba(191,219,254,0.45), transparent);
-}
-.landing-blob-bottom {
-  width: 520px; height: 340px;
-  bottom: -210px; left: 30%;
-  background: radial-gradient(closest-side, rgba(219,234,254,0.5), transparent);
-}
-.dark .landing-blob-left { background: radial-gradient(closest-side, rgba(46,110,224,0.10), transparent); }
-.dark .landing-blob-right { background: radial-gradient(closest-side, rgba(46,110,224,0.09), transparent); }
-.dark .landing-blob-bottom { background: radial-gradient(closest-side, rgba(46,110,224,0.08), transparent); }
-
-/* Malla de puntos decorativa */
-.landing-dots {
+.landing-photo::after {
+  content: '';
   position: absolute;
-  width: 130px; height: 86px;
-  background-image: radial-gradient(#b8ccf0 1.4px, transparent 1.4px);
-  background-size: 13px 13px;
-  pointer-events: none;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.88) 22%, rgba(255,255,255,0.35) 38%, transparent 52%);
 }
-.landing-dots-tr { top: 30px; right: 30px; }
-.landing-dots-ml { top: 50%; left: 20%; }
-.dark .landing-dots { background-image: radial-gradient(rgba(126,166,240,0.25) 1.4px, transparent 1.4px); }
-
-/* Iconos flotantes + conectores punteados */
-.landing-float {
-  position: absolute;
-  z-index: 1;
-  width: 58px; height: 58px;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.9);
-  backdrop-filter: blur(8px);
-  border: 1px solid #dbe7f8;
-  box-shadow: 0 14px 32px rgba(22,70,142,0.16);
-  display: flex; align-items: center; justify-content: center;
-  color: #2e6ee0;
-  pointer-events: none;
-  animation: heroFloat 5.5s ease-in-out infinite alternate;
-}
-.dark .landing-float {
-  background: rgba(29,36,50,0.9);
-  border-color: rgba(255,255,255,0.08);
-  color: #7ea6f0;
-}
-.landing-float-l { left: 9%; top: 42%; }
-.landing-float-r { right: 9%; top: 52%; animation-delay: 2.2s; }
-
-@keyframes heroFloat {
-  from { transform: translateY(-4px); }
-  to { transform: translateY(4px); }
+.dark .landing-photo::after {
+  background: linear-gradient(90deg, rgba(22,27,40,0.95) 0%, rgba(22,27,40,0.88) 22%, rgba(22,27,40,0.35) 38%, rgba(22,27,40,0.1) 52%);
 }
 
-.landing-dash {
-  position: absolute;
-  pointer-events: none;
-  opacity: 0.9;
-}
-.landing-dash path {
-  animation: dashMarch 7s linear infinite;
-}
-@keyframes dashMarch {
-  to { stroke-dashoffset: -120; }
-}
-.landing-dash-l { left: 12%; top: 46%; width: 220px; height: 170px; }
-.landing-dash-r { right: 11%; top: 52%; width: 200px; height: 120px; }
-.dark .landing-dash path { stroke: rgba(126,166,240,0.4); }
-
-@media (max-width: 1100px) {
-  .landing-float, .landing-dash, .landing-dots-ml { display: none; }
-}
-
-.landing-center {
+.landing-inner {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: clamp(1rem, 3vh, 2.5rem) 1.5rem;
-  max-width: 640px;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: clamp(0.9rem, 2.4vh, 1.6rem) clamp(1.25rem, 2.6vw, 2.4rem);
 }
-.landing-center > * {
+.landing-inner > * {
   animation: heroRise .55s cubic-bezier(.22,1,.36,1) both;
 }
-.landing-center > *:nth-child(1) { animation-delay: .05s; }
-.landing-center > *:nth-child(2) { animation-delay: .12s; }
-.landing-center > *:nth-child(3) { animation-delay: .18s; }
-.landing-center > *:nth-child(4) { animation-delay: .26s; }
-.landing-center > *:nth-child(5) { animation-delay: .34s; }
-.landing-center > *:nth-child(6) { animation-delay: .42s; }
+.landing-inner > *:nth-child(1) { animation-delay: .05s; }
+.landing-inner > *:nth-child(2) { animation-delay: .16s; }
+.landing-inner > *:nth-child(3) { animation-delay: .3s; }
 @keyframes heroRise {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Marca arriba a la izquierda */
+.landing-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
 .landing-logo-circle {
-  width: 76px; height: 76px;
+  width: 54px; height: 54px;
   border-radius: 50%;
   background: #ffffff;
   border: 1px solid #e3eaf4;
-  box-shadow: 0 0 0 7px rgba(46,110,224,0.07), 0 10px 26px rgba(22,70,142,.14);
+  box-shadow: 0 0 0 5px rgba(46,110,224,0.07), 0 8px 20px rgba(22,70,142,.14);
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
-  margin-bottom: 12px;
+  flex-shrink: 0;
 }
-.landing-logo-circle img { width: 58px; height: 58px; object-fit: contain; }
+.landing-logo-circle img { width: 42px; height: 42px; object-fit: contain; }
 .dark .landing-logo-circle {
   background: #1d2432;
   border-color: rgba(255,255,255,0.08);
-  box-shadow: 0 0 0 7px rgba(126,166,240,0.08), 0 10px 26px rgba(0,0,0,.35);
+  box-shadow: 0 0 0 5px rgba(126,166,240,0.08), 0 8px 20px rgba(0,0,0,.35);
 }
-
-.landing-brand-name {
-  font-size: 19px;
+.landing-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.landing-brand-text strong {
+  font-size: 18px;
   font-weight: 800;
   letter-spacing: -0.01em;
   color: #0d2d6b;
   line-height: 1.15;
 }
-.dark .landing-brand-name { color: #e2e8f0; }
-
-.landing-eyebrow {
-  margin: 5px 0 0;
-  font-size: 10px;
+.landing-brand-text span {
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: .22em;
+  letter-spacing: .2em;
   text-transform: uppercase;
   color: #94a3b8;
 }
-.dark .landing-eyebrow { color: #64748b; }
+.dark .landing-brand-text strong { color: #e2e8f0; }
+.dark .landing-brand-text span { color: #64748b; }
 
+/* Bloque central: título + desc + CTA */
+.landing-main {
+  margin: auto 0;
+  max-width: 560px;
+}
 .landing-title {
-  margin: 16px 0 0;
-  font-size: clamp(1.55rem, 3vw, 2.4rem);
+  margin: 0;
+  font-size: clamp(1.6rem, 2.9vw, 2.6rem);
   font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.18;
-  color: #0d2d6b;
+  letter-spacing: -0.025em;
+  line-height: 1.16;
+  color: #16468e;
 }
-.landing-title span {
-  background: linear-gradient(100deg, #2e6ee0 10%, #16468e 90%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
+.landing-title span { color: #2563eb; }
 .dark .landing-title { color: #e2e8f0; }
-.dark .landing-title span {
-  background: linear-gradient(100deg, #a8c4f5 10%, #5b8eef 90%);
-  -webkit-background-clip: text;
-  background-clip: text;
-}
+.dark .landing-title span { color: #7ea6f0; }
 
 .landing-desc {
-  margin: 12px 0 0;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.6;
-  color: #64748b;
-  max-width: 500px;
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.55;
+  color: #3d4f6e;
+  max-width: 460px;
 }
 .dark .landing-desc { color: #94a3b8; }
 
@@ -2102,15 +2018,15 @@ usePolling(() => {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  padding: 13px 26px;
-  border-radius: 13px;
+  padding: 13px 24px;
+  border-radius: 12px;
   border: none;
-  background: linear-gradient(135deg, #2e6ee0 0%, #16468e 100%);
+  background: #2563eb;
   color: #ffffff;
   font-size: 13.5px;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(22,70,142,.35), inset 0 1px 0 rgba(255,255,255,0.18);
+  box-shadow: 0 10px 24px rgba(37,99,235,.35), inset 0 1px 0 rgba(255,255,255,0.18);
   transition: transform .18s ease, box-shadow .18s ease;
 }
 .landing-cta::after {
@@ -2124,80 +2040,100 @@ usePolling(() => {
 }
 .landing-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(22,70,142,.45), inset 0 1px 0 rgba(255,255,255,0.18);
+  background: #1d4ed8;
+  box-shadow: 0 14px 30px rgba(37,99,235,.45), inset 0 1px 0 rgba(255,255,255,0.18);
 }
 .landing-cta:hover::after { left: 125%; }
 .landing-cta:active { transform: translateY(0); }
 .landing-cta-arrow { transition: transform .2s ease; }
 .landing-cta:hover .landing-cta-arrow { transform: translateX(3px); }
 
-/* ── Opciones ── */
-.feature-strip {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+/* Cards de acción al pie del hero (vidrio sobre la imagen) */
+.landing-cards {
+  display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
-.feature-item {
+.landing-card {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 18px 44px 18px 18px;
+  gap: 10px;
+  padding: 10px 34px 10px 12px;
   min-width: 0;
-  border-radius: 15px;
-  background: #ffffff;
-  border: 1px solid #e3eaf4;
-  box-shadow: 0 6px 18px rgba(22,70,142,.05);
+  flex: 1 1 230px;
+  max-width: 300px;
+  border-radius: 13px;
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.75);
+  box-shadow: 0 8px 22px rgba(22,70,142,.12);
   cursor: pointer;
   text-align: left;
   font: inherit;
-  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
 }
-.feature-item:hover {
+.landing-card:hover {
   transform: translateY(-2px);
-  border-color: #bfdbfe;
-  box-shadow: 0 12px 26px rgba(22,70,142,.12);
+  background: rgba(255,255,255,0.96);
+  box-shadow: 0 14px 30px rgba(22,70,142,.2);
 }
-.feature-item:hover .feature-icon { transform: scale(1.08); }
-.feature-item:active { transform: translateY(0); }
-.dark .feature-item {
-  background: #161b28;
-  border-color: rgba(255,255,255,0.06);
+.landing-card:active { transform: translateY(0); }
+.dark .landing-card {
+  background: rgba(29,36,50,0.75);
+  border-color: rgba(255,255,255,0.1);
 }
-.dark .feature-item:hover { border-color: rgba(126,166,240,0.4); }
-.feature-icon {
-  width: 44px; height: 44px;
-  border-radius: 12px;
+.dark .landing-card:hover { background: rgba(29,36,50,0.92); }
+.landing-card-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   transition: transform .2s ease;
 }
-.feature-text { display: flex; flex-direction: column; gap: 3px; line-height: 1.35; min-width: 0; }
-.feature-text strong {
-  font-size: 13px; font-weight: 800; color: #1e2d55;
+.landing-card:hover .landing-card-icon { transform: scale(1.08); }
+.landing-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.3;
+  min-width: 0;
 }
-.feature-text span {
-  font-size: 11px; font-weight: 500; color: #64748b;
+.landing-card-text strong {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #1e2d55;
 }
-.dark .feature-text strong { color: #e2e8f0; }
-.dark .feature-text span { color: #94a3b8; }
-.feature-arrow {
+.landing-card-text span {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: #64748b;
+}
+.dark .landing-card-text strong { color: #e2e8f0; }
+.dark .landing-card-text span { color: #94a3b8; }
+.landing-card-arrow {
   position: absolute;
-  right: 16px;
-  width: 17px; height: 17px;
+  right: 12px;
+  width: 15px; height: 15px;
   color: #94a3b8;
   opacity: 0;
-  transform: translateX(-6px);
+  transform: translateX(-5px);
   transition: opacity .18s ease, transform .18s ease;
 }
-.feature-item:hover .feature-arrow {
+.landing-card:hover .landing-card-arrow {
   opacity: 1;
   transform: translateX(0);
-  color: #2e6ee0;
+  color: #2563eb;
 }
 
-@media (max-width: 560px) {
-  .feature-strip { grid-template-columns: 1fr; }
+@media (max-width: 900px) {
+  .landing-photo::after {
+    background: rgba(255,255,255,0.88);
+  }
+  .dark .landing-photo::after {
+    background: rgba(22,27,40,0.9);
+  }
+  .landing-card { max-width: none; }
 }
 
 @keyframes fadeInScale {
