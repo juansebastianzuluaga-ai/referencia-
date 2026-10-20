@@ -12,8 +12,8 @@
 
         <!-- Header con gradiente -->
         <tr><td style="background:linear-gradient(135deg,#0D2D6B 0%,#16468E 55%,#1e3a7a 100%);padding:32px 40px 24px;text-align:center;">
-          <p style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;letter-spacing:.02em;">Clínica Santa Bárbara</p>
-          <p style="margin:8px 0 0;color:#a0b8e8;font-size:13px;">Sistema de Referencia &middot; Notificación interna</p>
+          <img src="{{ $message->embed(public_path('images/logo-w.png')) }}" alt="Clínica Santa Bárbara" style="height:48px;margin:0 auto 10px;display:block;">
+          <p style="margin:0;color:#a0b8e8;font-size:13px;">Sistema de Referencia &middot; Notificación interna</p>
         </td></tr>
 
         <!-- Banner de estado -->

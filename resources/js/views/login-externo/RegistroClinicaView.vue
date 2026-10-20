@@ -241,6 +241,7 @@ import {
   Lock as LockIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
+import { formatearNit } from '@/utils/nit';
 
 const logoBlanco = '/images/logo-w.png';
 
@@ -311,12 +312,16 @@ function validarNIT() {
   const nit = form.nit.trim();
   if (!nit) { nitError.value = ''; nitValido.value = false; return; }
 
-  if (!/^\d{6,10}-?\d?$/.test(nit)) {
+  // Se acepta el NIT con o sin puntos/guion ("891.300.047-6" o "8913000476")
+  const limpio = nit.replace(/[.\s]/g, '');
+  if (!/^\d{6,10}-?\d?$/.test(limpio)) {
     nitError.value = 'Formato inválido. Use solo números (ej: 900123456 o 900123456-7)';
     nitValido.value = false;
     return;
   }
 
+  // Normaliza a cómo se guarda en la BD: "891.300.047-6"
+  form.nit = formatearNit(limpio);
   nitError.value = '';
   nitValido.value = true;
 }

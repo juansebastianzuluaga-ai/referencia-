@@ -205,7 +205,6 @@ class SolicitudReferenciaController extends Controller
         return response()->json(['data' => $solicitud, 'message' => 'Solicitud devuelta a pendiente']);
     }
 
-
     public function completado(Request $request, SolicitudReferencia $solicitud): JsonResponse
     {
         abort_unless($request->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
@@ -286,7 +285,10 @@ class SolicitudReferenciaController extends Controller
         } catch (Throwable $e) {
             Log::error('Error consultando ingreso en Gomedisys', ['solicitud_id' => $solicitud->id, 'error' => $e->getMessage()]);
 
-            return response()->json(['message' => 'No se pudo conectar con la base de datos de Gomedisys: ' . $e->getMessage()], 502);
+            // El detalle ya quedó en el log — al usuario solo le llega un
+            // mensaje limpio, sin exponer consultas SQL ni datos de la
+            // conexión (host, base, usuario).
+            return response()->json(['message' => 'No se pudo conectar con la base de datos de Gomedisys. Intenta de nuevo en unos minutos o avisa a soporte.'], 502);
         }
 
         if (! $fila || ! $fila->admission_number) {

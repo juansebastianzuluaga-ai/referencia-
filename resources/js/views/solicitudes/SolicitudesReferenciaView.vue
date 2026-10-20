@@ -36,27 +36,39 @@
       <!-- ── Chips de estado + toggle de filtros ── -->
       <div class="sol-filter-bar shrink-0">
         <div class="sol-tabs">
-          <button
+          <el-tooltip
             v-for="tab in tabs"
             :key="tab.value"
-            class="sol-tab"
-            :class="{ 'sol-tab-active': tabActiva === tab.value }"
-            @click="cambiarTab(tab.value)"
+            :content="estadoTooltip(tab.value)"
+            placement="bottom"
+            effect="light"
+            popper-class="estado-tip"
+            :popper-options="{ strategy: 'fixed' }"
           >
-            <span v-if="tab.value !== 'todas'" class="sol-tab-dot" :class="'sol-tab-dot--' + tab.value"></span>
-            {{ tab.label }}
-            <span class="sol-tab-count">{{ tab.count }}</span>
-          </button>
-          <button class="sol-tab sol-tab-link" @click="irAHistorico('completado')">
-            <span class="sol-tab-dot sol-tab-dot--completado"></span>
-            Completadas
-            <span class="sol-tab-count">{{ statsSol.completadas }}</span>
-          </button>
-          <button class="sol-tab sol-tab-link" @click="irAHistorico('negado')">
-            <span class="sol-tab-dot sol-tab-dot--negado"></span>
-            Negadas
-            <span class="sol-tab-count">{{ statsSol.negadas }}</span>
-          </button>
+            <button
+              class="sol-tab"
+              :class="{ 'sol-tab-active': tabActiva === tab.value }"
+              @click="cambiarTab(tab.value)"
+            >
+              <span v-if="tab.value !== 'todas'" class="sol-tab-dot" :class="'sol-tab-dot--' + tab.value"></span>
+              {{ tab.label }}
+              <span class="sol-tab-count">{{ tab.count }}</span>
+            </button>
+          </el-tooltip>
+          <el-tooltip content="Ya atendido — va al histórico." placement="bottom" effect="light" popper-class="estado-tip" :popper-options="{ strategy: 'fixed' }">
+            <button class="sol-tab sol-tab-link" @click="irAHistorico('completado')">
+              <span class="sol-tab-dot sol-tab-dot--completado"></span>
+              Completadas
+              <span class="sol-tab-count">{{ statsSol.completadas }}</span>
+            </button>
+          </el-tooltip>
+          <el-tooltip content="Rechazada — va al histórico." placement="bottom" effect="light" popper-class="estado-tip" :popper-options="{ strategy: 'fixed' }">
+            <button class="sol-tab sol-tab-link" @click="irAHistorico('negado')">
+              <span class="sol-tab-dot sol-tab-dot--negado"></span>
+              Negadas
+              <span class="sol-tab-count">{{ statsSol.negadas }}</span>
+            </button>
+          </el-tooltip>
         </div>
         <div class="sol-header-spacer"></div>
         <div class="sol-chips-actions">
@@ -154,6 +166,15 @@
       <div v-else class="flex flex-col h-full overflow-hidden">
         <div class="overflow-y-auto custom-scrollbar flex-1">
           <table class="sol-table">
+            <colgroup>
+              <col style="width: 23%">
+              <col style="width: 16%">
+              <col style="width: 14%">
+              <col style="width: 20%">
+              <col style="width: 9%">
+              <col style="width: 9%">
+              <col style="width: 9%">
+            </colgroup>
             <thead class="sol-table-thead">
               <tr>
                 <th class="sol-th sol-th-paciente sol-th-sortable" @click="toggleSort('paciente')">
@@ -169,6 +190,10 @@
                   <component :is="sortIcon('especialidad')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'especialidad', 'opacity-30': sortKey !== 'especialidad' }" />
                 </th>
                 <th class="sol-th">Diagnóstico</th>
+                <th class="sol-th sol-th-sortable" @click="toggleSort('fecha')">
+                  Fecha
+                  <component :is="sortIcon('fecha')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'fecha', 'opacity-30': sortKey !== 'fecha' }" />
+                </th>
                 <th class="sol-th">Estado</th>
                 <th class="sol-th sol-th-actions">Acciones</th>
               </tr>
@@ -187,35 +212,41 @@
                       {{ inicialesPaciente(s) }}
                     </div>
                     <div class="sol-table-paciente-info">
-                      <p class="sol-table-name" :class="{ 'sol-table-name-resaltada': resaltarId === s.id }">{{ nombreCompleto(s) }}</p>
+                      <p class="sol-table-name" :class="{ 'sol-table-name-resaltada': resaltarId === s.id }" :title="nombreCompleto(s)">{{ nombreCompleto(s) }}</p>
                       <p class="sol-table-doc">{{ s.edad }} años · {{ s.genero }} · {{ s.eps }}</p>
                     </div>
                   </div>
                 </td>
                 <td class="sol-td">
-                  <p class="sol-table-clinica-name">{{ s.clinica?.nombre ?? '—' }}</p>
+                  <p class="sol-table-clinica-name" :title="s.clinica?.nombre">{{ s.clinica?.nombre ?? '—' }}</p>
                   <p class="sol-table-remitente" v-if="s.quien_remitente || s.telefono_contacto">
                     {{ s.quien_remitente || '—' }}<span v-if="s.telefono_contacto"> · {{ s.telefono_contacto }}</span>
                   </p>
                 </td>
-                <td class="sol-td">{{ s.especialidad_requerida }}</td>
+                <td class="sol-td" :title="s.especialidad_requerida">{{ s.especialidad_requerida }}</td>
                 <td class="sol-td">
-                  <p v-if="s.diagnosticos?.length" class="sol-dx-text">
+                  <p v-if="s.diagnosticos?.length" class="sol-dx-text" :title="descripcionSinCodigo(s.diagnosticos[0])">
                     {{ descripcionSinCodigo(s.diagnosticos[0]) }}<span v-if="s.diagnosticos.length > 1" class="sol-dx-more"> +{{ s.diagnosticos.length - 1 }}</span>
                   </p>
-                  <p v-else-if="s.diagnostico" class="sol-dx-text">{{ s.diagnostico }}</p>
+                  <p v-else-if="s.diagnostico" class="sol-dx-text" :title="s.diagnostico">{{ s.diagnostico }}</p>
                   <span v-else class="sol-dx-none">—</span>
                 </td>
+                <td class="sol-td sol-td-fecha">
+                  <p class="sol-fecha">{{ formatFecha(s.fecha) }}</p>
+                  <p class="sol-hora">{{ formatHora(s.hora) }}</p>
+                </td>
                 <td class="sol-td">
-                  <span class="sol-table-status" :class="{
-                    'sol-status-pending': s.estado === 'pendiente',
-                    'sol-status-waiting': s.estado === 'en_espera',
-                    'sol-status-completed': s.estado === 'completado',
-                    'sol-status-rejected': s.estado === 'negado',
-                  }">
-                    <span class="sol-status-dot"></span>
-                    {{ estadoLabel(s.estado) }}
-                  </span>
+                  <el-tooltip :key="`estado-${s.id}`" :content="estadoTooltip(s.estado)" placement="top" effect="light" popper-class="estado-tip" :popper-options="{ strategy: 'fixed' }">
+                    <span class="sol-table-status" :class="{
+                      'sol-status-pending': s.estado === 'pendiente',
+                      'sol-status-waiting': s.estado === 'en_espera',
+                      'sol-status-completed': s.estado === 'completado',
+                      'sol-status-rejected': s.estado === 'negado',
+                    }">
+                      <span class="sol-status-dot"></span>
+                      {{ estadoLabel(s.estado) }}
+                    </span>
+                  </el-tooltip>
                 </td>
                 <td class="sol-td">
                   <div class="sol-table-actions">
@@ -280,6 +311,7 @@
         <div class="sol-side-head">
           <component :is="GaugeIcon" class="w-3.5 h-3.5 sol-side-icon" />
           <p class="sol-side-title">Salud de la cola</p>
+          <PanelHelp alinear="derecha" texto="Cómo va la cola de solicitudes: cuántas llevan menos de 24h (verde = al día) y cuántas están viejas — más de 7 días es urgente. 'Sin gestionar' son las que nadie ha revisado." />
           <span class="sol-side-pill sol-side-pill-live"><span class="sol-live-dot"></span>En vivo</span>
         </div>
         <!-- Resumen + barra segmentada por antigüedad de la cola -->
@@ -334,6 +366,7 @@
         <div class="sol-side-head">
           <component :is="ActivityIcon" class="w-3.5 h-3.5 sol-side-icon" />
           <p class="sol-side-title">Especialidades en cola</p>
+          <PanelHelp alinear="derecha" texto="Las especialidades con más solicitudes esperando en la cola — sirve para ver dónde se concentra la demanda pendiente." />
           <span class="sol-side-pill">Más requeridas</span>
         </div>
         <div class="sol-esp-list">
@@ -371,9 +404,11 @@
               <p class="detalle-head-title">Detalle de solicitud</p>
               <p class="detalle-head-sub">{{ idInterno(solicitudSeleccionada.id) }} · {{ formatFecha(solicitudSeleccionada.fecha) }} · {{ formatHora(solicitudSeleccionada.hora) }}</p>
             </div>
-            <span class="detalle-head-badge" :class="'estado-' + solicitudSeleccionada.estado">
-              {{ estadoLabel(solicitudSeleccionada.estado) }}
-            </span>
+            <el-tooltip :content="estadoTooltip(solicitudSeleccionada.estado)" placement="bottom" effect="light" popper-class="estado-tip" :popper-options="{ strategy: 'fixed' }">
+              <span class="detalle-head-badge" :class="'estado-' + solicitudSeleccionada.estado">
+                {{ estadoLabel(solicitudSeleccionada.estado) }}
+              </span>
+            </el-tooltip>
             <button class="detalle-head-pdf" @click="exportarPdf">
               <component :is="FileDownIcon" class="w-3.5 h-3.5" />
               <span>Descargar PDF</span>
@@ -404,6 +439,7 @@
                   <p class="detalle-card-title detalle-card-title-amber">Remisión</p>
                 </div>
                 <div class="card-body">
+                  <div class="data-row"><span>Fecha solicitud</span><strong>{{ formatFecha(solicitudSeleccionada.fecha) }} · {{ formatHora(solicitudSeleccionada.hora) }}</strong></div>
                   <div class="data-row"><span>Institución</span><strong>{{ solicitudSeleccionada.clinica?.nombre ?? '—' }}</strong></div>
                   <div v-if="solicitudSeleccionada.quien_remitente" class="data-row"><span>Remite</span><strong>{{ solicitudSeleccionada.quien_remitente }}</strong></div>
                   <div v-if="solicitudSeleccionada.telefono_contacto" class="data-row"><span>Teléfono</span><strong>{{ solicitudSeleccionada.telefono_contacto }}</strong></div>
@@ -431,25 +467,22 @@
               </div>
             </div>
 
-            <!-- Historia clínica a ancho completo -->
-            <div class="detalle-card mb-1.5">
-              <div class="detalle-card-head">
-                <span class="detalle-card-icon detalle-card-icon-blue"><component :is="ClipboardListIcon" class="w-3.5 h-3.5" /></span>
-                <p class="detalle-card-title detalle-card-title-blue">Historia clínica</p>
+            <!-- Historia clínica grande a la izquierda; seguimiento y
+                 soportes apilados a la derecha -->
+            <div class="detalle-layout">
+              <div class="detalle-card detalle-hc-card">
+                <div class="detalle-card-head">
+                  <span class="detalle-card-icon detalle-card-icon-blue"><component :is="ClipboardListIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="detalle-card-title detalle-card-title-blue">Historia clínica</p>
+                </div>
+                <div class="card-body detalle-hc-body">
+                  <div class="detalle-hc-box">
+                    <p class="card-text-sm">{{ solicitudSeleccionada.resumen_historia_clinica }}</p>
+                  </div>
+                </div>
               </div>
-              <div class="card-body">
-                <p class="card-text-sm card-text-clamp">{{ solicitudSeleccionada.resumen_historia_clinica }}</p>
-                <button
-                  v-if="(solicitudSeleccionada.resumen_historia_clinica?.length ?? 0) > 180"
-                  class="leer-mas-btn"
-                  @click="abrirHistoriaClinica"
-                >Leer más</button>
-              </div>
-            </div>
-
-            <!-- Seguimiento + Soportes en 2 columnas -->
-            <div class="grid grid-cols-2 gap-2">
-              <div class="detalle-card">
+              <div class="detalle-layout-side">
+                <div class="detalle-card">
                 <div class="detalle-card-head">
                   <span class="detalle-card-icon detalle-card-icon-slate"><component :is="ClockIcon" class="w-3.5 h-3.5" /></span>
                   <p class="detalle-card-title detalle-card-title-slate">Seguimiento</p>
@@ -496,6 +529,7 @@
                   </div>
                   <p v-else class="adjunto-empty">Sin archivos adjuntos</p>
                 </div>
+              </div>
               </div>
             </div>
           </div>
@@ -577,19 +611,6 @@
       </div>
     </el-dialog>
 
-    <el-dialog v-model="modalHistoriaClinica" width="620px" class="historia-dialog" append-to-body align-center>
-      <template #header>
-        <div class="historia-dialog-header">
-          <component :is="FileTextIcon" class="w-5 h-5" />
-          <div>
-            <p>Historia clínica</p>
-            <span>{{ solicitudSeleccionada ? nombreCompleto(solicitudSeleccionada) : '' }}</span>
-          </div>
-        </div>
-      </template>
-      <p class="historia-dialog-text">{{ solicitudSeleccionada?.resumen_historia_clinica }}</p>
-    </el-dialog>
-
     <!-- ── Modal: Aceptar ── -->
     <el-dialog v-model="modalAceptar" width="520px" class="accion-dialog" :show-close="false" align-center>
       <template v-if="solicitudSeleccionada">
@@ -656,7 +677,14 @@
                 <div class="grid grid-cols-2 gap-2 mb-2">
                   <div>
                     <label class="accion-field-label">Hora de llegada <span class="accion-required">*</span></label>
-                    <el-time-select v-model="formAceptar.hora_llegada" placeholder="Seleccione" start="00:00" step="00:15" end="23:45" class="w-full" />
+                    <el-time-picker
+                      v-model="formAceptar.hora_llegada"
+                      placeholder="Ej: 2:30 PM"
+                      format="hh:mm A"
+                      value-format="HH:mm"
+                      :clearable="false"
+                      class="w-full"
+                    />
                   </div>
                   <div>
                     <label class="accion-field-label">Lugar <span class="accion-required">*</span></label>
@@ -748,21 +776,21 @@
       </template>
     </el-dialog>
 
-    <!-- ── Modal: Resultado de enviar a Gomedisys ── -->
-    <el-dialog v-model="modalResultadoGomedisys" width="480px" class="accion-dialog" :show-close="false" align-center>
+    <!-- ── Modal: Ficha de datos para Gomedisys ── -->
+    <el-dialog v-model="modalFichaGomedisys" width="560px" class="accion-dialog" :show-close="false" align-center>
       <template v-if="solicitudSeleccionada">
         <div class="detalle-content">
-          <button type="button" class="detalle-close-btn" @click="modalResultadoGomedisys = false">
+          <button type="button" class="detalle-close-btn" @click="modalFichaGomedisys = false">
             <component :is="XIcon" class="w-4 h-4" />
           </button>
           <div class="detalle-head">
             <div class="detalle-head-pattern"></div>
-            <div class="detalle-head-icon" :class="resultadoGomedisysOk ? 'accion-icon-success' : 'accion-icon-danger'">
-              <component :is="resultadoGomedisysOk ? CheckCircleIcon : XCircleIcon" class="w-6 h-6" />
+            <div class="detalle-head-icon accion-icon-violet">
+              <component :is="ClipboardListIcon" class="w-6 h-6" />
             </div>
             <div class="detalle-head-info">
-              <p class="detalle-head-title">{{ resultadoGomedisysOk ? 'Enviado a Gomedisys' : 'No se pudo enviar' }}</p>
-              <p class="detalle-head-sub">ID #{{ solicitudSeleccionada.id }} · {{ resultadoGomedisysOk ? 'diligenciado, sin guardar' : 'revisa el detalle abajo' }}</p>
+              <p class="detalle-head-title">Datos para Gomedisys</p>
+              <p class="detalle-head-sub">ID #{{ solicitudSeleccionada.id }} · copia cada campo y pégalo en el registro de referencia</p>
             </div>
           </div>
 
@@ -775,18 +803,31 @@
               </div>
             </div>
 
-            <p class="resultado-gomedisys-mensaje">{{ resultadoGomedisysMensaje }}</p>
+            <div class="ficha-list">
+              <div v-for="campo in fichaGomedisys" :key="campo.label" class="ficha-item">
+                <div class="ficha-item-text">
+                  <span class="ficha-item-label">{{ campo.label }}</span>
+                  <strong class="ficha-item-value" :title="campo.valor">{{ campo.valor || '—' }}</strong>
+                </div>
+                <button
+                  type="button"
+                  class="ficha-copy-btn"
+                  :class="{ 'ficha-copy-btn-ok': campoCopiado === campo.label }"
+                  :disabled="!campo.valor"
+                  @click="copiarDato(campo)"
+                >
+                  <component :is="campoCopiado === campo.label ? CheckIcon : CopyIcon" class="w-3 h-3" />
+                  {{ campoCopiado === campo.label ? 'Copiado' : 'Copiar' }}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="detalle-footer">
-            <button
-              type="button"
-              class="accion-confirmar-btn"
-              :class="resultadoGomedisysOk ? 'accion-confirmar-success' : 'accion-confirmar-danger'"
-              @click="modalResultadoGomedisys = false"
-            >
-              <component :is="resultadoGomedisysOk ? CheckIcon : XIcon" class="w-3.5 h-3.5" />
-              Entendido
+            <button type="button" class="accion-cancelar-btn" @click="modalFichaGomedisys = false">Cerrar</button>
+            <button type="button" class="accion-confirmar-btn accion-confirmar-violet" @click="copiarTodoGomedisys">
+              <component :is="CopyIcon" class="w-3.5 h-3.5" />
+              Copiar todo
             </button>
           </div>
         </div>
@@ -890,6 +931,7 @@ import {
   ArrowDown as ArrowDownIcon,
   ArrowUpDown as ArrowUpDownIcon,
   Send as SendIcon,
+  Copy as CopyIcon,
   Shield as ShieldIcon,
   User as UserIcon,
   Building2 as BuildingIcon,
@@ -905,6 +947,7 @@ import {
 import http from '@/plugins/axios';
 import StatCard from '@/components/ui/StatCard.vue';
 import DateRangeFilter from '@/components/ui/DateRangeFilter.vue';
+import PanelHelp from '@/components/ui/PanelHelp.vue';
 import { autocompletarEnGomedisys } from '@/lib/gomedisys';
 import { useAuthStore } from '@/stores/auth';
 
@@ -1013,16 +1056,15 @@ interface DashStats {
 const dash = ref<DashStats | null>(null);
 
 const modalDetalle = ref(false);
-const modalHistoriaClinica = ref(false);
+
 const modalAceptar = ref(false);
 const modalNegar = ref(false);
 const modalPdf = ref(false);
 const solicitudSeleccionada = ref<Solicitud | null>(null);
 const enviandoGomedisysId = ref<number | null>(null);
 const consultandoIngresoId = ref<number | null>(null);
-const modalResultadoGomedisys = ref(false);
-const resultadoGomedisysOk = ref(false);
-const resultadoGomedisysMensaje = ref('');
+const modalFichaGomedisys = ref(false);
+const campoCopiado = ref<string | null>(null);
 const adjuntoActivo = ref<{ id: number; nombre_original: string; mime_type: string; tamano: number } | null>(null);
 
 const formAceptar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', observaciones_respuesta: '' });
@@ -1132,6 +1174,13 @@ const colaTramos = computed(() => {
 
 function verTramo(id: string) {
   edadCola.value = edadCola.value === id ? null : id;
+  // Los tramos cuentan sobre toda la cola — si el tab de estado queda en
+  // 'pendiente' la tabla muestra menos filas de las que promete el tramo.
+  // Al elegir uno, el filtro de estado vuelve a 'todas' para que el número
+  // del gráfico coincida con lo que se lista.
+  if (edadCola.value) {
+    tabActiva.value = 'todas';
+  }
   paginaActual.value = 1;
 }
 
@@ -1264,7 +1313,7 @@ const solicitudesFiltradas = computed(() => {
     if (sortKey.value === 'paciente') { va = nombreCompleto(a).toLowerCase(); vb = nombreCompleto(b).toLowerCase(); }
     else if (sortKey.value === 'clinica') { va = (a.clinica?.nombre ?? '').toLowerCase(); vb = (b.clinica?.nombre ?? '').toLowerCase(); }
     else if (sortKey.value === 'especialidad') { va = (a.especialidad_requerida ?? '').toLowerCase(); vb = (b.especialidad_requerida ?? '').toLowerCase(); }
-    else { va = a.created_at; vb = b.created_at; }
+    else { va = `${a.fecha} ${a.hora ?? ''}`; vb = `${b.fecha} ${b.hora ?? ''}`; }
     return va < vb ? -dir : va > vb ? dir : 0;
   });
   return result;
@@ -1286,7 +1335,16 @@ const paginasVisibles = computed<(number | '…')[]>(() => {
   return [1, '…', cur - 1, cur, cur + 1, '…', total];
 });
 
-function toggleSort(key: 'paciente' | 'clinica' | 'especialidad') {
+function toggleSort(key: 'paciente' | 'clinica' | 'especialidad' | 'fecha') {
+  if (key === 'fecha') {
+    if (sortKey.value === 'fecha') {
+      sortDir.value = sortDir.value === 'desc' ? 'asc' : 'desc';
+    } else {
+      sortKey.value = 'fecha';
+      sortDir.value = 'desc';
+    }
+    return;
+  }
   if (sortKey.value === key) {
     sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
   } else {
@@ -1351,6 +1409,18 @@ function descripcionSinCodigo(dx: { codigo_cie10: string; descripcion: string })
 
 function estadoLabel(estado: string) {
   return { pendiente: 'Pendiente', en_espera: 'En espera', completado: 'Completada', negado: 'Negada' }[estado] ?? estado;
+}
+
+/** Qué significa cada estado — tooltip en badges y tabs (pendiente vs
+ *  en_espera es la confusión clásica del equipo). */
+function estadoTooltip(estado: string): string {
+  return {
+    todas: 'Toda la cola activa.',
+    pendiente: 'Sin revisar — falta aceptarla o negarla.',
+    en_espera: 'Aceptada — esperando que el paciente llegue a la sede.',
+    completado: 'El paciente ya fue atendido.',
+    negado: 'La solicitud fue rechazada.',
+  }[estado] ?? estado;
 }
 
 /** ID interno de la app (distinto del código REF que emite Gomedisys). */
@@ -1641,7 +1711,6 @@ function verDetalle(s: Solicitud) {
     URL.revokeObjectURL(pdfBlobUrl.value);
     pdfBlobUrl.value = null;
   }
-  modalHistoriaClinica.value = false;
   modalDetalle.value = true;
   cargarThumbnails(s);
 }
@@ -1649,10 +1718,6 @@ function verDetalle(s: Solicitud) {
 function cerrarDetalle() {
   modalDetalle.value = false;
   limpiarThumbnails();
-}
-
-function abrirHistoriaClinica() {
-  modalHistoriaClinica.value = true;
 }
 
 function fechaActual(): string {
@@ -1764,23 +1829,100 @@ function abrirAceptar(s: Solicitud) {
   modalAceptar.value = true;
 }
 
+interface FichaCampo { label: string; valor: string }
+
+// Campos en el mismo orden del formulario "Registro de Referencia" de
+// Gomedisys — así el operador va copiando y pegando de arriba abajo sin
+// saltarse nada.
+const fichaGomedisys = computed<FichaCampo[]>(() => {
+  const s = solicitudSeleccionada.value;
+  if (!s) return [];
+  const dx = s.diagnosticos?.[0];
+  return [
+    { label: 'Tipo de documento', valor: s.tipo_documento },
+    { label: 'Número de documento', valor: s.numero_documento },
+    { label: 'Nombres', valor: [s.primer_nombre, s.segundo_nombre].filter(Boolean).join(' ') },
+    { label: 'Apellidos', valor: [s.primer_apellido, s.segundo_apellido].filter(Boolean).join(' ') },
+    { label: 'Edad', valor: String(s.edad) },
+    { label: 'Género', valor: s.genero === 'M' ? 'Masculino' : 'Femenino' },
+    { label: 'Diagnóstico CIE-10', valor: dx ? `${dx.codigo_cie10} — ${dx.descripcion}` : s.diagnostico },
+    { label: 'Municipio', valor: s.municipio_capita },
+    { label: 'Dirección', valor: s.direccion_paciente || '' },
+    { label: 'Teléfono', valor: s.telefono_paciente || '' },
+    { label: 'Servicio de remisión', valor: s.servicio_remision || s.servicio_ubicacion_actual },
+    { label: 'Resumen clínico', valor: s.resumen_historia_clinica },
+  ];
+});
+
 async function abrirGomedisys(s: Solicitud) {
-  // Seguro extra además del :loading del botón — si por algo llega un
-  // segundo clic mientras el primero sigue en curso (doble clic rápido,
-  // otra fila), se ignora en vez de mandar un segundo intento que choque
-  // con el primero en la misma pestaña de Gomedisys.
+  // Seguro extra — si llega un segundo clic mientras el primero sigue en
+  // curso (doble clic rápido), se ignora.
   if (enviandoGomedisysId.value !== null) return;
   enviandoGomedisysId.value = s.id;
   solicitudSeleccionada.value = s;
   try {
     const resultado = await autocompletarEnGomedisys(s);
-    resultadoGomedisysOk.value = resultado.ok;
-    resultadoGomedisysMensaje.value = resultado.ok
-      ? 'El formulario quedó diligenciado en Gomedisys, sin guardar. Revisa esa pestaña, completa lo que falte y decide tú si guardar.'
-      : (resultado.error || 'No se pudo diligenciar el formulario en Gomedisys.');
-    modalResultadoGomedisys.value = true;
+    if (resultado.ok) {
+      notify.success('El formulario quedó diligenciado en la ventana de Gomedisys — revísalo allá antes de guardar.');
+      return;
+    }
+    if (resultado.error === 'login') {
+      // La ventana gestionada quedó abierta en el login — la persona entra
+      // una sola vez (la sesión queda guardada) y reintenta el botón.
+      notify.warning('Se abrió una ventana de Gomedisys — inicia sesión ahí una sola vez y vuelve a darle clic al botón.');
+      return;
+    }
+    // 'local-offline' = el servidor local no está corriendo: sin escándalo,
+    // se abre la ficha de copiado manual. Otros errores sí se avisan.
+    if (resultado.error && resultado.error !== 'local-offline') {
+      notify.warning(resultado.error);
+    }
+    campoCopiado.value = null;
+    modalFichaGomedisys.value = true;
   } finally {
     enviandoGomedisysId.value = null;
+  }
+}
+
+// navigator.clipboard solo existe en contextos seguros (https/localhost);
+// en http://referencia.test toca el fallback con textarea + execCommand.
+async function copiarTexto(texto: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(texto);
+      return true;
+    }
+  } catch { /* sigue al fallback */ }
+  const ta = document.createElement('textarea');
+  ta.value = texto;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  const ok = document.execCommand('copy');
+  ta.remove();
+  return ok;
+}
+
+let copiadoTimer: number | undefined;
+
+async function copiarDato(campo: FichaCampo) {
+  if (!campo.valor) return;
+  if (await copiarTexto(campo.valor)) {
+    campoCopiado.value = campo.label;
+    window.clearTimeout(copiadoTimer);
+    copiadoTimer = window.setTimeout(() => { campoCopiado.value = null; }, 1600);
+  } else {
+    notify.error('No se pudo copiar al portapapeles');
+  }
+}
+
+async function copiarTodoGomedisys() {
+  const texto = fichaGomedisys.value.map(c => `${c.label}: ${c.valor || '—'}`).join('\n');
+  if (await copiarTexto(texto)) {
+    notify.success('Todos los datos copiados al portapapeles');
+  } else {
+    notify.error('No se pudo copiar al portapapeles');
   }
 }
 
@@ -1850,7 +1992,7 @@ watch(() => route.query.resaltar, (nuevo) => {
 });
 
 usePolling(() => {
-  if (!cargando.value && !modalDetalle.value && !modalAceptar.value && !modalNegar.value && !modalPdf.value && !modalHistoriaClinica.value && !modalResultadoGomedisys.value && !modalConfirmarIngreso.value) cargarSilencioso();
+  if (!cargando.value && !modalDetalle.value && !modalAceptar.value && !modalNegar.value && !modalPdf.value && !modalFichaGomedisys.value && !modalConfirmarIngreso.value) cargarSilencioso();
 }, 30000);
 </script>
 
@@ -2375,7 +2517,6 @@ usePolling(() => {
 .sol-dx-text {
   font-size: 11px;
   color: #64748b;
-  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2557,9 +2698,9 @@ usePolling(() => {
 }
 
 /* ── Table ── */
-.sol-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.sol-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
 .sol-th {
-  padding: 8px 12px;
+  padding: 8px 10px;
   text-align: left;
   font-size: 10px; font-weight: 700;
   text-transform: uppercase; letter-spacing: .05em;
@@ -2567,22 +2708,26 @@ usePolling(() => {
   background: #16468E;
   border-bottom: 1px solid #123a78;
   text-shadow: 0 1px 2px rgba(0,0,0,.25);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sol-th:first-child { border-radius: 8px 0 0 8px; }
 .sol-th:last-child { border-radius: 0 8px 8px 0; }
 .sol-table-thead th { position: sticky; top: 0; z-index: 10; }
 .sol-td {
-  padding: 9px 12px;
+  padding: 9px 10px;
   font-size: 12px; color: #334155;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sol-table-row { transition: background .15s ease, box-shadow .15s ease; }
 .sol-table-row:hover { background: #f8fafc; box-shadow: inset 3px 0 0 var(--rf-primary); }
 .sol-table-row:hover .sol-table-status { transform: scale(1.06); }
 .sol-table-row:last-child td { border-bottom: none; }
-.sol-th-paciente { min-width: 200px; }
 .sol-th-actions { text-align: right; }
 
 .sol-table-paciente { display: flex; align-items: center; gap: 10px; }
@@ -2595,11 +2740,16 @@ usePolling(() => {
 .sol-table-name {
   font-size: 13px; font-weight: 700; color: #1e2d55;
   margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  max-width: 200px;
 }
-.sol-table-clinica-name { font-size: 12px; font-weight: 700; color: #1e40af; margin: 0; }
-.sol-table-remitente { font-size: 10px; color: #94a3b8; margin: 2px 0 0; }
-.sol-table-doc { font-size: 10px; color: #94a3b8; margin: 1px 0 0; }
+.sol-table-clinica-name {
+  font-size: 12px; font-weight: 700; color: #1e40af; margin: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sol-table-remitente {
+  font-size: 10px; color: #94a3b8; margin: 2px 0 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sol-table-doc { font-size: 10px; color: #94a3b8; margin: 1px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sol-table-status {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 10px; border-radius: 999px;
@@ -2680,13 +2830,19 @@ usePolling(() => {
 :deep(.detalle-dialog .el-dialog__body) {
   padding: 0;
   max-height: calc(100vh - 3rem);
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 :deep(.el-overlay) { background-color: rgba(8, 27, 58, .56); backdrop-filter: blur(4px); }
 
-.detalle-content { padding: 0; position: relative; background: #F8FAFC; }
+.detalle-content {
+  padding: 0;
+  position: relative;
+  background: #F8FAFC;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 3rem);
+}
 
 .detalle-close-btn {
   position: absolute;
@@ -2710,8 +2866,8 @@ usePolling(() => {
   overflow: hidden;
   display: flex;
   align-items: center;
-  gap: .65rem;
-  padding: .7rem 3.5rem .7rem 1.1rem;
+  gap: .55rem;
+  padding: .5rem 3.5rem .5rem 1rem;
   background: #fff;
   border-bottom: 1px solid #EEF2F9;
 }
@@ -2726,8 +2882,8 @@ usePolling(() => {
 }
 .detalle-head-icon {
   position: relative; z-index: 1;
-  width: 36px; height: 36px;
-  border-radius: 11px;
+  width: 32px; height: 32px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #4F46E5, #7C3AED);
   display: grid; place-items: center;
   color: #fff;
@@ -2772,7 +2928,11 @@ usePolling(() => {
 .detalle-head-pdf:hover { background: #eff6ff; border-color: #86b4e8; }
 
 .detalle-body {
-  padding: .7rem 1.1rem;
+  padding: .5rem .9rem;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Cards */
@@ -2793,12 +2953,12 @@ usePolling(() => {
 .detalle-card-head {
   display: flex;
   align-items: center;
-  gap: .4rem;
-  padding: .45rem .6rem .25rem;
+  gap: .35rem;
+  padding: .35rem .55rem .15rem;
 }
 .detalle-card-icon {
-  width: 1.6rem; height: 1.6rem;
-  border-radius: 8px;
+  width: 1.45rem; height: 1.45rem;
+  border-radius: 7px;
   display: grid; place-items: center;
   flex-shrink: 0;
 }
@@ -2818,56 +2978,79 @@ usePolling(() => {
 .detalle-card-title-slate { color: #334155; }
 .detalle-card-title-rose { color: #b91c1c; }
 
-.card-body { padding: 0 .6rem .45rem; }
+.card-body { padding: 0 .55rem .35rem; }
 .card-text { font-size: .72rem; color: #334e70; line-height: 1.5; margin: 0; }
 .card-text-sm { font-size: .66rem; color: #64748b; line-height: 1.45; margin: 0; }
-.card-text-clamp {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.detalle-layout {
+  display: grid;
+  grid-template-columns: 1.9fr 1fr;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 6px;
 }
-.leer-mas-btn {
-  margin-top: .3rem;
-  font-size: .62rem;
-  font-weight: 700;
-  color: #2563eb;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
+.detalle-layout-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
-.leer-mas-btn:hover { text-decoration: underline; }
+.detalle-hc-card { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.detalle-hc-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.detalle-hc-box {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: .5rem .6rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e8eef5;
+}
+@media (max-width: 700px) {
+  :deep(.detalle-dialog .el-dialog__body) { overflow-y: auto; }
+  .detalle-layout { grid-template-columns: 1fr; grid-template-rows: none; }
+  .detalle-hc-box { min-height: 110px; max-height: 220px; }
+  .detalle-layout-side { overflow-y: visible; }
+}
+.detalle-hc-box::-webkit-scrollbar { width: 5px; }
+.detalle-hc-box::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.detalle-hc-box::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.dark .detalle-hc-box { background: rgba(15, 23, 42, .4); border-color: #243247; }
 
-:deep(.historia-dialog) { border-radius: 18px; overflow: hidden; box-shadow: 0 32px 80px rgba(11,35,73,.35); }
-:deep(.historia-dialog .el-dialog__header) { margin: 0; padding: 1rem 1.25rem; background: linear-gradient(135deg, #0D2D6B, #16468E); }
-:deep(.historia-dialog .el-dialog__body) { padding: 1.25rem; }
-:deep(.historia-dialog .el-dialog__headerbtn) { top: 14px; right: 14px; }
-:deep(.historia-dialog .el-dialog__headerbtn .el-dialog__close) { color: #fff; }
-.historia-dialog-header { display: flex; align-items: center; gap: .7rem; color: #fff; }
-.historia-dialog-header > svg { color: #7dd3fc; flex-shrink: 0; }
-.historia-dialog-header p { margin: 0; font-size: 14px; font-weight: 800; }
-.historia-dialog-header span { display: block; margin-top: 2px; color: rgba(255,255,255,.65); font-size: 11px; }
-.historia-dialog-text { max-height: min(55vh, 520px); margin: 0; overflow-y: auto; white-space: pre-wrap; word-break: break-word; color: #334155; font-size: 13px; line-height: 1.7; }
-
-.card-dx-list { display: flex; flex-direction: column; gap: 5px; }
+.card-dx-list { display: flex; flex-direction: column; gap: 6px; }
 .card-dx-item {
-  display: flex; align-items: baseline; gap: 6px;
-  padding: 5px 8px; border-radius: 8px;
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 8px 10px; border-radius: 10px;
   background: #f5f3ff;
+  border: 1px solid #e9e5fb;
 }
 .card-dx-code {
-  font-size: 11px; font-weight: 800; color: #7c3aed;
+  font-size: 10px; font-weight: 800; color: #7c3aed;
   font-family: monospace; flex-shrink: 0;
+  background: #ede9fe; border-radius: 6px;
+  padding: 1px 6px; margin-top: 1px;
 }
-.card-dx-desc { font-size: 11px; color: #334155; }
+.card-dx-desc { font-size: 12px; color: #334155; line-height: 1.4; }
+.dark .card-dx-item { background: rgba(124, 58, 237, .1); border-color: rgba(124, 58, 237, .25); }
+.dark .card-dx-code { background: rgba(124, 58, 237, .22); color: #c4b5fd; }
+.dark .card-dx-desc { color: #cbd5e1; }
+
+.sol-td-fecha { white-space: nowrap; }
+.sol-fecha { margin: 0; font-size: 11px; font-weight: 600; color: #334155; }
+.dark .sol-fecha { color: #cbd5e1; }
+.sol-hora { margin: 0; font-size: 10px; color: #94a3b8; }
 
 .data-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: .4rem;
-  padding: .12rem 0;
+  padding: .08rem 0;
   border-bottom: 1px solid #f1f5f9;
 }
 .data-row:last-child { border-bottom: none; }
@@ -3009,18 +3192,18 @@ usePolling(() => {
   padding: .55rem 1.1rem;
   border-radius: 10px;
   border: none;
-  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  background: linear-gradient(135deg, #16468e, #2563eb);
   color: #fff;
   font-size: .78rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(124, 58, 237, .3);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, .3);
   transition: all .2s ease;
   flex-shrink: 0;
 }
 .detalle-cerrar-btn:hover {
-  background: linear-gradient(135deg, #5B52F0, #8B47E8);
-  box-shadow: 0 6px 20px rgba(124, 58, 237, .4);
+  background: linear-gradient(135deg, #1d55ad, #3b82f6);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, .4);
 }
 
 /* ── Modales de acción (Aceptar/Negar/En espera/Completar) ── */
@@ -3112,10 +3295,8 @@ usePolling(() => {
 }
 .accion-gomedisys-btn:hover:not(.accion-gomedisys-btn-enviando) { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(124,58,237,.4); }
 /* No se usa :disabled a propósito — un botón enfocado que se deshabilita
-   pierde el foco de golpe, y eso hacía que la página saltara de scroll al
-   dar clic en "Enviar a Gomedisys". Este estado se ve igual mientras envía,
-   pero sin quitarlo de verdad del flujo de foco (el doble clic ya está
-   bloqueado aparte, en abrirGomedisys). */
+   pierde el foco de golpe y la página salta de scroll. El doble clic ya
+   está bloqueado aparte, en abrirGomedisys. */
 .accion-gomedisys-btn-enviando { opacity: .6; cursor: default; pointer-events: none; }
 .accion-confirm-text {
   font-size: .78rem;
@@ -3161,16 +3342,61 @@ usePolling(() => {
 .accion-confirmar-info { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 4px 14px rgba(37,99,235,.3); }
 .accion-confirmar-info:hover:not(:disabled) { background: linear-gradient(135deg, #60a5fa, #3b82f6); box-shadow: 0 6px 20px rgba(37,99,235,.4); }
 .accion-confirmar-violet { background: linear-gradient(135deg, #818cf8, #6366f1); box-shadow: 0 4px 14px rgba(99,102,241,.3); }
-.resultado-gomedisys-mensaje {
-  margin: 0;
-  padding: .85rem 1rem;
-  border-radius: 10px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #475569;
-  font-size: .82rem;
-  line-height: 1.5;
+/* Ficha de copiado para Gomedisys */
+.ficha-list {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  max-height: 46vh;
+  overflow-y: auto;
 }
+.ficha-item {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .4rem .45rem .4rem .6rem;
+  border-radius: 9px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+}
+.ficha-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .05rem; }
+.ficha-item-label {
+  font-size: .56rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.ficha-item-value {
+  font-size: .72rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+.ficha-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .32rem .6rem;
+  border-radius: 7px;
+  border: 1px solid #ddd6fe;
+  background: #fff;
+  color: #6d28d9;
+  font-size: .62rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: all .15s ease;
+}
+.ficha-copy-btn:hover:not(:disabled) { background: #f5f3ff; border-color: #c4b5fd; }
+.ficha-copy-btn:disabled { opacity: .45; cursor: default; }
+.ficha-copy-btn-ok { background: #dcfce7 !important; border-color: #86efac !important; color: #16a34a !important; }
 .accion-confirmar-violet:hover:not(:disabled) { background: linear-gradient(135deg, #a5b4fc, #818cf8); box-shadow: 0 6px 20px rgba(99,102,241,.4); }
 .accion-confirmar-amber { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 14px rgba(217,119,6,.3); }
 .accion-confirmar-amber:hover:not(:disabled) { background: linear-gradient(135deg, #fbbf24, #f59e0b); box-shadow: 0 6px 20px rgba(217,119,6,.4); }

@@ -1920,3 +1920,10 @@
 .min-h-screen {
   min-height: 125vh;
 }
+
+/* Con zoom .8 el documento mide 125vh y el scroll queda en <html>;
+   Element Plus solo bloquea <body>, así que aquí bloqueamos html
+   mientras haya un popup/modal abierto. */
+html:has(> body.el-popup-parent--hidden) {
+  overflow: hidden !important;
+}

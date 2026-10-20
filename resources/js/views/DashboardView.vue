@@ -48,21 +48,16 @@
             <component :is="BarChart3Icon" class="w-3.5 h-3.5" />
           </div>
           <p class="panel-head-title">Tendencia de solicitudes</p>
+          <PanelHelp inverso texto="Cuántas solicitudes llegan a lo largo del tiempo. Cambia entre día, semana, mes o año; la línea tenue compara con el período anterior." />
           <div class="chart-legend">
             <span class="chart-legend-pill">
               <span class="chart-legend-dot" style="background:#8fb5f5"></span>Actual
             </span>
           </div>
-          <div class="gran-seg">
-            <button
-              v-for="g in [['dia', 'Día'], ['mes', 'Mes'], ['anio', 'Año']] as const" :key="g[0]"
-              class="gran-seg-btn" :class="{ 'gran-seg-btn--on': granularidad === g[0] }"
-              @click="cambiarGranularidad(g[0])"
-            >{{ g[1] }}</button>
-          </div>
+          <PeriodoSeg v-model="granularidad" v-model:fecha="fechaTendencia" sin-todo inverso />
         </div>
         <div class="flex-1 min-h-0">
-          <apexchart :key="'tend-' + granularidad" type="line" height="100%" :options="diaChartOptions" :series="diaChartSeries" />
+          <apexchart :key="'tend-' + granularidad + (isDark ? 'd' : 'l')" type="line" height="100%" :options="diaChartOptions" :series="diaChartSeries" />
         </div>
       </div>
 
@@ -73,19 +68,21 @@
             <component :is="PieChartIcon" class="w-3.5 h-3.5" />
           </div>
           <p class="panel-head-title">Distribución por estado</p>
-          <span class="panel-head-pill">Total <i class="pill-caret">▾</i></span>
+          <PanelHelp texto="Cómo están repartidas las solicitudes según su estado actual. Pasa el mouse sobre cada color para ver el detalle; los botones cambian el período." />
+          <PeriodoSeg v-model="periodos.donut.p" v-model:fecha="periodos.donut.ref" />
         </div>
         <div class="flex-1 flex items-center min-h-0 overflow-hidden gap-2">
           <div class="estado-donut-wrap">
-            <apexchart type="donut" height="100%" width="100%" :options="estadoDonutOptions" :series="estadoDonutSeries" />
-            <div class="estado-donut-center">
+            <apexchart v-if="stats.distribucion.total > 0" :key="'donut-' + (isDark ? 'd' : 'l')" type="donut" height="100%" width="100%" :options="estadoDonutOptions" :series="estadoDonutSeries" />
+            <div v-else class="estado-donut-empty">Sin solicitudes<br>en este período</div>
+            <div v-if="stats.distribucion.total > 0" class="estado-donut-center">
               <template v-if="donutHover">
                 <span class="estado-donut-label" :style="{ color: donutHover.color }">{{ donutHover.label }}</span>
                 <span class="estado-donut-num">{{ donutHover.value }}</span>
                 <span class="estado-donut-label">{{ donutHover.pct }}% del total</span>
               </template>
               <template v-else>
-                <span class="estado-donut-num">{{ stats.solicitudes.total }}</span>
+                <span class="estado-donut-num">{{ stats.distribucion.total }}</span>
                 <span class="estado-donut-label">Solicitudes</span>
               </template>
             </div>
@@ -114,6 +111,8 @@
             <component :is="ActivityIcon" class="w-3.5 h-3.5" />
           </div>
           <p class="panel-head-title">Actividad reciente</p>
+          <PanelHelp alinear="derecha" texto="Los últimos movimientos del sistema: solicitudes recibidas, aceptadas, negadas o puestas en espera. Los botones cambian el período." />
+          <PeriodoSeg v-model="periodos.actividad.p" v-model:fecha="periodos.actividad.ref" />
           <router-link to="/historico" class="panel-link-sm">Ver todo</router-link>
         </div>
         <div class="flex-1 w-full flex flex-col gap-1 min-h-0 overflow-y-auto activity-list">
@@ -146,10 +145,11 @@
             <component :is="StethoscopeIcon" class="w-3.5 h-3.5" />
           </div>
           <p class="panel-head-title">Solicitudes por especialidad</p>
-          <span class="panel-head-pill">Todas <i class="pill-caret">▾</i></span>
+          <PanelHelp texto="Las especialidades más solicitadas, qué porcentaje representan del total y su tendencia reciente. Los botones cambian el período." />
+          <PeriodoSeg v-model="periodos.especialidades.p" v-model:fecha="periodos.especialidades.ref" />
         </div>
-        <div class="flex-1 min-h-0 overflow-hidden">
-          <table class="dash-table">
+        <div class="flex-1 min-h-0 overflow-y-auto esp-scroll">
+          <table class="dash-table dash-table--esp">
             <thead>
               <tr>
                 <th>Especialidad</th>
@@ -194,7 +194,8 @@
             <component :is="TimerIcon" class="w-3.5 h-3.5" />
           </div>
           <p class="panel-head-title">Tiempo de respuesta (SLA)</p>
-          <span class="panel-head-pill">Últimos 14 días <i class="pill-caret">▾</i></span>
+          <PanelHelp texto="Qué tan rápido responde el equipo: cuántas solicitudes se contestaron en menos de 2h, entre 2–4h o más de 4h; la línea es el tiempo promedio. Los botones cambian el período (día agrupa por horas, año por meses)." />
+          <PeriodoSeg v-model="periodos.sla.p" v-model:fecha="periodos.sla.ref" />
         </div>
         <div class="flex-1 min-h-0 flex flex-col">
           <!-- Leyenda -->
@@ -231,7 +232,7 @@
           </div>
           <!-- Etiquetas X -->
           <div class="sla-xaxis">
-            <span v-for="d in stats.sla_diario.dias" :key="d.fecha" class="sla-xlabel">{{ slaFechaCorta(d.fecha) }}</span>
+            <span v-for="d in stats.sla_diario.dias" :key="d.fecha" class="sla-xlabel">{{ d.etiqueta }}</span>
           </div>
         </div>
         <div class="sla-summary">
@@ -258,7 +259,8 @@
             <component :is="HospitalIcon" class="w-3.5 h-3.5" />
           </div>
           <p class="panel-head-title">Top clínicas emisoras</p>
-          <span class="panel-head-pill">Más solicitudes <i class="pill-caret">▾</i></span>
+          <PanelHelp alinear="derecha" texto="Las clínicas que más solicitudes envían, su participación sobre el total y su tendencia reciente. Los botones cambian el período." />
+          <PeriodoSeg v-model="periodos.clinicas.p" v-model:fecha="periodos.clinicas.ref" />
         </div>
         <div class="flex-1 min-h-0 overflow-hidden">
           <table class="dash-table">
@@ -305,7 +307,8 @@
           <component :is="ClipboardListIcon" class="w-3.5 h-3.5" />
         </div>
         <p class="panel-head-title">Solicitudes recientes</p>
-        <span class="panel-head-pill">Últimas {{ stats.solicitudes_recientes.length }}</span>
+        <PanelHelp texto="Las últimas solicitudes recibidas con su estado actual. Los botones cambian el período." />
+        <PeriodoSeg v-model="periodos.recientes.p" v-model:fecha="periodos.recientes.ref" />
         <router-link to="/solicitudes-referencia" class="panel-link-sm ml-2">Ver todas</router-link>
       </div>
       <div class="flex-1 min-h-0 overflow-auto recientes-scroll">
@@ -318,7 +321,6 @@
               <th>Especialidad</th>
               <th>Estado</th>
               <th>Fecha solicitud</th>
-              <th class="text-right">Tiempo</th>
               <th class="text-right">Acciones</th>
             </tr>
           </thead>
@@ -340,7 +342,6 @@
               <td><p class="tbl-name tbl-name--esp" :title="s.especialidad">{{ s.especialidad }}</p></td>
               <td><span class="estado-badge" :class="`estado-badge--${s.estado}`">{{ estadoLabel(s.estado) }}</span></td>
               <td class="tbl-sub whitespace-nowrap">{{ s.fecha_solicitud }}</td>
-              <td class="text-right"><span class="tiempo-chip">{{ s.tiempo || '—' }}</span></td>
               <td class="text-right whitespace-nowrap">
                 <button class="tbl-action" title="Ver solicitud" @click="verSolicitud(s.id)">
                   <component :is="EyeIcon" class="w-3.5 h-3.5" />
@@ -354,7 +355,7 @@
               </td>
             </tr>
             <tr v-if="!stats.solicitudes_recientes.length">
-              <td colspan="8" class="tbl-empty">Sin solicitudes recientes</td>
+              <td colspan="7" class="tbl-empty">Sin solicitudes recientes</td>
             </tr>
           </tbody>
         </table>
@@ -368,7 +369,8 @@
             <component :is="CalClockIcon" class="w-3.5 h-3.5" />
           </div>
           <p class="panel-head-title">Solicitudes por día y hora</p>
-          <span class="panel-head-pill">Histórico</span>
+          <PanelHelp texto="En qué momentos llegan más solicitudes — las celdas más oscuras son los días y horas de mayor volumen. Los botones cambian el período." />
+          <PeriodoSeg v-model="periodos.diahora.p" v-model:fecha="periodos.diahora.ref" />
         </div>
         <div class="flex-1 min-h-0 flex flex-col">
           <div class="heatmap-grid flex-1 min-h-0">
@@ -400,10 +402,11 @@
             <component :is="GridIcon" class="w-3.5 h-3.5" />
           </div>
           <p class="panel-head-title">Mapa de calor</p>
-          <span class="panel-head-pill">6 meses</span>
+          <PanelHelp alinear="derecha" texto="Las especialidades más pedidas mes a mes — sirve para ver qué servicios crecen o bajan en el tiempo. Los botones cambian el período." />
+          <PeriodoSeg v-model="periodos.heatmap.p" v-model:fecha="periodos.heatmap.ref" />
         </div>
         <div v-if="espMesSeries.length" class="flex-1 min-h-0">
-          <apexchart type="heatmap" height="100%" :options="espMesOptions" :series="espMesSeries" />
+          <apexchart :key="'espmes-' + (isDark ? 'd' : 'l')" type="heatmap" height="100%" :options="espMesOptions" :series="espMesSeries" />
         </div>
         <div v-else class="flex-1 min-h-0 flex items-center justify-center text-[10px] text-slate-400">
           Sin datos de especialidades
@@ -433,7 +436,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, reactive, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useLayoutStore } from '@/stores/layout';
 import { useAuthStore } from '@/stores/auth';
@@ -442,7 +445,6 @@ import { exportarSolicitudPdf } from '@/lib/exportarSolicitudPdf';
 import {
   ArrowRight as ArrowRightIcon,
   Clock3 as ClockIcon,
-  Users as UsersIcon,
   ClipboardList as ClipboardListIcon,
   Hospital as HospitalIcon,
   PieChart as PieChartIcon,
@@ -470,6 +472,8 @@ import http from '@/plugins/axios';
 import StatCard, { type StatCardTone } from '@/components/ui/StatCard.vue';
 import DateRangeFilter from '@/components/ui/DateRangeFilter.vue';
 import Sparkline from '@/components/ui/Sparkline.vue';
+import PanelHelp from '@/components/ui/PanelHelp.vue';
+import PeriodoSeg from '@/components/ui/PeriodoSeg.vue';
 
 const router = useRouter();
 const layout = useLayoutStore();
@@ -486,14 +490,17 @@ const pdfCargando = ref<number | null>(null);
 type ActividadEvento = { tipo: string; titulo: string; detalle: string; at: string | null };
 type TopConSerie = { nombre: string; total: number; pct: number; serie: number[] };
 type SlaDiario = {
-  dias: Array<{ fecha: string; hasta2: number; de2a4: number; mas4: number; avg_horas: number }>;
+  dias: Array<{ fecha: string; etiqueta: string; hasta2: number; de2a4: number; mas4: number; avg_horas: number }>;
   promedio: string | null;
   promedio_min: number | null;
   promedio_delta: number | null;
 };
 
+type Periodo = 'dia' | 'semana' | 'mes' | 'anio' | 'todo';
+
 const stats = ref({
   solicitudes: { total: 0, pendientes: 0, negadas: 0, en_espera: 0, completadas: 0 },
+  distribucion: { total: 0, pendientes: 0, negadas: 0, en_espera: 0, completadas: 0 },
   clinicas: { total: 0, activas: 0, pendientes: 0, nuevas_mes: 0 },
   usuarios: { total: 0, activos: 0 },
   solicitudes_recientes: [] as any[],
@@ -504,6 +511,11 @@ const stats = ref({
   tendencia_usuarios: [] as Array<{ fecha: string; total: number }>,
   tendencia_pendientes: [] as Array<{ fecha: string; total: number }>,
   tendencia_pendientes_anterior: [] as Array<{ fecha: string; total: number }>,
+  tendencia_en_espera: [] as Array<{ fecha: string; total: number }>,
+  tendencia_completadas: [] as Array<{ fecha: string; total: number }>,
+  tendencia_negadas: [] as Array<{ fecha: string; total: number }>,
+  tendencia_negadas_anterior: [] as Array<{ fecha: string; total: number }>,
+  tasa_aceptacion: 0,
   top_especialidades_serie: [] as TopConSerie[],
   top_clinicas: [] as TopConSerie[],
   sla: { bandas: [] as Array<{ etiqueta: string; total: number; pct: number }>, dentro_pct: 0, total: 0 },
@@ -520,6 +532,19 @@ const filtros = ref<{ desde: string; hasta: string; estado: string; especialidad
   especialidad: '',
   clinica: '',
 });
+
+/** Período + fecha ancla de cada panel — 'todo' mantiene los filtros generales. */
+const periodos = reactive<Record<string, { p: Periodo; ref: string }>>({
+  donut: { p: 'todo', ref: '' },
+  actividad: { p: 'todo', ref: '' },
+  especialidades: { p: 'todo', ref: '' },
+  sla: { p: 'todo', ref: '' },
+  clinicas: { p: 'todo', ref: '' },
+  recientes: { p: 'todo', ref: '' },
+  diahora: { p: 'todo', ref: '' },
+  heatmap: { p: 'todo', ref: '' },
+});
+watch(periodos, () => cargarStats());
 
 const especialidadesOpciones = computed(() => stats.value.filtros?.especialidades ?? []);
 const clinicasOpciones = computed(() => stats.value.filtros?.clinicas ?? []);
@@ -541,7 +566,7 @@ function aplicarFiltros() {
   cargarStats();
 }
 
-const displayStats = ref([0, 0, 0, 0]);
+const displayStats = ref([0, 0, 0]);
 
 function animateCounters(targets: number[]) {
   const duration = 900;
@@ -572,12 +597,18 @@ function comparacionTexto(pct: number): string {
   return `${pct >= 0 ? '↑' : '↓'}${Math.abs(pct)}% vs período anterior`;
 }
 
+/** Comparación de negadas: menos rechazos es mejor — pill verde cuando
+ *  bajaron vs la quincena anterior, roja cuando subieron. */
+const negadasComparacion = computed(() => {
+  const d = cambioVsAnterior(stats.value.tendencia_negadas, stats.value.tendencia_negadas_anterior);
+  if (d === 0) return 'sin cambios';
+  return d < 0 ? `↑${Math.abs(d)}% menos que antes` : `↓${d}% más que antes`;
+});
+
 const statCards = computed((): { label: string; value: string; icon: typeof ClipboardListIcon; tone: StatCardTone; delta: string; percent: number; sparkline?: number[]; comparacion?: string }[] => {
   const cambioPend = cambioVsAnterior(stats.value.tendencia_pendientes, stats.value.tendencia_pendientes_anterior);
-  const cambioUsuarios = cambioVsAnterior(
-    stats.value.tendencia_usuarios.slice(Math.floor(stats.value.tendencia_usuarios.length / 2)),
-    stats.value.tendencia_usuarios.slice(0, Math.floor(stats.value.tendencia_usuarios.length / 2)),
-  );
+  const aceptadas = stats.value.solicitudes.en_espera + stats.value.solicitudes.completadas;
+  const resueltas = aceptadas + stats.value.solicitudes.negadas;
   return [
     {
       label: 'Solicitudes totales',
@@ -590,18 +621,18 @@ const statCards = computed((): { label: string; value: string; icon: typeof Clip
       comparacion: comparacionTexto(cambioVsAnterior(stats.value.tendencia, stats.value.tendencia_anterior)),
     },
     {
-      label: 'Clínicas registradas',
-      value: String(displayStats.value[1]),
-      icon: HospitalIcon,
-      tone: 'success',
-      delta: `${stats.value.clinicas.activas} activas`,
-      percent: stats.value.clinicas.total ? Math.round((stats.value.clinicas.activas / stats.value.clinicas.total) * 100) : 0,
-      sparkline: stats.value.tendencia_clinicas.map(t => t.total),
-      comparacion: `+${stats.value.clinicas.nuevas_mes} nuevas este mes`,
+      label: 'Negadas',
+      value: String(displayStats.value[2]),
+      icon: XCircleIcon,
+      tone: 'danger',
+      delta: `${stats.value.solicitudes.total ? Math.round((stats.value.solicitudes.negadas / stats.value.solicitudes.total) * 100) : 0}% del total`,
+      percent: 0,
+      sparkline: stats.value.tendencia_negadas.map(t => t.total),
+      comparacion: negadasComparacion.value,
     },
     {
       label: 'Pendientes de gestión',
-      value: String(displayStats.value[2]),
+      value: String(displayStats.value[1]),
       icon: ClockIcon,
       tone: 'warning',
       delta: `${stats.value.solicitudes.en_espera} en espera`,
@@ -610,20 +641,20 @@ const statCards = computed((): { label: string; value: string; icon: typeof Clip
       comparacion: comparacionTexto(cambioPend),
     },
     {
-      label: 'Usuarios activos',
-      value: String(displayStats.value[3]),
-      icon: UsersIcon,
-      tone: 'violet',
-      delta: `${stats.value.usuarios.total} total`,
-      percent: stats.value.usuarios.total ? Math.round((stats.value.usuarios.activos / stats.value.usuarios.total) * 100) : 0,
-      sparkline: stats.value.tendencia_usuarios.map(t => t.total),
-      comparacion: cambioUsuarios === 0 ? 'sin cambios' : comparacionTexto(cambioUsuarios),
+      label: 'Tasa de aceptación',
+      value: `${stats.value.tasa_aceptacion}%`,
+      icon: CheckCircleIcon,
+      tone: 'success',
+      delta: `${stats.value.solicitudes.negadas} negadas`,
+      percent: 0,
+      sparkline: stats.value.tendencia_en_espera.map((t, i) => t.total + (stats.value.tendencia_completadas[i]?.total ?? 0)),
+      comparacion: `${aceptadas} de ${resueltas} resueltas`,
     },
   ];
 });
 
 const donutBars = computed(() => {
-  const s = stats.value.solicitudes;
+  const s = stats.value.distribucion;
   const total = Math.max(1, s.total);
   return [
     { label: 'Completadas', value: s.completadas, color: '#22c55e', pct: Math.round((s.completadas / total) * 100) },
@@ -678,13 +709,10 @@ const estadoDonutOptions = computed(() => ({
   tooltip: { enabled: false },
 }));
 
-/** Granularidad del gráfico de tendencia (día / mes / año). */
-const granularidad = ref<'dia' | 'mes' | 'anio'>('dia');
-function cambiarGranularidad(g: 'dia' | 'mes' | 'anio') {
-  if (granularidad.value === g) return;
-  granularidad.value = g;
-  cargarStats();
-}
+/** Granularidad del gráfico de tendencia (día / semana / mes / año) + fecha ancla. */
+const granularidad = ref<string>('dia');
+const fechaTendencia = ref('');
+watch([granularidad, fechaTendencia], () => cargarStats());
 
 /** Área: solicitudes por período con la línea punteada del período anterior. */
 const diaCats = computed(() => stats.value.tendencia.map(t => t.label));
@@ -803,7 +831,7 @@ function slaHoverShow(e: MouseEvent, i: number): void {
   const d = stats.value.sla_diario.dias[i];
   if (!d) return;
   const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-  showTip(r.left + r.width / 2, r.top, slaFecha(d.fecha), [
+  showTip(r.left + r.width / 2, r.top, d.etiqueta, [
     { color: '#22c55e', label: '≤ 2h:', value: d.hasta2 },
     { color: '#f59e0b', label: '2–4h:', value: d.de2a4 },
     { color: '#ef4444', label: '> 4h:', value: d.mas4 },
@@ -824,16 +852,6 @@ const slaTicks = computed(() => [0, 0.25, 0.5, 0.75, 1].map(f => ({
 
 function slaSegH(v: number): number {
   return (v / slaMaxTotal.value) * 100;
-}
-
-function slaFecha(iso: string): string {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function slaFechaCorta(iso: string): string {
-  const d = new Date(iso + 'T00:00:00');
-  const mes = d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '');
-  return `${d.getDate()} ${mes}`;
 }
 
 /** La línea de promedio se escala a su propio rango (con margen arriba). */
@@ -1052,6 +1070,11 @@ async function cargarStats() {
   try {
     cargando.value = true;
     const params: Record<string, string> = { granularidad: granularidad.value };
+    if (fechaTendencia.value) params.ref_tendencia = fechaTendencia.value;
+    for (const [key, sel] of Object.entries(periodos)) {
+      params[`periodo_${key}`] = sel.p;
+      if (sel.p !== 'todo' && sel.ref) params[`ref_${key}`] = sel.ref;
+    }
     if (filtros.value.desde) params.desde = filtros.value.desde;
     if (filtros.value.hasta) params.hasta = filtros.value.hasta;
     if (filtros.value.estado && filtros.value.estado !== 'todas') params.estado = filtros.value.estado;
@@ -1062,9 +1085,8 @@ async function cargarStats() {
     errorCarga.value = false;
     animateCounters([
       stats.value.solicitudes.total,
-      stats.value.clinicas.total,
       stats.value.solicitudes.pendientes,
-      stats.value.usuarios.activos,
+      stats.value.solicitudes.negadas,
     ]);
   } catch {
     errorCarga.value = true;
@@ -1191,6 +1213,8 @@ usePolling(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  row-gap: 5px;
+  flex-wrap: wrap;
   margin-bottom: 7px;
   position: relative;
   z-index: 1;
@@ -1227,7 +1251,6 @@ usePolling(() => {
   flex-shrink: 0;
 }
 .dark .panel-head-pill { background: rgba(99,102,241,0.15); color: #a5b4fc; border-color: rgba(99,102,241,0.25); }
-.pill-caret { font-style: normal; font-size: 8px; margin-left: 2px; opacity: .7; }
 .panel-link, .panel-link-sm {
   display: inline-flex;
   align-items: center;
@@ -1307,25 +1330,15 @@ usePolling(() => {
   padding: 2px 8px;
   font-size: 9px;
 }
-/* Selector Día · Mes · Año en vidrio sobre el navy */
-.gran-seg {
-  display: flex; align-items: center; gap: 2px;
-  background: rgba(255,255,255,.12);
-  border: 1px solid rgba(255,255,255,.2);
-  border-radius: 999px;
-  padding: 2px;
-  flex-shrink: 0;
+
+.estado-donut-empty {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  font-size: 10px; font-weight: 700; color: #94a3b8;
+  line-height: 1.5;
 }
-.gran-seg-btn {
-  font-size: 9px; font-weight: 800;
-  padding: 2.5px 9px; border-radius: 999px;
-  color: rgba(255,255,255,.72);
-  background: transparent; border: none; cursor: pointer;
-  transition: background .15s ease, color .15s ease;
-  white-space: nowrap;
-}
-.gran-seg-btn:hover { color: #fff; }
-.gran-seg-btn--on { background: #fff; color: #16468e; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
+.dark .estado-donut-empty { color: #64748b; }
 
 /* ── Dona de estados ── */
 /* La dona llena el alto disponible de la tarjeta — se adapta a cualquier
@@ -1642,17 +1655,6 @@ usePolling(() => {
 .dark .estado-badge--pendiente { background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.3); }
 .dark .estado-badge--negado { background: rgba(239,68,68,0.15); color: #fca5a5; border-color: rgba(239,68,68,0.3); }
 
-.tiempo-chip {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 700;
-  color: #475569;
-  background: #f1f5f9;
-  border-radius: 7px;
-  padding: 3px 8px;
-}
-.dark .tiempo-chip { background: rgba(255,255,255,0.06); color: #cbd5e1; }
-
 .tbl-action {
   width: 26px; height: 26px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -1718,13 +1720,16 @@ usePolling(() => {
 
 /* ── Tabla de recientes: header pegado al hacer scroll interno ── */
 .recientes-scroll { scrollbar-width: thin; }
-.dash-table--recientes thead th {
+.esp-scroll { scrollbar-width: thin; }
+.dash-table--recientes thead th,
+.dash-table--esp thead th {
   position: sticky;
   top: 0;
   background: #fff;
   z-index: 2;
 }
-.dark .dash-table--recientes thead th { background: #161b28; }
+.dark .dash-table--recientes thead th,
+.dark .dash-table--esp thead th { background: #161b28; }
 
 /* ── Avatar de paciente ── */
 .pac-avatar {

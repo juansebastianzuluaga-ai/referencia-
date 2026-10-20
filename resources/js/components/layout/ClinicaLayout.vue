@@ -57,7 +57,7 @@
                 <span class="topbar-user-name">{{ clinicaAuth.clinica?.nombre }}</span>
                 <span class="topbar-user-role">Clínica externa</span>
               </div>
-              <ChevronDownIcon class="w-3.5 h-3.5 hidden md:block" style="color:rgba(255,255,255,0.5);" />
+              <ChevronDownIcon class="w-3.5 h-3.5 hidden md:block topbar-user-chevron" />
             </button>
             <template #dropdown>
               <el-dropdown-menu class="w-56">
@@ -75,29 +75,8 @@
             </template>
           </el-dropdown>
 
-          <!-- Hamburguesa móvil -->
-          <button class="topbar-action-btn lg:hidden" title="Menú" @click="layout.toggleMobileMenu">
-            <component :is="layout.isMobileMenuOpen ? XIcon : MenuIcon" class="w-5 h-5" />
-          </button>
         </div>
       </div>
-
-      <!-- Menú móvil desplegable -->
-      <transition name="topbar-menu">
-        <nav v-if="layout.isMobileMenuOpen" class="lg:hidden border-t px-3 py-2" style="border-color:rgba(255,255,255,0.15);">
-          <router-link
-            v-for="item in mainItems"
-            :key="item.to"
-            :to="item.to"
-            class="topbar-mobile-item no-underline"
-            active-class="topbar-mobile-item-active"
-            @click="layout.closeMobileMenu"
-          >
-            <component :is="iconOf(item.icon)" class="shrink-0" style="width:18px;height:18px;" />
-            <span>{{ item.text }}</span>
-          </router-link>
-        </nav>
-      </transition>
     </header>
 
     <!-- ── Contenido ──────────────────────────────────────────────────────── -->
@@ -122,10 +101,8 @@ import * as icons from '@lucide/vue';
 import {
   ChevronDown as ChevronDownIcon,
   LogOut as LogOutIcon,
-  Menu as MenuIcon,
   Moon as MoonIcon,
   Sun as SunIcon,
-  X as XIcon,
 } from '@lucide/vue';
 import { ElMessageBox } from 'element-plus';
 
@@ -261,69 +238,72 @@ header::after {
   color: #fff;
 }
 
+/* Perfil destacado: píldora blanca que resalta sobre el navy */
 .topbar-user {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px 4px 4px;
-  margin-left: 4px;
-  border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 11px;
-  background: rgba(255,255,255,0.1);
+  gap: 9px;
+  padding: 4px 12px 4px 5px;
+  margin-left: 6px;
+  border: 1px solid rgba(255,255,255,0.9);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.96);
+  box-shadow: 0 4px 14px rgba(10, 25, 60, .28);
   cursor: pointer;
-  transition: background .15s ease, border-color .15s ease;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
-.topbar-user:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.25); }
+.topbar-user:hover {
+  background: #ffffff;
+  border-color: #ffffff;
+  box-shadow: 0 6px 18px rgba(10, 25, 60, .38);
+  transform: translateY(-1px);
+}
+.dark .topbar-user {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.22);
+  box-shadow: none;
+}
+.dark .topbar-user:hover {
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.32);
+}
 .topbar-user-avatar {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(255,255,255,0.28), rgba(255,255,255,0.1));
-  border: 1px solid rgba(255,255,255,0.3);
+  background: linear-gradient(135deg, var(--rf-primary), var(--rf-primary-2, #2563eb));
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35), 0 2px 6px rgba(13,45,107,.35);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
 }
+.dark .topbar-user-avatar {
+  background: linear-gradient(135deg, #2563eb, #16468e);
+}
 .topbar-user-iniciales {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   color: #fff;
   letter-spacing: 0.03em;
 }
+.topbar-user-chevron { color: #64748b; }
+.dark .topbar-user-chevron { color: rgba(255,255,255,0.55); }
 .topbar-user-name {
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--rf-primary, #16468e);
   max-width: 160px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.dark .topbar-user-name { color: #fff; }
 .topbar-user-role {
-  font-size: 9px;
-  color: rgba(255,255,255,0.55);
+  font-size: 9.5px;
+  font-weight: 500;
+  color: #64748b;
 }
-
-.topbar-mobile-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.85);
-  margin-bottom: 2px;
-}
-.topbar-mobile-item:hover { background: rgba(255,255,255,0.12); color:#fff; }
-.topbar-mobile-item-active {
-  background: #fff;
-  color: var(--rf-primary);
-}
-
-.topbar-menu-enter-active { transition: opacity .2s ease, transform .2s ease; }
-.topbar-menu-leave-active { transition: opacity .15s ease, transform .15s ease; }
-.topbar-menu-enter-from, .topbar-menu-leave-to { opacity: 0; transform: translateY(-6px); }
+.dark .topbar-user-role { color: rgba(255,255,255,0.55); }
 </style>

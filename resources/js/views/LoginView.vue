@@ -339,7 +339,9 @@ async function handleLogin() {
     await auth.login({ username: form.username, password: form.password });
     router.push({ name: 'dashboard' });
   } catch (error: any) {
-    if (axios.isAxiosError(error)) {
+    if (error?.code === 'session_not_persisted') {
+      errorInterno.value = 'La sesión no se pudo establecer. Borra las cookies del sitio (Ctrl+Shift+Supr) e inténtalo de nuevo.';
+    } else if (axios.isAxiosError(error)) {
       const status = error.response?.status;
       if (status === 422) {
         errorInterno.value = 'Usuario o contraseña incorrectos';

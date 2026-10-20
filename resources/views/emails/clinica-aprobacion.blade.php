@@ -14,10 +14,8 @@
           <!-- Header -->
           <tr>
             <td style="background:#0D2D6B;padding:28px 40px;text-align:center;">
-              <p style="margin:0;color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:0.5px;">
-                🏥 Clínica Santa Bárbara
-              </p>
-              <p style="margin:6px 0 0;color:#a0b8e8;font-size:13px;">Sistema de Referencia y Contrarreferencia</p>
+              <img src="{{ $message->embed(public_path('images/logo-w.png')) }}" alt="Clínica Santa Bárbara" style="height:48px;margin:0 auto 10px;display:block;">
+              <p style="margin:0;color:#a0b8e8;font-size:13px;">Sistema de Referencia</p>
             </td>
           </tr>
 
@@ -40,7 +38,7 @@
                 Estimados representantes de <strong>{{ $clinica->nombre }}</strong>,
               </p>
               <p style="margin:0 0 20px;font-size:14px;color:#555;line-height:1.7;">
-                Nos complace informarles que su solicitud de registro en el <strong>Sistema de Referencia y Contrarreferencia</strong> de la Clínica Santa Bárbara ha sido <strong style="color:#2e7d32;">aprobada exitosamente</strong>. A partir de ahora, su institución puede acceder al sistema y gestionar los procesos de referencia de pacientes.
+                Nos complace informarles que su solicitud de registro en el <strong>Sistema de Referencia</strong> de la Clínica Santa Bárbara ha sido <strong style="color:#2e7d32;">aprobada exitosamente</strong>. A partir de ahora, su institución puede acceder al sistema y gestionar los procesos de referencia de pacientes.
               </p>
 
               <!-- Datos de la clínica -->

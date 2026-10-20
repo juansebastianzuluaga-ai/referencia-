@@ -25,20 +25,6 @@
       />
     </div>
 
-    <!-- ── Bulk actions bar ── -->
-    <Transition name="bulk-slide">
-      <div v-if="seleccionadas.size > 0" class="clinic-bulk-bar shrink-0">
-        <span class="text-xs font-bold" style="color:#0D2D6B;">{{ seleccionadas.size }} seleccionada(s)</span>
-        <el-button type="success" size="small" @click="aprobarLote">
-          <component :is="CheckIcon" class="w-3 h-3 mr-0.5" /> Aprobar
-        </el-button>
-        <el-button type="danger" size="small" @click="abrirRechazoLote">
-          <component :is="XIcon" class="w-3 h-3 mr-0.5" /> Rechazar
-        </el-button>
-        <el-button size="small" text @click="seleccionadas.clear()">Limpiar</el-button>
-      </div>
-    </Transition>
-
     <!-- ── Mapa + Estadísticas + Tabla ── -->
     <div class="flex-1 flex gap-2 overflow-hidden">
     <div class="clinic-map-col shrink-0 flex flex-col gap-2 min-h-0">
@@ -103,42 +89,49 @@
             <span v-if="conteoFiltros > 0" class="clinic-filtros-badge">{{ conteoFiltros }}</span>
           </button>
 
-          <!-- ── Panel desplegable de filtros (teleport: el panel de la tabla tiene overflow:hidden) ── -->
-          <Teleport to="body">
-            <Transition name="bulk-slide">
-            <div v-if="filtrosAbiertos" ref="filtrosPanel" class="clinic-filtros-panel" :style="{ top: filtrosPanelPos.top + 'px', left: filtrosPanelPos.left + 'px' }">
-              <el-select v-model="filtroCiudad" placeholder="Todas las ciudades" clearable filterable size="small" class="clinic-select">
-                <el-option v-for="c in ciudadesUnicas" :key="c" :label="c" :value="c" />
-              </el-select>
-              <el-select
-                :model-value="tabActiva"
-                placeholder="Todos los estados"
-                size="small"
-                class="clinic-select"
-                @update:model-value="(v: string) => cambiarTab(v as 'todas' | 'pendiente' | 'activa' | 'rechazada')"
-              >
-                <el-option label="Todos los estados" value="todas" />
-                <el-option label="Activas" value="activa" />
-                <el-option label="Pendientes" value="pendiente" />
-                <el-option label="Rechazadas" value="rechazada" />
-              </el-select>
-              <el-input
-                v-model="filtroBuscar"
-                placeholder="Buscar por NIT, clínica, ciudad, contacto..."
-                class="clinic-search"
-                clearable
-                size="small"
-              >
-                <template #prefix>
-                  <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
-                </template>
-              </el-input>
-              <button v-if="hayFiltros" class="clinic-limpiar" @click="limpiarFiltros">Limpiar filtros</button>
-            </div>
-            </Transition>
-          </Teleport>
         </div>
       </div>
+      <!-- ── Barra de filtros inline: empuja la tabla, no se monta encima ── -->
+      <Transition name="bulk-slide">
+        <div v-if="filtrosAbiertos" class="clinic-filtros-bar">
+          <div class="clinic-filtros-field">
+            <label class="clinic-filtros-label">Ciudad</label>
+            <el-select v-model="filtroCiudad" placeholder="Todas las ciudades" clearable filterable size="small" class="clinic-select">
+              <el-option v-for="c in ciudadesUnicas" :key="c" :label="c" :value="c" />
+            </el-select>
+          </div>
+          <div class="clinic-filtros-field">
+            <label class="clinic-filtros-label">Estado</label>
+            <el-select
+              :model-value="tabActiva"
+              placeholder="Todos los estados"
+              size="small"
+              class="clinic-select"
+              @update:model-value="(v: string) => cambiarTab(v as 'todas' | 'pendiente' | 'activa' | 'rechazada')"
+            >
+              <el-option label="Todos los estados" value="todas" />
+              <el-option label="Activas" value="activa" />
+              <el-option label="Pendientes" value="pendiente" />
+              <el-option label="Rechazadas" value="rechazada" />
+            </el-select>
+          </div>
+          <div class="clinic-filtros-field clinic-filtros-field--grow">
+            <label class="clinic-filtros-label">Buscar</label>
+            <el-input
+              v-model="filtroBuscar"
+              placeholder="NIT, clínica, ciudad, contacto..."
+              class="clinic-search"
+              clearable
+              size="small"
+            >
+              <template #prefix>
+                <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
+              </template>
+            </el-input>
+          </div>
+          <button v-if="hayFiltros" class="clinic-limpiar" @click="limpiarFiltros">Limpiar</button>
+        </div>
+      </Transition>
       <!-- Loading -->
       <div v-if="cargando" class="clinic-table-loading">
         <div v-for="i in 6" :key="i" class="clinic-table-row-skeleton">
@@ -171,7 +164,7 @@
           <table class="clinic-table">
             <thead class="clinic-table-thead">
               <tr>
-                <th class="clinic-table-th clinic-table-th-check">
+                <th class="clinic-table-th clinic-table-th-check" title="Seleccionar todas las visibles para verlas en el mapa">
                   <input type="checkbox" :checked="todasSeleccionadas" @change="toggleSeleccionTodas" class="clinic-checkbox" />
                 </th>
                 <th class="clinic-table-th clinic-th-num">#</th>
@@ -202,7 +195,7 @@
                 :class="{ 'clinic-table-row-selected': seleccionadas.has(clinica.id), 'clinic-table-row-resaltada': idsActualizados.has(clinica.id) }"
               >
                 <td class="clinic-table-td clinic-table-td-check">
-                  <input type="checkbox" :checked="seleccionadas.has(clinica.id)" @change="toggleSeleccion(clinica.id)" class="clinic-checkbox" />
+                  <input type="checkbox" :checked="seleccionadas.has(clinica.id)" :title="seleccionadas.has(clinica.id) ? 'Quitar del mapa' : 'Ver en el mapa'" @change="toggleSeleccion(clinica.id)" class="clinic-checkbox" />
                 </td>
                 <td class="clinic-table-td clinic-td-num">{{ (paginaActual - 1) * itemsPorPagina + idx + 1 }}</td>
                 <td class="clinic-table-td">
@@ -434,8 +427,8 @@
             <component :is="XIcon" class="w-5 h-5" />
           </div>
           <div class="accion-head-info">
-            <p class="accion-head-title">{{ rechazoLoteActivo ? `Rechazar ${seleccionadas.size} clínica(s)` : 'Rechazar clínica' }}</p>
-            <p class="accion-head-sub">{{ rechazoLoteActivo ? 'El motivo se aplica a todas las seleccionadas' : `${clinicaSeleccionada?.nit} · ${clinicaSeleccionada?.nombre}` }}</p>
+            <p class="accion-head-title">Rechazar clínica</p>
+            <p class="accion-head-sub">{{ clinicaSeleccionada?.nit }} · {{ clinicaSeleccionada?.nombre }}</p>
           </div>
         </div>
       </template>
@@ -1245,15 +1238,10 @@
 .clinic-tab-dot--activa { background: #22c55e; }
 .clinic-tab-dot--rechazada { background: #ef4444; }
 
-/* ── Bulk actions bar ── */
-.clinic-bulk-bar {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  background: linear-gradient(135deg, #eef2f9, #e0e8f5);
-  border: 1px solid #c4d4e8;
-  border-radius: 10px;
-  padding: .4rem .8rem;
+/* Mientras la barra de filtros entra y empuja el layout, bloquear clics
+   sobre el contenido que se mueve */
+.bulk-slide-enter-active ~ * {
+  pointer-events: none;
 }
 .bulk-slide-enter-active, .bulk-slide-leave-active {
   transition: all .25s ease;
@@ -1263,17 +1251,6 @@
   transform: translateY(-8px);
 }
 
-/* ── Checkbox ── */
-.clinic-checkbox {
-  width: 16px; height: 16px;
-  border-radius: 4px;
-  border: 1.5px solid #cbd5e1;
-  cursor: pointer;
-  accent-color: #16468E;
-}
-.clinic-table-th-check { width: 36px; text-align: center; }
-.clinic-table-td-check { text-align: center; }
-
 /* ── Sortable headers ── */
 .clinic-th-sortable {
   cursor: pointer;
@@ -1281,11 +1258,6 @@
   transition: color .15s ease;
 }
 .clinic-th-sortable:hover { color: #16468E; }
-
-/* ── Selected row ── */
-.clinic-table-row-selected {
-  background: rgba(22,70,142,.04) !important;
-}
 
 /* ── Row transitions ── */
 .clinic-row-enter-active, .clinic-row-leave-active {
@@ -1367,6 +1339,21 @@
 }
 
 /* ── Columnas nuevas ── */
+.clinic-checkbox {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid #cbd5e1;
+  cursor: pointer;
+  accent-color: #16468E;
+}
+.clinic-table-th-check { width: 36px; text-align: center; }
+.clinic-table-td-check { text-align: center; }
+.clinic-table-row-selected {
+  background: rgba(22,70,142,.04) !important;
+}
+.dark .clinic-table-row-selected {
+  background: rgba(96,165,250,.08) !important;
+}
 .clinic-th-num { width: 34px; text-align: center; }
 .clinic-td-num { text-align: center; color: #94a3b8; font-weight: 600; font-size: 11px; }
 .clinic-th-right, .clinic-td-right { text-align: right; }
@@ -1576,79 +1563,116 @@
   box-shadow: 0 8px 20px rgba(13, 45, 107, .35);
 }
 
-:deep(.clinic-acciones-menu) {
-  min-width: 170px;
-  border-radius: 14px !important;
-  border: 1.5px solid #d7dde6 !important;
-  box-shadow: 0 14px 38px rgba(15, 23, 42, .18) !important;
-  overflow: hidden;
-}
-:deep(.clinic-acciones-menu .el-dropdown-menu) {
-  padding: 6px !important;
-}
-:deep(.clinic-acciones-menu .el-dropdown-menu__item) {
-  border-radius: 8px;
-  margin: 1px 0;
-  padding: .4rem .6rem;
-  font-size: .78rem;
-  font-weight: 500;
-  line-height: 1.3;
-  gap: .45rem;
-}
-:deep(.clinic-acciones-menu .el-dropdown-menu__item i),
-:deep(.clinic-acciones-menu .el-dropdown-menu__item svg) {
-  font-size: .85rem;
-  margin-right: 0;
-}
-:deep(.clinic-acciones-menu .el-dropdown-menu__item--divided) {
-  margin-top: 5px;
-  border-top-color: #eef1f5;
-}
-:deep(.clinic-acciones-menu .el-dropdown-menu__item--divided::before) {
-  margin-bottom: 5px;
-}
-:deep(.clinic-acciones-menu .clinic-accion-success) { color: #16a34a; }
-:deep(.clinic-acciones-menu .clinic-accion-success:hover) { background: #f0fdf4; color: #15803d; }
-:deep(.clinic-acciones-menu .clinic-accion-danger) { color: #dc2626; }
-:deep(.clinic-acciones-menu .clinic-accion-danger:hover) { background: #fef2f2; color: #b91c1c; }
-:deep(.clinic-acciones-menu .clinic-accion-neutral) { color: #64748b; }
-:deep(.clinic-acciones-menu .clinic-accion-neutral:hover) { background: #f8fafc; color: #334155; }
 </style>
 
 <!-- Panel de filtros teleportado a <body>: sin scoped porque sale del árbol del componente -->
 <style>
-.clinic-filtros-panel {
-  position: fixed;
-  width: 230px;
-  display: flex; flex-direction: column; gap: 8px;
-  padding: 10px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.14);
-  z-index: 2100;
-  max-height: min(420px, calc(100vh - 240px));
-  overflow-y: auto;
+.clinic-filtros-bar {
+  display: flex; align-items: flex-end; gap: 12px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #eef1f6;
 }
-.dark .clinic-filtros-panel { background: #161b28; border-color: rgba(255,255,255,0.08); }
-.clinic-filtros-panel .clinic-select,
-.clinic-filtros-panel .clinic-search { width: 100%; min-width: 0; max-width: none; }
-.clinic-filtros-panel .el-select__wrapper,
-.clinic-filtros-panel .el-input__wrapper {
+.dark .clinic-filtros-bar { background: rgba(255,255,255,0.03); border-bottom-color: rgba(255,255,255,0.07); }
+.clinic-filtros-field { display: flex; flex-direction: column; gap: 5px; width: 190px; flex-shrink: 0; }
+.clinic-filtros-field--grow { width: auto; flex: 1; min-width: 200px; }
+.clinic-filtros-label {
+  font-size: 10.5px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.dark .clinic-filtros-label { color: #94a3b8; }
+.clinic-filtros-bar .clinic-select,
+.clinic-filtros-bar .clinic-search { width: 100%; min-width: 0; max-width: none; }
+.clinic-filtros-bar .el-select__wrapper,
+.clinic-filtros-bar .el-input__wrapper {
   border-radius: 9px !important;
-  min-height: 30px;
+  min-height: 32px;
 }
-.clinic-filtros-panel .clinic-limpiar {
-  font-size: 11.5px; font-weight: 700; color: #dc2626;
+.clinic-filtros-bar .clinic-limpiar {
+  font-size: 11px; font-weight: 700; color: #dc2626;
   background: none; border: none; cursor: pointer;
-  font-family: inherit; padding: 4px 8px; border-radius: 7px;
-  transition: background .15s ease;
+  font-family: inherit; padding: 7px 10px; border-radius: 7px;
+  transition: background .15s ease; flex-shrink: 0;
+  margin-bottom: 1px;
 }
-.clinic-filtros-panel .clinic-limpiar:hover { background: #fef2f2; }
-.clinic-filtros-panel.bulk-slide-enter-active,
-.clinic-filtros-panel.bulk-slide-leave-active { transition: all .25s ease; }
-.clinic-filtros-panel.bulk-slide-enter-from,
-.clinic-filtros-panel.bulk-slide-leave-to { opacity: 0; transform: translateY(-8px); }
+.clinic-filtros-bar .clinic-limpiar:hover { background: #fef2f2; }
+.dark .clinic-filtros-bar .clinic-limpiar:hover { background: rgba(220,38,38,0.15); }
+
+/* ── Menú de acciones por fila (popper teleportado a <body>) ── */
+.el-popper.clinic-acciones-menu,
+.clinic-acciones-menu {
+  min-width: 182px;
+  border-radius: 14px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, .18), 0 4px 10px rgba(15, 23, 42, .06) !important;
+  overflow: hidden;
+}
+.clinic-acciones-menu .el-dropdown-menu {
+  padding: 6px !important;
+}
+.clinic-acciones-menu .el-dropdown-menu__item {
+  display: flex;
+  align-items: center;
+  border-radius: 9px;
+  margin: 2px 0;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  gap: 10px;
+  color: #334155;
+  transition: background .15s ease, transform .15s ease;
+}
+.clinic-acciones-menu .el-dropdown-menu__item:hover {
+  transform: translateX(2px);
+}
+.clinic-acciones-menu .el-dropdown-menu__item i.el-icon,
+.clinic-acciones-menu .el-dropdown-menu__item svg {
+  font-size: 13px;
+  margin-right: 0;
+}
+.clinic-acciones-menu .el-dropdown-menu__item svg {
+  width: 27px;
+  height: 27px;
+  padding: 6px;
+  border-radius: 8px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.clinic-acciones-menu .el-dropdown-menu__item--divided {
+  margin-top: 6px;
+  border-top-color: #eef1f5;
+}
+.clinic-acciones-menu .el-dropdown-menu__item--divided::before {
+  margin-bottom: 6px;
+}
+.clinic-acciones-menu .clinic-accion-success { color: #15803d !important; }
+.clinic-acciones-menu .clinic-accion-success svg { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
+.clinic-acciones-menu .clinic-accion-success:not(.is-disabled):hover { background: #f0fdf4 !important; color: #15803d !important; }
+.clinic-acciones-menu .clinic-accion-danger { color: #b91c1c !important; }
+.clinic-acciones-menu .clinic-accion-danger svg { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+.clinic-acciones-menu .clinic-accion-danger:not(.is-disabled):hover { background: #fef2f2 !important; color: #b91c1c !important; }
+.clinic-acciones-menu .clinic-accion-neutral { color: #334155 !important; }
+.clinic-acciones-menu .clinic-accion-neutral svg { background: #e0e9f8; color: #16468E; border: 1px solid #cbdaf0; }
+.clinic-acciones-menu .clinic-accion-neutral:not(.is-disabled):hover { background: #eef3fb !important; color: #16468E !important; }
+
+html.dark .clinic-acciones-menu,
+html.dark .el-popper.clinic-acciones-menu {
+  background: #161b28 !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  box-shadow: 0 18px 44px rgba(0,0,0,.55) !important;
+}
+html.dark .clinic-acciones-menu .el-dropdown-menu__item { color: #cbd5e1; }
+html.dark .clinic-acciones-menu .el-dropdown-menu__item--divided { border-top-color: rgba(255,255,255,0.07); }
+html.dark .clinic-acciones-menu .clinic-accion-success { color: #4ade80 !important; }
+html.dark .clinic-acciones-menu .clinic-accion-success svg { background: rgba(34,197,94,0.14); color: #4ade80; border-color: rgba(34,197,94,0.25); }
+html.dark .clinic-acciones-menu .clinic-accion-success:not(.is-disabled):hover { background: rgba(34,197,94,0.12) !important; }
+html.dark .clinic-acciones-menu .clinic-accion-danger { color: #f87171 !important; }
+html.dark .clinic-acciones-menu .clinic-accion-danger svg { background: rgba(239,68,68,0.14); color: #f87171; border-color: rgba(239,68,68,0.25); }
+html.dark .clinic-acciones-menu .clinic-accion-danger:not(.is-disabled):hover { background: rgba(239,68,68,0.12) !important; }
+html.dark .clinic-acciones-menu .clinic-accion-neutral { color: #cbd5e1 !important; }
+html.dark .clinic-acciones-menu .clinic-accion-neutral svg { background: rgba(59,130,246,0.16); color: #93c5fd; border-color: rgba(59,130,246,0.25); }
+html.dark .clinic-acciones-menu .clinic-accion-neutral:not(.is-disabled):hover { background: rgba(255,255,255,0.06) !important; color: #93c5fd !important; }
 </style>
 
 <script setup lang="ts">
@@ -1725,7 +1749,6 @@ const mapaRef = ref<InstanceType<typeof MapaClinicas> | null>(null);
 const cargando = ref(false);
 const procesando = ref<string | null>(null);
 const modalRechazo = ref(false);
-const rechazoLoteActivo = ref(false);
 const modalDetalle = ref(false);
 const modalCargaMasiva = ref(false);
 const clinicaSeleccionada = ref<Clinica | null>(null);
@@ -1770,7 +1793,6 @@ const rulesEditar: FormRules = {
   email: [{ required: true, message: 'Obligatorio', trigger: 'blur' }, { type: 'email', message: 'Correo inválido', trigger: 'blur' }],
 };
 
-const seleccionadas = ref<Set<number>>(new Set());
 const idsActualizados = ref<Set<number>>(new Set());
 const sortKey = ref<'nombre' | 'nit' | 'ciudad'>('nombre');
 const sortDir = ref<'asc' | 'desc'>('asc');
@@ -1866,19 +1888,14 @@ const estadisticasCiudad = computed(() => {
 
 const hayFiltros = computed(() => !!filtroBuscar.value.trim() || !!filtroCiudad.value || tabActiva.value !== 'todas');
 
-/* ── Panel desplegable de filtros (botón "Filtros") ── */
+/* ── Barra de filtros inline (botón "Filtros") — queda dentro del card,
+   empuja la tabla hacia abajo en vez de montarse encima. Se cierra solo
+   con el mismo botón. ── */
 const filtrosAbiertos = ref(false);
 const filtrosWrap = ref<HTMLElement | null>(null);
-const filtrosPanel = ref<HTMLElement | null>(null);
-const filtrosPanelPos = ref({ top: 0, left: 0 });
 function toggleFiltros() {
   filtrosAbiertos.value = !filtrosAbiertos.value;
-  if (filtrosAbiertos.value && filtrosWrap.value) {
-    const r = filtrosWrap.value.getBoundingClientRect();
-    filtrosPanelPos.value = { top: r.bottom + 6, left: r.right - 230 };
-  }
 }
-onClickOutside(filtrosWrap, () => { filtrosAbiertos.value = false; }, { ignore: [filtrosPanel] });
 const conteoFiltros = computed(() =>
   (filtroCiudad.value ? 1 : 0) + (filtroBuscar.value.trim() ? 1 : 0),
 );
@@ -1987,7 +2004,11 @@ const clinicasFiltradas = computed(() => {
     );
   }
   const dir = sortDir.value === 'asc' ? 1 : -1;
+  const ordenEstado: Record<string, number> = { pendiente: 0, activa: 1, rechazada: 2 };
   result = [...result].sort((a, b) => {
+    // Las pendientes van siempre primero — son la cola de trabajo pendiente
+    const prio = (ordenEstado[a.estado] ?? 3) - (ordenEstado[b.estado] ?? 3);
+    if (prio !== 0) return prio;
     const va = (a[sortKey.value] ?? '').toString().toLowerCase();
     const vb = (b[sortKey.value] ?? '').toString().toLowerCase();
     return va < vb ? -dir : va > vb ? dir : 0;
@@ -2036,11 +2057,6 @@ function actividadClase(c: Clinica): string {
   return 'clinic-act-dot--old';
 }
 
-const todasSeleccionadas = computed(() => {
-  if (clinicasPaginadas.value.length === 0) return false;
-  return clinicasPaginadas.value.every(c => seleccionadas.value.has(c.id));
-});
-
 function toggleSort(key: 'nombre' | 'nit' | 'ciudad') {
   if (sortKey.value === key) {
     sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
@@ -2059,6 +2075,13 @@ function cambiarTab(tab: 'todas' | 'pendiente' | 'activa' | 'rechazada') {
   tabActiva.value = tab;
   paginaActual.value = 1;
 }
+
+// Selección en el mapa — solo controla el foco/vista, no acciones masivas
+const seleccionadas = ref<Set<number>>(new Set());
+
+const todasSeleccionadas = computed(() => {
+  return clinicasPaginadas.value.length > 0 && clinicasPaginadas.value.every(c => seleccionadas.value.has(c.id));
+});
 
 function toggleSeleccion(id: number) {
   const s = new Set(seleccionadas.value);
@@ -2089,60 +2112,6 @@ function iniciales(nombre: string) {
   if (palabras.length === 0) return '?';
   if (palabras.length === 1) return palabras[0].slice(0, 2).toUpperCase();
   return (palabras[0][0] + palabras[1][0]).toUpperCase();
-}
-
-async function aprobarLote() {
-  const ids = [...seleccionadas.value];
-  const clinicasLote = clinicas.value.filter(c => ids.includes(c.id) && c.estado !== 'activa');
-  if (clinicasLote.length === 0) {
-    notify.warning('No hay clínicas pendientes o rechazadas para aprobar');
-    return;
-  }
-  try {
-    await ElMessageBox.confirm(`¿Aprobar ${clinicasLote.length} clínica(s)?`, 'Confirmar aprobación', { confirmButtonText: 'Aprobar', cancelButtonText: 'Cancelar', type: 'success' });
-    for (const c of clinicasLote) {
-      const endpoint = c.estado === 'rechazada' ? 'reactivar' : 'aprobar';
-      await http.post(`/api/clinicas/${c.id}/${endpoint}`);
-    }
-    notify.success(`${clinicasLote.length} clínica(s) aprobada(s)`);
-    seleccionadas.value = new Set();
-    await cargar();
-  } catch (e: any) {
-    if (e !== 'cancel') notify.error('Error al aprobar en lote');
-  }
-}
-
-function abrirRechazoLote() {
-  const ids = [...seleccionadas.value];
-  const lote = clinicas.value.filter(c => ids.includes(c.id) && c.estado !== 'rechazada');
-  if (lote.length === 0) {
-    notify.warning('No hay clínicas para rechazar');
-    return;
-  }
-  rechazoLoteActivo.value = true;
-  motivoRechazo.value = '';
-  modalRechazo.value = true;
-}
-
-async function confirmarRechazoLote() {
-  const ids = [...seleccionadas.value];
-  const lote = clinicas.value.filter(c => ids.includes(c.id) && c.estado !== 'rechazada');
-
-  procesando.value = 'lote_rechazar';
-  try {
-    const resultados = await Promise.allSettled(
-      lote.map(c => http.post(`/api/clinicas/${c.id}/rechazar`, { motivo: motivoRechazo.value })),
-    );
-    const ok = resultados.filter(r => r.status === 'fulfilled').length;
-    const fallidas = resultados.length - ok;
-    if (ok > 0) notify.success(`${ok} clínica(s) rechazada(s)`);
-    if (fallidas > 0) notify.error(`${fallidas} clínica(s) no se pudieron rechazar`);
-    seleccionadas.value = new Set();
-    modalRechazo.value = false;
-    await cargar();
-  } finally {
-    procesando.value = null;
-  }
 }
 
 function exportarExcel() {
@@ -2295,7 +2264,6 @@ function manejarAccionFila(comando: string, clinica: Clinica) {
 }
 
 function abrirRechazo(clinica: Clinica) {
-  rechazoLoteActivo.value = false;
   clinicaSeleccionada.value = clinica;
   motivoRechazo.value = '';
   modalDetalle.value = false;
@@ -2305,10 +2273,6 @@ function abrirRechazo(clinica: Clinica) {
 async function rechazar() {
   if (!motivoRechazo.value.trim()) {
     notify.warning('Ingrese el motivo de rechazo');
-    return;
-  }
-  if (rechazoLoteActivo.value) {
-    await confirmarRechazoLote();
     return;
   }
   try {

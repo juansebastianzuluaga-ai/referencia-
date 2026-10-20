@@ -34,11 +34,45 @@ class DashboardController extends BaseController
 
         $query = (clone $queryDims);
         if ($request->filled('desde')) {
-            $query->whereDate('created_at', '>=', $request->input('desde'));
+            $query->whereDate('solicitudes_referencia.created_at', '>=', $request->input('desde'));
         }
         if ($request->filled('hasta')) {
-            $query->whereDate('created_at', '<=', $request->input('hasta'));
+            $query->whereDate('solicitudes_referencia.created_at', '<=', $request->input('hasta'));
         }
+
+        // Período independiente de cada panel (día/semana/mes/año/todo) —
+        // se aplica encima de los filtros generales de dimensión y fechas.
+        $pDonut = $this->periodoPanel($request, 'periodo_donut');
+        $pActividad = $this->periodoPanel($request, 'periodo_actividad');
+        $pEspecialidades = $this->periodoPanel($request, 'periodo_especialidades');
+        $pSla = $this->periodoPanel($request, 'periodo_sla');
+        $pClinicas = $this->periodoPanel($request, 'periodo_clinicas');
+        $pRecientes = $this->periodoPanel($request, 'periodo_recientes');
+        $pDiaHora = $this->periodoPanel($request, 'periodo_diahora');
+        $pHeatmap = $this->periodoPanel($request, 'periodo_heatmap');
+
+        // Fecha ancla de cada panel — qué día/semana/mes/año específico
+        // eligió el usuario en el picker junto al período.
+        $fTendencia = $this->fechaPanel($request, 'ref_tendencia');
+        $fDonut = $this->fechaPanel($request, 'ref_donut');
+        $fActividad = $this->fechaPanel($request, 'ref_actividad');
+        $fEspecialidades = $this->fechaPanel($request, 'ref_especialidades');
+        $fSla = $this->fechaPanel($request, 'ref_sla');
+        $fClinicas = $this->fechaPanel($request, 'ref_clinicas');
+        $fRecientes = $this->fechaPanel($request, 'ref_recientes');
+        $fDiaHora = $this->fechaPanel($request, 'ref_diahora');
+        $fHeatmap = $this->fechaPanel($request, 'ref_heatmap');
+
+        // La dona tiene período propio — sus conteos viven aparte de los
+        // KPIs, que siguen respondiendo solo a los filtros generales.
+        $qDonut = $this->queryPanel($queryDims, $query, $pDonut, $fDonut);
+        $distribucion = [
+            'total' => (clone $qDonut)->count(),
+            'pendientes' => (clone $qDonut)->where('solicitudes_referencia.estado', 'pendiente')->count(),
+            'en_espera' => (clone $qDonut)->where('solicitudes_referencia.estado', 'en_espera')->count(),
+            'completadas' => (clone $qDonut)->where('solicitudes_referencia.estado', 'completado')->count(),
+            'negadas' => (clone $qDonut)->where('solicitudes_referencia.estado', 'negado')->count(),
+        ];
 
         $solicitudesTotal = (clone $query)->count();
         $solicitudesPendientes = (clone $query)->where('solicitudes_referencia.estado', 'pendiente')->count();
@@ -58,28 +92,12 @@ class DashboardController extends BaseController
         $usuariosTotal = User::count();
         $usuariosActivos = User::where('is_active', true)->count();
 
-        $solicitudesRecientes = (clone $query)->with('clinica:id,nombre')
+        $solicitudesRecientes = $this->queryPanel($queryDims, $query, $pRecientes, $fRecientes)->with('clinica:id,nombre')
             ->select('id', 'clinica_id', 'tipo_documento', 'numero_documento', 'primer_nombre', 'segundo_nombre', 'primer_apellido', 'segundo_apellido', 'telefono_contacto', 'estado', 'especialidad_requerida', 'eps', 'fecha', 'hora', 'hora_respuesta', 'created_at')
             ->latest()
             ->limit(8)
             ->get()
             ->map(function ($s) {
-                // "Tiempo": duración de la gestión si ya respondieron; si no,
-                // tiempo que lleva esperando desde su creación.
-                $minutos = null;
-                if ($s->hora_respuesta && $s->fecha && $s->hora) {
-                    $inicio = Carbon::parse("{$s->fecha->toDateString()} {$s->hora}");
-                    $minutos = $inicio->diffInMinutes(Carbon::parse("{$s->fecha->toDateString()} {$s->hora_respuesta}"));
-                } elseif ($s->created_at) {
-                    $minutos = (int) abs(now()->diffInMinutes($s->created_at));
-                }
-                $tiempo = null;
-                if ($minutos !== null) {
-                    $tiempo = $minutos >= 60
-                        ? intdiv($minutos, 60).'h '.str_pad((string) ($minutos % 60), 2, '0', STR_PAD_LEFT).'m'
-                        : $minutos.'m';
-                }
-
                 return [
                     'id' => $s->id,
                     'paciente' => trim("{$s->primer_nombre} {$s->primer_apellido}"),
@@ -92,7 +110,6 @@ class DashboardController extends BaseController
                     'eps' => $s->eps,
                     'clinica' => $s->clinica?->nombre,
                     'fecha_solicitud' => $s->created_at?->format('d M Y · H:i'),
-                    'tiempo' => $tiempo,
                     'created_at' => $s->created_at?->toISOString(),
                 ];
             });
@@ -111,11 +128,11 @@ class DashboardController extends BaseController
             ->filter()
             ->values();
 
-        $granularidad = in_array($request->input('granularidad'), ['dia', 'mes', 'anio'], true)
+        $granularidad = in_array($request->input('granularidad'), ['dia', 'semana', 'mes', 'anio'], true)
             ? $request->input('granularidad')
             : 'dia';
-        $tendencia = $this->tendenciaPeriodo(clone $queryDims, $granularidad);
-        $tendenciaAnterior = $this->tendenciaPeriodo(clone $queryDims, $granularidad, anterior: true);
+        $tendencia = $this->tendenciaPeriodo(clone $queryDims, $granularidad, $fTendencia);
+        $tendenciaAnterior = $this->tendenciaPeriodo(clone $queryDims, $granularidad, $fTendencia, anterior: true);
         $tendenciaClinicas = $this->tendenciaUltimosDias(Clinica::class, 14);
         $tendenciaUsuarios = $this->tendenciaUltimosDias(User::class, 14);
         $tendenciaPendientes = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'pendiente'), 0, $queryDims);
@@ -124,6 +141,8 @@ class DashboardController extends BaseController
         $tendenciaEnEsperaAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'en_espera'), 14, $queryDims);
         $tendenciaCompletadas = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'completado'), 0, $queryDims);
         $tendenciaCompletadasAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'completado'), 14, $queryDims);
+        $tendenciaNegadas = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'negado'), 0, $queryDims);
+        $tendenciaNegadasAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'negado'), 14, $queryDims);
 
         // Hace cuánto está esperando revisión la solicitud pendiente más
         // antigua — el volumen total no dice si el personal va al día o si
@@ -131,7 +150,7 @@ class DashboardController extends BaseController
         $pendienteMasAntigua = (clone $query)->where('estado', 'pendiente')->min('created_at');
         $pendienteMasAntiguaHoras = $pendienteMasAntigua ? abs(now()->diffInHours($pendienteMasAntigua)) : null;
 
-        $topEspecialidades = (clone $query)
+        $topEspecialidades = $this->queryPanel($queryDims, $query, $pEspecialidades, $fEspecialidades)
             ->select('especialidad_requerida')
             ->selectRaw('COUNT(*) as total')
             ->whereNotNull('especialidad_requerida')
@@ -149,13 +168,13 @@ class DashboardController extends BaseController
         $resueltas = $solicitudesAceptadas + $solicitudesNegadas;
         $tasaAceptacion = $resueltas > 0 ? round(($solicitudesAceptadas / $resueltas) * 100) : 0;
 
-        $porDiaHora = $this->porDiaHora();
-        $heatmapEspMes = $this->heatmapEspecialidadMes();
-        $sla = $this->slaRespuesta(clone $query);
-        $slaDiario = $this->slaDiario(14);
-        $actividad = $this->actividadReciente(clone $query);
+        $porDiaHora = $this->porDiaHora(clone $queryDims, $pDiaHora, $fDiaHora);
+        $heatmapEspMes = $this->heatmapEspecialidadMes(clone $queryDims, $pHeatmap, $fHeatmap);
+        $sla = $this->slaRespuesta($this->queryPanel($queryDims, $query, $pSla, $fSla));
+        $slaDiario = $this->slaDiario($pSla, $fSla);
+        $actividad = $this->actividadReciente($this->queryPanel($queryDims, $query, $pActividad, $fActividad));
         $clinicasFiltro = Clinica::orderBy('nombre')->get(['id', 'nombre']);
-        $porClinica = (clone $query)
+        $porClinica = $this->queryPanel($queryDims, $query, $pClinicas, $fClinicas)
             ->join('clinicas', 'clinicas.id', '=', 'solicitudes_referencia.clinica_id')
             ->select('clinicas.nombre')
             ->selectRaw('COUNT(*) as total')
@@ -165,8 +184,10 @@ class DashboardController extends BaseController
             ->get()
             ->map(fn ($r) => ['clinica' => $r->nombre, 'total' => (int) $r->total]);
 
-        $topClinicas = $this->topConSparkline($query, 'clinicas.nombre', 'clinicas', 5, $solicitudesTotal);
-        $topEspecialidadesConSerie = $this->topConSparkline($query, 'especialidad_requerida', 'especialidades', 5, $solicitudesTotal);
+        $qEspPeriodo = $this->queryPanel($queryDims, $query, $pEspecialidades, $fEspecialidades);
+        $qCliPeriodo = $this->queryPanel($queryDims, $query, $pClinicas, $fClinicas);
+        $topClinicas = $this->topConSparkline(clone $qCliPeriodo, 'clinicas.nombre', 'clinicas', 5, (clone $qCliPeriodo)->count());
+        $topEspecialidadesConSerie = $this->topConSparkline(clone $qEspPeriodo, 'especialidad_requerida', 'especialidades', 5, (clone $qEspPeriodo)->count());
 
         $porEps = (clone $query)
             ->select('eps')
@@ -197,6 +218,7 @@ class DashboardController extends BaseController
                 'total' => $usuariosTotal,
                 'activos' => $usuariosActivos,
             ],
+            'distribucion' => $distribucion,
             'solicitudes_recientes' => $solicitudesRecientes,
             'filtros' => [
                 'especialidades' => $especialidades,
@@ -213,6 +235,8 @@ class DashboardController extends BaseController
             'tendencia_en_espera_anterior' => $tendenciaEnEsperaAnterior,
             'tendencia_completadas' => $tendenciaCompletadas,
             'tendencia_completadas_anterior' => $tendenciaCompletadasAnterior,
+            'tendencia_negadas' => $tendenciaNegadas,
+            'tendencia_negadas_anterior' => $tendenciaNegadasAnterior,
             'pendiente_mas_antigua_horas' => $pendienteMasAntiguaHoras,
             'top_especialidades' => $topEspecialidades,
             'tasa_aceptacion' => $tasaAceptacion,
@@ -229,18 +253,104 @@ class DashboardController extends BaseController
     }
 
     /**
+     * Período independiente de cada panel del dashboard.
+     */
+    private function periodoPanel(Request $request, string $key): string
+    {
+        $v = (string) $request->input($key, 'todo');
+
+        return in_array($v, ['dia', 'semana', 'mes', 'anio'], true) ? $v : 'todo';
+    }
+
+    /**
+     * Fecha ancla elegida en el picker del panel: qué día, semana, mes o
+     * año específico quiere ver el usuario. Sin ancla el período usa la
+     * ventana móvil que termina hoy.
+     */
+    private function fechaPanel(Request $request, string $key): ?Carbon
+    {
+        $v = $request->input($key);
+        if (! is_string($v) || $v === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($v);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Ventana [desde, hasta] que representa el período elegido; con fecha
+     * ancla es el día/semana/mes/año calendario de esa fecha y sin ancla
+     * es la ventana móvil que termina hoy. 'todo' devuelve null (sin
+     * corte de fechas — solo aplican los filtros generales).
+     *
+     * @return array{0: Carbon, 1: Carbon}|null
+     */
+    private function rangoPeriodo(string $periodo, ?Carbon $ref = null): ?array
+    {
+        $ahora = now();
+
+        return match ($periodo) {
+            'dia' => $ref
+                ? [$ref->copy()->startOfDay(), $ref->copy()->endOfDay()]
+                : [$ahora->copy()->startOfDay(), $ahora],
+            'semana' => $ref
+                ? [$ref->copy()->startOfWeek(), $ref->copy()->endOfWeek()]
+                : [$ahora->copy()->subDays(6)->startOfDay(), $ahora],
+            'mes' => $ref
+                ? [$ref->copy()->startOfMonth(), $ref->copy()->endOfMonth()]
+                : [$ahora->copy()->subDays(29)->startOfDay(), $ahora],
+            'anio' => $ref
+                ? [$ref->copy()->startOfYear(), $ref->copy()->endOfYear()]
+                : [$ahora->copy()->subDays(364)->startOfDay(), $ahora],
+            default => null,
+        };
+    }
+
+    /**
+     * Aplica la ventana del período sobre un query ya clonado; con 'todo'
+     * el query queda intacto.
+     */
+    private function conPeriodo($query, string $periodo, ?Carbon $ref = null)
+    {
+        $rango = $this->rangoPeriodo($periodo, $ref);
+        if ($rango) {
+            $query->whereBetween('solicitudes_referencia.created_at', $rango);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Query de un panel: con 'todo' usa dims + rango global; con un período
+     * propio la ventana reemplaza el rango global de fechas (los filtros de
+     * dimensión sí siguen aplicando) — así el selector siempre responde.
+     */
+    private function queryPanel($queryDims, $query, string $periodo, ?Carbon $ref = null)
+    {
+        if ($periodo === 'todo') {
+            return clone $query;
+        }
+
+        return $this->conPeriodo(clone $queryDims, $periodo, $ref);
+    }
+
+    /**
      * Mapa de calor de solicitudes por día de la semana × franja horaria
-     * (bloques de 2h), sobre el histórico completo (el volumen de datos es
-     * bajo, así que limitar a un periodo corto dejaría casi todo en cero).
+     * (bloques de 2h), acotado al período elegido en el panel.
      *
      * @return array<int, array{dia: string, hora: string, total: int}>
      */
-    private function porDiaHora(): array
+    private function porDiaHora($base, string $periodo, ?Carbon $ref = null): array
     {
         $dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
         $horas = range(0, 22, 2);
 
-        $conteos = SolicitudReferencia::selectRaw('DAYOFWEEK(created_at) as dow, HOUR(created_at) as hora, COUNT(*) as total')
+        $conteos = $this->conPeriodo($base, $periodo, $ref)
+            ->selectRaw('DAYOFWEEK(created_at) as dow, HOUR(created_at) as hora, COUNT(*) as total')
             ->groupByRaw('DAYOFWEEK(created_at), HOUR(created_at)')
             ->get();
 
@@ -278,12 +388,18 @@ class DashboardController extends BaseController
      *
      * @return array<int, array{especialidad: string, mes: string, total: int}>
      */
-    private function heatmapEspecialidadMes(): array
+    private function heatmapEspecialidadMes($base, string $periodo, ?Carbon $ref = null): array
     {
-        $hasta = now();
-        $desde = $hasta->copy()->subMonths(5)->startOfMonth();
+        $rango = $this->rangoPeriodo($periodo, $ref);
+        $hasta = $rango ? $rango[1] : now();
+        // Las columnas siempre son meses calendario; el período decide qué
+        // tan atrás va la ventana ('todo' = último semestre como antes).
+        $desde = $rango
+            ? $rango[0]->copy()
+            : $hasta->copy()->subMonths(5)->startOfMonth();
 
-        $especialidades = SolicitudReferencia::select('especialidad_requerida')
+        $especialidades = $this->conPeriodo(clone $base, $periodo, $ref)
+            ->select('especialidad_requerida')
             ->selectRaw('COUNT(*) as total')
             ->whereNotNull('especialidad_requerida')
             ->groupBy('especialidad_requerida')
@@ -295,7 +411,7 @@ class DashboardController extends BaseController
             return [];
         }
 
-        $conteos = SolicitudReferencia::whereBetween('created_at', [$desde, $hasta])
+        $conteos = (clone $base)->whereBetween('created_at', [$desde, $hasta])
             ->whereIn('especialidad_requerida', $especialidades)
             ->selectRaw("especialidad_requerida, DATE_FORMAT(created_at, '%Y-%m') as bucket, COUNT(*) as total")
             ->groupBy('especialidad_requerida', 'bucket')
@@ -303,7 +419,7 @@ class DashboardController extends BaseController
             ->groupBy('especialidad_requerida');
 
         $meses = [];
-        $cursor = $desde->copy();
+        $cursor = $desde->copy()->startOfMonth();
         $fin = $hasta->copy()->startOfMonth();
         while ($cursor->lte($fin)) {
             $meses[] = $cursor->format('Y-m');
@@ -333,14 +449,27 @@ class DashboardController extends BaseController
      *
      * @return array<int, array{label: string, total: int}>
      */
-    private function tendenciaPeriodo($base, string $granularidad, bool $anterior = false): array
+    private function tendenciaPeriodo($base, string $granularidad, ?Carbon $ref = null, bool $anterior = false): array
     {
-        $hasta = now();
+        // Con ancla la ventana termina en ese día/semana/mes/año elegido;
+        // sin ancla termina hoy como siempre.
+        $hasta = match (true) {
+            $ref && $granularidad === 'mes' => $ref->copy()->endOfMonth(),
+            $ref && $granularidad === 'anio' => $ref->copy()->endOfYear(),
+            $ref && $granularidad === 'semana' => $ref->copy()->endOfWeek(),
+            $ref => $ref->copy()->endOfDay(),
+            default => now(),
+        };
         if ($granularidad === 'mes') {
             $desde = $hasta->copy()->subMonths(11)->startOfMonth();
             $fmt = '%Y-%m';
             $paso = 'addMonth';
             $clave = 'Y-m';
+        } elseif ($granularidad === 'semana') {
+            $desde = $hasta->copy()->subDays(6)->startOfDay();
+            $fmt = '%Y-%m-%d';
+            $paso = 'addDay';
+            $clave = 'Y-m-d';
         } elseif ($granularidad === 'anio') {
             $desde = $hasta->copy()->subYears(4)->startOfYear();
             $fmt = '%Y';
@@ -358,6 +487,7 @@ class DashboardController extends BaseController
             $desde = match ($granularidad) {
                 'mes' => $desde->copy()->subMonths(12),
                 'anio' => $desde->copy()->subYears(5),
+                'semana' => $desde->copy()->subDays(7),
                 default => $desde->copy()->subDays(30),
             };
         }
@@ -476,33 +606,83 @@ class DashboardController extends BaseController
     }
 
     /**
-     * SLA desglosado por día (últimos $dias): cuántas respuestas cayeron en
-     * cada banda (≤2h, 2–4h, >4h) y el promedio en horas — alimenta las
+     * SLA desglosado en la ventana del período del panel (día → bloques de
+     * 2h, semana/mes/todo → días, año → meses): cuántas respuestas cayeron
+     * en cada banda (≤2h, 2–4h, >4h) y el promedio en horas — alimenta las
      * barras apiladas + línea del panel "Tiempo de respuesta".
      *
-     * @return array{dias: array<int, array{fecha: string, hasta2: int, de2a4: int, mas4: int, avg_horas: float}>, promedio: string|null, promedio_min: int|null, promedio_delta: int|null}
+     * @return array{dias: array<int, array{fecha: string, etiqueta: string, hasta2: int, de2a4: int, mas4: int, avg_horas: float}>, promedio: string|null, promedio_min: int|null, promedio_delta: int|null}
      */
-    private function slaDiario(int $dias): array
+    private function slaDiario(string $periodo, ?Carbon $ref = null): array
     {
         $expresion = "TIMESTAMPDIFF(MINUTE, CONCAT(fecha, ' ', hora), CONCAT(fecha, ' ', hora_respuesta))";
-        $desde = now()->subDays($dias - 1)->startOfDay();
+
+        // El período del panel define la ventana y el bucket:
+        // día → bloques de 2h; semana/mes/todo → días; año → meses.
+        // Con fecha ancla la ventana es ese día/semana/mes/año calendario.
+        $rango = $this->rangoPeriodo($periodo, $ref);
+        if ($rango) {
+            [$desde, $hasta] = $rango;
+            $bucketSel = $periodo === 'dia'
+                ? 'FLOOR(HOUR(created_at)/2)*2'
+                : ($periodo === 'anio' ? "DATE_FORMAT(created_at, '%Y-%m')" : 'DATE(created_at)');
+        } else {
+            $hasta = now();
+            switch ($periodo) {
+                case 'dia':
+                    $desde = $hasta->copy()->startOfDay();
+                    $bucketSel = 'FLOOR(HOUR(created_at)/2)*2';
+                    break;
+                case 'semana':
+                    $desde = $hasta->copy()->subDays(6)->startOfDay();
+                    $bucketSel = 'DATE(created_at)';
+                    break;
+                case 'anio':
+                    $desde = $hasta->copy()->subMonths(11)->startOfMonth();
+                    $bucketSel = "DATE_FORMAT(created_at, '%Y-%m')";
+                    break;
+                default:
+                    $desde = $hasta->copy()->subDays(13)->startOfDay();
+                    $bucketSel = 'DATE(created_at)';
+            }
+        }
 
         $filas = SolicitudReferencia::query()
             ->whereNotNull('hora_respuesta')
             ->where('created_at', '>=', $desde)
-            ->selectRaw("DATE(created_at) as f, {$expresion} as m")
+            ->selectRaw("{$bucketSel} as b, {$expresion} as m")
             ->get()
-            ->groupBy('f');
+            ->groupBy('b');
+
+        // Lista completa de buckets esperados con su etiqueta visible.
+        $buckets = [];
+        if ($periodo === 'dia') {
+            for ($h = 0; $h <= 22; $h += 2) {
+                $buckets[$h] = str_pad((string) $h, 2, '0', STR_PAD_LEFT).':00';
+            }
+        } elseif ($periodo === 'anio') {
+            $cursor = $desde->copy();
+            while ($cursor->lte($hasta)) {
+                $buckets[$cursor->format('Y-m')] = self::MESES[$cursor->month - 1].' '.$cursor->format('y');
+                $cursor->addMonth();
+            }
+        } else {
+            $cursor = $desde->copy();
+            while ($cursor->lte($hasta)) {
+                $buckets[$cursor->format('Y-m-d')] = $cursor->day.' '.self::MESES[$cursor->month - 1];
+                $cursor->addDay();
+            }
+        }
 
         $resultado = [];
-        for ($i = $dias - 1; $i >= 0; $i--) {
-            $fecha = now()->subDays($i)->format('Y-m-d');
-            $del = $filas->get($fecha, collect());
+        foreach ($buckets as $clave => $etiqueta) {
+            $del = $filas->get($clave, collect());
             $hasta2 = $del->filter(fn ($r) => $r->m <= 120)->count();
             $de2a4 = $del->filter(fn ($r) => $r->m > 120 && $r->m <= 240)->count();
             $mas4 = $del->count() - $hasta2 - $de2a4;
             $resultado[] = [
-                'fecha' => $fecha,
+                'fecha' => (string) $clave,
+                'etiqueta' => $etiqueta,
                 'hasta2' => $hasta2,
                 'de2a4' => $de2a4,
                 'mas4' => $mas4,
@@ -510,17 +690,18 @@ class DashboardController extends BaseController
             ];
         }
 
-        // Promedio del período vs el período anterior para el delta del mockup.
-        $promedioDe = function ($desdeDias, $hastaDias) use ($expresion) {
+        // Promedio del período vs la ventana anterior de igual longitud.
+        $dur = (int) abs($desde->diffInSeconds($hasta)) + 1;
+        $promedioDe = function ($desdeX, $hastaX) use ($expresion) {
             return SolicitudReferencia::query()
                 ->whereNotNull('hora_respuesta')
-                ->whereBetween('created_at', [now()->subDays($desdeDias)->startOfDay(), now()->subDays($hastaDias)->endOfDay()])
+                ->whereBetween('created_at', [$desdeX, $hastaX])
                 ->selectRaw("AVG({$expresion}) as m")
                 ->value('m');
         };
 
-        $promedio = $promedioDe($dias - 1, 0);
-        $promedioAnt = $promedioDe(2 * $dias - 1, $dias);
+        $promedio = $promedioDe($desde, $hasta);
+        $promedioAnt = $promedioDe($desde->copy()->subSeconds($dur), $desde->copy()->subSecond());
         $promedioMin = $promedio !== null ? (int) round($promedio) : null;
         $delta = ($promedioMin !== null && $promedioAnt)
             ? (int) round((($promedioMin - $promedioAnt) / $promedioAnt) * 100)

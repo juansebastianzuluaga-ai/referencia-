@@ -27,7 +27,7 @@
           <img :src="logoBlanco" alt="logo" class="h-10 object-contain relative z-10 drop-shadow-lg mb-3" />
           <h1 class="text-xl font-extrabold text-white tracking-wide relative z-10">Acceso Clínicas</h1>
           <p class="text-blue-300/80 text-xs relative z-10 mt-1">
-            Sistema de Referencia y Contrarreferencia
+            Sistema de Referencia
           </p>
         </div>
 

@@ -127,3 +127,120 @@ body {
   from { opacity: 0; transform: translateY(-6px) scale(.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* ── Date-picker (selectores de período del dashboard) ── */
+.el-picker__popper.el-popper {
+  border-radius: 14px;
+  border: 1px solid #e8edf4;
+  box-shadow: 0 16px 40px rgba(15, 35, 71, .18);
+  --el-datepicker-active-color: #16468e;
+  --el-datepicker-hover-font-color: #16468e;
+  --el-datepicker-inrange-bg-color: #eef4fd;
+  --el-datepicker-inrange-hover-bg-color: #e2ecfb;
+}
+.el-picker__popper .el-picker-panel {
+  font-family: inherit;
+  border-radius: 14px;
+}
+.el-date-picker__header-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #1e2d55;
+}
+.el-picker-panel__icon-btn {
+  color: #64748b;
+  font-size: 11px;
+  margin-top: 8px;
+}
+.el-picker-panel__icon-btn:hover { color: #16468e; }
+.el-date-picker__header--bordered { border-bottom-color: #eef2f7; }
+
+/* Celdas (años, meses, días): píldora redondeada con hover suave */
+.el-year-table td .cell,
+.el-month-table td .cell,
+.el-year-table td .el-date-table-cell__text,
+.el-month-table td .el-date-table-cell__text,
+.el-date-table td .el-date-table-cell__text {
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background .12s ease, color .12s ease;
+}
+.el-year-table td.available:hover .cell,
+.el-month-table td.available:hover .cell,
+.el-year-table td.available:hover .el-date-table-cell__text,
+.el-month-table td.available:hover .el-date-table-cell__text,
+.el-date-table td.available:hover .el-date-table-cell__text {
+  background: #eef4fd;
+  color: #16468e;
+}
+.el-year-table td.today .cell,
+.el-month-table td.today .cell,
+.el-year-table td.today .el-date-table-cell__text,
+.el-month-table td.today .el-date-table-cell__text {
+  color: #16468e;
+  font-weight: 800;
+}
+.el-year-table td.current:not(.disabled) .cell,
+.el-month-table td.current:not(.disabled) .cell,
+.el-year-table td.current:not(.disabled) .el-date-table-cell__text,
+.el-month-table td.current:not(.disabled) .el-date-table-cell__text {
+  background: linear-gradient(135deg, #16468e, #2563eb);
+  color: #fff;
+  border-radius: 999px;
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(22, 70, 142, .35);
+}
+
+/* Modo oscuro */
+.dark .el-picker__popper.el-popper {
+  background: #161b28;
+  border-color: rgba(255, 255, 255, .1);
+  --el-bg-color-overlay: #161b28;
+  --el-text-color-primary: #e2e8f0;
+  --el-text-color-regular: #cbd5e1;
+  --el-border-color-light: rgba(255, 255, 255, .08);
+  --el-datepicker-active-color: #3b82f6;
+  --el-datepicker-hover-font-color: #93c5fd;
+  --el-datepicker-inrange-bg-color: rgba(59, 130, 246, .12);
+  --el-datepicker-inrange-hover-bg-color: rgba(59, 130, 246, .18);
+}
+.dark .el-date-picker__header-label { color: #e2e8f0; }
+.dark .el-picker-panel__icon-btn { color: #94a3b8; }
+.dark .el-picker-panel__icon-btn:hover { color: #93c5fd; }
+.dark .el-date-picker__header--bordered { border-bottom-color: rgba(255, 255, 255, .07); }
+.dark .el-year-table td.available:hover .cell,
+.dark .el-month-table td.available:hover .cell,
+.dark .el-year-table td.available:hover .el-date-table-cell__text,
+.dark .el-month-table td.available:hover .el-date-table-cell__text,
+.dark .el-date-table td.available:hover .el-date-table-cell__text {
+  background: rgba(59, 130, 246, .14);
+  color: #93c5fd;
+}
+.dark .el-year-table td.today .cell,
+.dark .el-month-table td.today .cell,
+.dark .el-year-table td.today .el-date-table-cell__text,
+.dark .el-month-table td.today .el-date-table-cell__text {
+  color: #93c5fd;
+}
+
+/* ── Tooltip de estados (solicitudes) — compacto y claro ── */
+.el-popper.is-light.estado-tip {
+  max-width: 190px;
+  padding: 5px 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #1e2d55;
+  border: 1px solid #dde6f2;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 35, 71, .14);
+}
+.dark .el-popper.is-light.estado-tip {
+  background: #1e293b;
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, .12);
+}
+.dark .el-popper.is-light.estado-tip .el-popper__arrow::before {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, .12);
+}

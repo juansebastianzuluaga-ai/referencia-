@@ -19,6 +19,14 @@ window.addEventListener('message', (ev) => {
   if (!datos || datos.source !== 'referencia-app' || datos.type !== 'autocompletar') return;
   console.log('[Gomedisys ext] pedido recibido de la app:', datos);
 
+  // Acuse de recibo inmediato — la app usa este mensaje para saber que la
+  // extensión está instalada (sin él tendría que esperar el resultado
+  // completo, que tarda ~40s, para distinguir "instalada" de "ausente").
+  window.postMessage(
+    { source: 'gomedisys-extension', type: 'autocompletar-recibido', requestId: datos.requestId },
+    window.location.origin,
+  );
+
   const responder = (resultado) => {
     console.log('[Gomedisys ext] respondiendo a la app:', resultado);
     window.postMessage(

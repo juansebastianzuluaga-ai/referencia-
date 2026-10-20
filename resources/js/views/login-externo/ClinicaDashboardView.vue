@@ -29,29 +29,6 @@
               <component :is="ArrowRightIcon" class="w-[18px] h-[18px] landing-cta-arrow" />
             </button>
           </div>
-
-          <div class="landing-cards">
-            <button type="button" class="landing-card" @click="abrirFormulario()">
-              <div class="landing-card-icon" style="background:#e0ecff; color:#2563eb;">
-                <component :is="ClipboardListIcon" class="w-4 h-4" />
-              </div>
-              <div class="landing-card-text">
-                <strong>Registra la solicitud</strong>
-                <span>Diligencia la información de tu paciente de forma completa y segura.</span>
-              </div>
-              <component :is="ChevronRightIcon" class="landing-card-arrow" />
-            </button>
-            <button type="button" class="landing-card" @click="irHistorial()">
-              <div class="landing-card-icon" style="background:#ede9fe; color:#7c3aed;">
-                <component :is="EyeIcon" class="w-4 h-4" />
-              </div>
-              <div class="landing-card-text">
-                <strong>Seguimiento en tiempo real</strong>
-                <span>Puedes consultar el estado de tu solicitud en cualquier momento.</span>
-              </div>
-              <component :is="ChevronRightIcon" class="landing-card-arrow" />
-            </button>
-          </div>
         </div>
       </div>
 
@@ -99,10 +76,8 @@ import {
   XCircle as XCircleIcon,
   Stethoscope as StethoscopeIcon,
   RefreshCw as RefreshCwIcon,
-  ChevronRight as ChevronRightIcon,
   ArrowRight as ArrowRightIcon,
   FilePlus as FilePlusIcon,
-  Eye as EyeIcon,
   Paperclip as PaperclipIcon,
   UploadCloud as UploadCloudIcon,
   CheckCircle2 as CheckCircle2Icon,
@@ -527,7 +502,6 @@ async function cargarSilencioso() {
 }
 
 function abrirFormulario() { router.push('/clinica/solicitud'); }
-function irHistorial() { router.push('/clinica/historial'); }
 
 function formularioTieneDatos(): boolean {
   const f = form.value;
@@ -1913,10 +1887,20 @@ usePolling(() => {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.88) 22%, rgba(255,255,255,0.35) 38%, transparent 52%);
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.97) 0%,
+    rgba(255,255,255,0.92) 16%,
+    rgba(255,255,255,0.55) 27%,
+    rgba(255,255,255,0.12) 36%,
+    transparent 44%);
 }
 .dark .landing-photo::after {
-  background: linear-gradient(90deg, rgba(22,27,40,0.95) 0%, rgba(22,27,40,0.88) 22%, rgba(22,27,40,0.35) 38%, rgba(22,27,40,0.1) 52%);
+  background: linear-gradient(90deg,
+    rgba(22,27,40,0.97) 0%,
+    rgba(22,27,40,0.92) 16%,
+    rgba(22,27,40,0.55) 27%,
+    rgba(22,27,40,0.12) 36%,
+    transparent 44%);
 }
 
 .landing-inner {
@@ -1994,8 +1978,9 @@ usePolling(() => {
   font-size: clamp(1.6rem, 2.9vw, 2.6rem);
   font-weight: 800;
   letter-spacing: -0.025em;
-  line-height: 1.16;
+  line-height: 1.14;
   color: #16468e;
+  text-shadow: 0 1px 2px rgba(255,255,255,.85), 0 0 14px rgba(255,255,255,.6);
 }
 .landing-title span { color: #2563eb; }
 .dark .landing-title { color: #e2e8f0; }
@@ -2008,6 +1993,7 @@ usePolling(() => {
   line-height: 1.55;
   color: #3d4f6e;
   max-width: 460px;
+  text-shadow: 0 1px 2px rgba(255,255,255,.8);
 }
 .dark .landing-desc { color: #94a3b8; }
 
@@ -2048,83 +2034,6 @@ usePolling(() => {
 .landing-cta-arrow { transition: transform .2s ease; }
 .landing-cta:hover .landing-cta-arrow { transform: translateX(3px); }
 
-/* Cards de acción al pie del hero (vidrio sobre la imagen) */
-.landing-cards {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.landing-card {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 34px 10px 12px;
-  min-width: 0;
-  flex: 1 1 230px;
-  max-width: 300px;
-  border-radius: 13px;
-  background: rgba(255,255,255,0.82);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.75);
-  box-shadow: 0 8px 22px rgba(22,70,142,.12);
-  cursor: pointer;
-  text-align: left;
-  font: inherit;
-  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
-}
-.landing-card:hover {
-  transform: translateY(-2px);
-  background: rgba(255,255,255,0.96);
-  box-shadow: 0 14px 30px rgba(22,70,142,.2);
-}
-.landing-card:active { transform: translateY(0); }
-.dark .landing-card {
-  background: rgba(29,36,50,0.75);
-  border-color: rgba(255,255,255,0.1);
-}
-.dark .landing-card:hover { background: rgba(29,36,50,0.92); }
-.landing-card-icon {
-  width: 36px; height: 36px;
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  transition: transform .2s ease;
-}
-.landing-card:hover .landing-card-icon { transform: scale(1.08); }
-.landing-card-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  line-height: 1.3;
-  min-width: 0;
-}
-.landing-card-text strong {
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #1e2d55;
-}
-.landing-card-text span {
-  font-size: 9.5px;
-  font-weight: 500;
-  color: #64748b;
-}
-.dark .landing-card-text strong { color: #e2e8f0; }
-.dark .landing-card-text span { color: #94a3b8; }
-.landing-card-arrow {
-  position: absolute;
-  right: 12px;
-  width: 15px; height: 15px;
-  color: #94a3b8;
-  opacity: 0;
-  transform: translateX(-5px);
-  transition: opacity .18s ease, transform .18s ease;
-}
-.landing-card:hover .landing-card-arrow {
-  opacity: 1;
-  transform: translateX(0);
-  color: #2563eb;
-}
 
 @media (max-width: 900px) {
   .landing-photo::after {
@@ -2133,7 +2042,6 @@ usePolling(() => {
   .dark .landing-photo::after {
     background: rgba(22,27,40,0.9);
   }
-  .landing-card { max-width: none; }
 }
 
 @keyframes fadeInScale {

@@ -47,6 +47,14 @@ export const useAuthStore = defineStore('auth', () => {
     // arranca siempre con los mismos datos completos, sin importar si se
     // acaba de iniciar sesión o si se recargó la página.
     await fetchUser();
+    // Si /api/user falló (401: cookie de sesión vieja o bloqueada), el login
+    // no debe resolverse como exitoso — si no, el router rebota a /login sin
+    // mostrar nada al usuario.
+    if (!user.value) {
+      const err = new Error('session_not_persisted') as Error & { code: string };
+      err.code = 'session_not_persisted';
+      throw err;
+    }
   }
 
   async function fetchUser() {

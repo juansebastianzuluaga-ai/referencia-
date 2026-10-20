@@ -139,3 +139,10 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - To filter on a particular test name: `php artisan test --compact --filter=testName` (recommended after making a change to a related file).
 
 </laravel-boost-guidelines>
+
+## Local Environment Notes
+
+- **Never run `php artisan config:cache` or `php artisan optimize` locally.** A stale `bootstrap/cache/config.php` once caused `MissingAppKeyException` (cached config had no APP_KEY while `.env` did) — sessions/cookies broke and logins silently 401'd. Local dev reads `.env` per request; config caching is for production only.
+- **After changing `.env` or if the app behaves oddly** (login loops, encryption errors, stale config values): run `php artisan optimize:clear`.
+- **If login succeeds (200) but bounces back to `/login` with no error**: stale browser cookies are the usual cause — clear site data for `referencia.test` (DevTools → Application → Storage → Clear site data, with "Cookies" checked). The frontend now surfaces this as a `session_not_persisted` error message.
+- **Frontend stable mode**: `public/hot` must NOT exist — the app serves compiled assets from `public/build`. Run `npm run build` after frontend changes. `npm run dev` recreates `public/hot` and switches back to the Vite dev server (page goes blank if the dev process dies).
