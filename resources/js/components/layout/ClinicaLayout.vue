@@ -42,13 +42,10 @@
 
         <!-- Acciones -->
         <div class="flex items-center gap-1 shrink-0">
-          <NotificationCenter :light="false" scope="externo" />
-          <button class="topbar-action-btn" :title="layout.isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'" @click="layout.toggleDarkMode">
-            <component :is="layout.isDarkMode ? SunIcon : MoonIcon" class="w-4 h-4" />
-          </button>
+          <NotificationCenter v-if="clinicaAuth.isAuthenticated" :light="false" scope="externo" />
 
           <!-- Clínica -->
-          <el-dropdown trigger="click" placement="bottom-end" @command="handleCommand">
+          <el-dropdown v-if="clinicaAuth.isAuthenticated" trigger="click" placement="bottom-end" @command="handleCommand">
             <button class="topbar-user">
               <div class="topbar-user-avatar">
                 <span class="topbar-user-iniciales">{{ iniciales }}</span>
@@ -101,8 +98,6 @@ import * as icons from '@lucide/vue';
 import {
   ChevronDown as ChevronDownIcon,
   LogOut as LogOutIcon,
-  Moon as MoonIcon,
-  Sun as SunIcon,
 } from '@lucide/vue';
 import { ElMessageBox } from 'element-plus';
 
@@ -115,7 +110,6 @@ interface NavItem {
 const mainItems: NavItem[] = [
   { to: '/clinica/dashboard', icon: 'Home', text: 'Inicio' },
   { to: '/clinica/solicitud', icon: 'FilePlus', text: 'Nueva solicitud' },
-  { to: '/clinica/historial', icon: 'History', text: 'Historial' },
 ];
 
 const logoColor = '/images/logo-avatar.png';

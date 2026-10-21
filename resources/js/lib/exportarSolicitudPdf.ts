@@ -25,7 +25,14 @@ function esc(valor: unknown): string {
 }
 
 function formatFecha(fecha: string): string {
-  return new Date(fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+  if (!fecha) return '—';
+  // La columna `fecha` llega serializada como "YYYY-MM-DDT00:00:00.000000Z" —
+  // con hora en medianoche es una fecha de calendario, no un instante: se toma
+  // la parte de fecha en hora local para no correrla un día hacia atrás.
+  const esSoloFecha = !fecha.includes('T') || fecha.slice(11, 19) === '00:00:00';
+  const d = new Date(esSoloFecha ? fecha.slice(0, 10) + 'T00:00:00' : fecha);
+  if (isNaN(d.getTime())) return fecha;
+  return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 export async function exportarSolicitudPdf(s: any): Promise<void> {

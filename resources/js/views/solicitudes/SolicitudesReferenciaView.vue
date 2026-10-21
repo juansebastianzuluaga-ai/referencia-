@@ -218,7 +218,7 @@
                   </div>
                 </td>
                 <td class="sol-td">
-                  <p class="sol-table-clinica-name" :title="s.clinica?.nombre">{{ s.clinica?.nombre ?? '—' }}</p>
+                  <p class="sol-table-clinica-name" :title="s.clinica?.nombre ?? s.institucion_remitente">{{ s.clinica?.nombre ?? s.institucion_remitente ?? '—' }}</p>
                   <p class="sol-table-remitente" v-if="s.quien_remitente || s.telefono_contacto">
                     {{ s.quien_remitente || '—' }}<span v-if="s.telefono_contacto"> · {{ s.telefono_contacto }}</span>
                   </p>
@@ -440,7 +440,7 @@
                 </div>
                 <div class="card-body">
                   <div class="data-row"><span>Fecha solicitud</span><strong>{{ formatFecha(solicitudSeleccionada.fecha) }} · {{ formatHora(solicitudSeleccionada.hora) }}</strong></div>
-                  <div class="data-row"><span>Institución</span><strong>{{ solicitudSeleccionada.clinica?.nombre ?? '—' }}</strong></div>
+                  <div class="data-row"><span>Institución</span><strong>{{ solicitudSeleccionada.clinica?.nombre ?? solicitudSeleccionada.institucion_remitente ?? '—' }}</strong></div>
                   <div v-if="solicitudSeleccionada.quien_remitente" class="data-row"><span>Remite</span><strong>{{ solicitudSeleccionada.quien_remitente }}</strong></div>
                   <div v-if="solicitudSeleccionada.telefono_contacto" class="data-row"><span>Teléfono</span><strong>{{ solicitudSeleccionada.telefono_contacto }}</strong></div>
                   <div v-if="solicitudSeleccionada.correo_contacto" class="data-row"><span>Correo</span><strong>{{ solicitudSeleccionada.correo_contacto }}</strong></div>
@@ -962,8 +962,9 @@ interface Clinica {
 
 interface Solicitud {
   id: number;
-  clinica_id: number;
+  clinica_id: number | null;
   clinica?: Clinica;
+  institucion_remitente?: string;
   fecha: string;
   hora: string;
   primer_nombre: string;
@@ -1303,7 +1304,7 @@ const solicitudesFiltradas = computed(() => {
       nombreCompleto(s).toLowerCase().includes(texto) ||
       s.eps.toLowerCase().includes(texto) ||
       s.especialidad_requerida.toLowerCase().includes(texto) ||
-      s.clinica?.nombre.toLowerCase().includes(texto) ||
+      (s.clinica?.nombre ?? s.institucion_remitente ?? '').toLowerCase().includes(texto) ||
       s.numero_documento.toLowerCase().includes(texto);
     return coincideTexto;
   });
@@ -1311,7 +1312,7 @@ const solicitudesFiltradas = computed(() => {
   result = [...result].sort((a, b) => {
     let va = '', vb = '';
     if (sortKey.value === 'paciente') { va = nombreCompleto(a).toLowerCase(); vb = nombreCompleto(b).toLowerCase(); }
-    else if (sortKey.value === 'clinica') { va = (a.clinica?.nombre ?? '').toLowerCase(); vb = (b.clinica?.nombre ?? '').toLowerCase(); }
+    else if (sortKey.value === 'clinica') { va = (a.clinica?.nombre ?? a.institucion_remitente ?? '').toLowerCase(); vb = (b.clinica?.nombre ?? b.institucion_remitente ?? '').toLowerCase(); }
     else if (sortKey.value === 'especialidad') { va = (a.especialidad_requerida ?? '').toLowerCase(); vb = (b.especialidad_requerida ?? '').toLowerCase(); }
     else { va = `${a.fecha} ${a.hora ?? ''}`; vb = `${b.fecha} ${b.hora ?? ''}`; }
     return va < vb ? -dir : va > vb ? dir : 0;
@@ -1430,7 +1431,11 @@ function idInterno(id: number): string {
 
 function formatFecha(fecha: string) {
   if (!fecha) return '—';
-  const d = new Date(fecha.includes('T') ? fecha : fecha + 'T00:00:00');
+  // La columna `fecha` llega serializada como "YYYY-MM-DDT00:00:00.000000Z" —
+  // con hora en medianoche es una fecha de calendario, no un instante: se toma
+  // la parte de fecha en hora local para no correrla un día hacia atrás.
+  const esSoloFecha = !fecha.includes('T') || fecha.slice(11, 19) === '00:00:00';
+  const d = new Date(esSoloFecha ? fecha.slice(0, 10) + 'T00:00:00' : fecha);
   if (isNaN(d.getTime())) return fecha;
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
 }

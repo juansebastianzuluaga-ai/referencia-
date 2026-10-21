@@ -33,7 +33,7 @@ export const ESPECIALIDADES = [
 ];
 
 export const SERVICIOS = [
-  'URGENCIAS','HOSPITALIZACION','HOSPITALIZACION 2 PISO','UCI','UCIN',
+  'URGENCIAS','HOSPITALIZACION','UCI','UCIN',
 ];
 
 // Catálogo real de "Servicio que refiere" en Gomedisys (campo Kendo

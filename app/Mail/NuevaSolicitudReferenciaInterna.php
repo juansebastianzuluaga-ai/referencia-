@@ -17,15 +17,17 @@ class NuevaSolicitudReferenciaInterna extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct(public Clinica $clinica, public SolicitudReferencia $solicitud) {}
+    public function __construct(public ?Clinica $clinica, public SolicitudReferencia $solicitud) {}
 
     /**
      * Get the message envelope.
      */
     public function envelope(): Envelope
     {
+        $institucion = $this->clinica?->nombre ?? $this->solicitud->institucion_remitente ?? 'Entidad externa';
+
         return new Envelope(
-            subject: 'Nueva solicitud de referencia — '.$this->clinica->nombre.' · '.$this->solicitud->primer_nombre.' '.$this->solicitud->primer_apellido.' ('.$this->solicitud->especialidad_requerida.')',
+            subject: 'Nueva solicitud de referencia — '.$institucion.' · '.$this->solicitud->primer_nombre.' '.$this->solicitud->primer_apellido.' ('.$this->solicitud->especialidad_requerida.')',
         );
     }
 

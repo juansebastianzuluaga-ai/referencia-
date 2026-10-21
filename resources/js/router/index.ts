@@ -48,24 +48,20 @@ const router = createRouter({
       component: () => import('@/views/login-externo/RegistroClinicaView.vue'),
       meta: { isPublic: true },
     },
+    // ── Portal público de remisión — sin login, acceso por link directo ──────
     {
       path: '/clinica',
       component: () => import('@/components/layout/ClinicaLayout.vue'),
-      meta: { requiresClinicaAuth: true },
+      meta: { isPublic: true },
       children: [
         {
           path: '',
-          redirect: '/clinica/dashboard',
+          redirect: '/clinica/inicio',
         },
         {
-          path: 'dashboard',
-          name: 'clinica-dashboard',
+          path: 'inicio',
+          name: 'clinica-inicio',
           component: () => import('@/views/login-externo/ClinicaDashboardView.vue'),
-        },
-        {
-          path: 'historial',
-          name: 'clinica-historial',
-          component: () => import('@/views/login-externo/HistorialSolicitudesView.vue'),
         },
         {
           path: 'solicitud',
@@ -73,6 +69,10 @@ const router = createRouter({
           component: () => import('@/views/login-externo/SolicitudView.vue'),
         },
       ],
+    },
+    {
+      path: '/solicitud',
+      redirect: '/clinica',
     },
     // ────────────────────────────────────────────────────────────────────────
 

@@ -111,8 +111,7 @@
             <component :is="ActivityIcon" class="w-3.5 h-3.5" />
           </div>
           <p class="panel-head-title">Actividad reciente</p>
-          <PanelHelp alinear="derecha" texto="Los últimos movimientos del sistema: solicitudes recibidas, aceptadas, negadas o puestas en espera. Los botones cambian el período." />
-          <PeriodoSeg v-model="periodos.actividad.p" v-model:fecha="periodos.actividad.ref" />
+          <PanelHelp alinear="derecha" texto="Los últimos movimientos del sistema: solicitudes recibidas, aceptadas, negadas o puestas en espera." />
           <router-link to="/historico" class="panel-link-sm">Ver todo</router-link>
         </div>
         <div class="flex-1 w-full flex flex-col gap-1 min-h-0 overflow-y-auto activity-list">
@@ -904,9 +903,18 @@ function heatTotal(dia: string, hora: string): number {
   return heatMapa.value.m.get(`${dia}|${hora}`) ?? 0;
 }
 
+/** Mezcla un color base y un acento hex en proporción t (0→base, 1→acento). */
+function mixHex(accent: string, base: string, t: number): string {
+  const parse = (h: string): number[] => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const [r1, g1, b1] = parse(base);
+  const [r2, g2, b2] = parse(accent);
+  const mix = (a: number, b: number): number => Math.round(a + (b - a) * t);
+  return `rgb(${mix(r1, r2)}, ${mix(g1, g2)}, ${mix(b1, b2)})`;
+}
+
 /** Escala azul de 0 a 1 — intensidad proporcional al máximo del mapa. */
 function heatScale(t: number): string {
-  return `color-mix(in srgb, #2563eb ${Math.round(8 + t * 92)}%, ${isDark.value ? '#1e2536' : '#eef4ff'})`;
+  return mixHex('#2563eb', isDark.value ? '#1e2536' : '#eef4ff', 0.08 + t * 0.92);
 }
 
 function heatColor(dia: string, hora: string): string {
@@ -941,7 +949,7 @@ const espMesMax = computed(() =>
 
 /** Escala violeta: del tinte base del tema al #7048e8 puro. */
 function espMesColor(t: number): string {
-  return `color-mix(in srgb, #7048e8 ${Math.round(10 + t * 90)}%, ${isDark.value ? '#1e2536' : '#f4f2ff'})`;
+  return mixHex('#7048e8', isDark.value ? '#1e2536' : '#f4f2ff', 0.10 + t * 0.90);
 }
 
 /* colorScale.ranges apaga el sombreado automático de Apex — así los

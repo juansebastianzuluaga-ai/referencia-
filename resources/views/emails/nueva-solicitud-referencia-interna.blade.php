@@ -24,7 +24,7 @@
         <!-- Cuerpo -->
         <tr><td style="padding:28px 40px 8px;">
           <p style="margin:0 0 6px;color:#0D2D6B;font-size:15px;font-weight:bold;">Nueva remisión recibida</p>
-          <p style="margin:0 0 22px;color:#64748b;font-size:13px;line-height:1.6;">La institución <strong style="color:#16468E;">{{ $clinica->nombre }}</strong> ha enviado una nueva solicitud de referencia. A continuación se detallan los datos del paciente y la remisión.</p>
+          <p style="margin:0 0 22px;color:#64748b;font-size:13px;line-height:1.6;">La institución <strong style="color:#16468E;">{{ $clinica?->nombre ?? $solicitud->institucion_remitente ?? 'Entidad externa' }}</strong> ha enviado una nueva solicitud de referencia. A continuación se detallan los datos del paciente y la remisión.</p>
 
           <!-- Sección: Datos del paciente -->
           <p style="margin:0 0 10px;color:#0D2D6B;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid #e0ecf8;padding-bottom:6px;">Datos del paciente</p>
@@ -39,7 +39,7 @@
           <!-- Sección: Datos de la remisión -->
           <p style="margin:0 0 10px;color:#0D2D6B;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid #e0ecf8;padding-bottom:6px;">Datos de la remisión</p>
           <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e0e8f0;border-radius:10px;overflow:hidden;margin-bottom:20px;">
-            <tr style="background:#f7f9fc;"><td style="padding:9px 16px;color:#64748b;font-size:12px;width:38%;">Institución</td><td style="padding:9px 16px;color:#1a1a2e;font-size:13px;">{{ $clinica->nombre }} &middot; NIT {{ $clinica->nit }}</td></tr>
+            <tr style="background:#f7f9fc;"><td style="padding:9px 16px;color:#64748b;font-size:12px;width:38%;">Institución</td><td style="padding:9px 16px;color:#1a1a2e;font-size:13px;">{{ $clinica ? $clinica->nombre.' · NIT '.$clinica->nit : ($solicitud->institucion_remitente ?? 'Entidad externa') }}</td></tr>
             <tr><td style="padding:9px 16px;color:#64748b;font-size:12px;">Especialidad requerida</td><td style="padding:9px 16px;color:#1a1a2e;font-size:13px;font-weight:bold;">{{ $solicitud->especialidad_requerida }}</td></tr>
             <tr style="background:#f7f9fc;"><td style="padding:9px 16px;color:#64748b;font-size:12px;">Diagnóstico (CIE-10)</td><td style="padding:9px 16px;color:#1a1a2e;font-size:13px;">{{ $solicitud->diagnostico }}</td></tr>
             <tr><td style="padding:9px 16px;color:#64748b;font-size:12px;">Municipio de origen</td><td style="padding:9px 16px;color:#1a1a2e;font-size:13px;">{{ $solicitud->municipio_capita }}</td></tr>

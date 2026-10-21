@@ -690,7 +690,9 @@ watch(drawerVisible, (isOpen) => {
 });
 
 onMounted(() => {
-  cargar();
+  // El portal es público: solo se consulta la bandeja de solicitudes si hay
+  // una sesión de clínica válida (acceso antiguo con login).
+  if (sessionStorage.getItem('clinica_token')) cargar();
   window.addEventListener('keydown', onKeydown);
 });
 onUnmounted(() => {
@@ -698,6 +700,7 @@ onUnmounted(() => {
 });
 
 usePolling(() => {
+  if (!sessionStorage.getItem('clinica_token')) return;
   if (!cargando.value && !drawerVisible.value) cargarSilencioso();
 }, 30000);
 </script>

@@ -64,12 +64,6 @@ class SolicitudReferenciaController extends Controller
      */
     public function buscarDiagnosticosCie10(Request $request): JsonResponse
     {
-        $clinicaId = $this->getClinicaId($request);
-
-        if (! $clinicaId) {
-            return response()->json(['message' => 'No autenticado'], 401);
-        }
-
         $buscar = trim((string) $request->query('buscar', ''));
 
         if ($buscar === '') {
@@ -77,6 +71,7 @@ class SolicitudReferenciaController extends Controller
         }
 
         $resultados = DiagnosticoCie10::query()
+            ->where('codigo', 'not like', 'R%')
             ->where(function ($q) use ($buscar) {
                 $q->where('codigo', 'like', $buscar.'%')
                     ->orWhere('descripcion', 'like', '%'.$buscar.'%');
@@ -100,12 +95,6 @@ class SolicitudReferenciaController extends Controller
      */
     public function listarCiudadesGomedisys(Request $request): JsonResponse
     {
-        $clinicaId = $this->getClinicaId($request);
-
-        if (! $clinicaId) {
-            return response()->json(['message' => 'No autenticado'], 401);
-        }
-
         $ciudades = CiudadGomedisys::orderBy('nombre')->get(['nombre']);
 
         return response()->json(['data' => $ciudades]);
@@ -113,11 +102,9 @@ class SolicitudReferenciaController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        // El formulario de remisión es público: si llega una sesión de clínica
+        // válida se asocia, si no queda como remisión externa sin clínica.
         $clinicaId = $this->getClinicaId($request);
-
-        if (! $clinicaId) {
-            return response()->json(['message' => 'No autenticado'], 401);
-        }
 
         $validated = $request->validate([
             'fecha' => ['nullable', 'date'],
@@ -142,9 +129,13 @@ class SolicitudReferenciaController extends Controller
             'especialidad_requerida' => ['required', 'string', 'max:120'],
             'servicio_ubicacion_actual' => ['required', 'string', 'max:60'],
             'servicio_remision' => ['nullable', 'string', 'max:60'],
+            'institucion_remitente' => ['nullable', 'string', 'max:150'],
+            'municipio_remitente' => ['nullable', 'string', 'max:120'],
+            'requiere_aislamiento' => ['nullable', 'boolean'],
+            'tipo_aislamiento' => ['nullable', 'string', 'in:contacto,respiratorio,cohortizado'],
             'quien_remitente' => ['required', 'string', 'max:200'],
             'telefono_contacto' => ['required', 'string', 'max:30'],
-            'correo_contacto' => ['required', 'email', 'max:150'],
+            'correo_contacto' => ['nullable', 'email', 'max:150'],
             'resumen_historia_clinica' => ['required', 'string'],
             'via_contacto' => ['nullable', 'string', 'max:20'],
             'gestante' => ['nullable', 'boolean'],
@@ -197,11 +188,12 @@ class SolicitudReferenciaController extends Controller
         ]);
 
         // Notificar en campana a usuarios con permisos de referencia
-        $clinica = Clinica::find($clinicaId);
+        $clinica = $clinicaId ? Clinica::find($clinicaId) : null;
+        $institucion = $clinica?->nombre ?? $validated['institucion_remitente'] ?? 'Entidad externa';
         $paciente = trim("{$validated['primer_nombre']} {$validated['primer_apellido']}");
         $this->notificarUsuarios(
             titulo: 'Nueva solicitud de referencia',
-            mensaje: "La institución \"{$clinica->nombre}\" solicita referencia para el paciente {$paciente} — {$validated['especialidad_requerida']}.",
+            mensaje: "La institución \"{$institucion}\" solicita referencia para el paciente {$paciente} — {$validated['especialidad_requerida']}.",
             tipo: 'warning',
             link: "/solicitudes-referencia?resaltar={$solicitud->id}",
         );

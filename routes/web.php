@@ -35,9 +35,9 @@ Route::prefix('api')->name('api.')->group(function (): void {
         Route::get('clinica', [LoginExternoController::class, 'clinicaActual'])->name('clinica');
         Route::post('logout', [LoginExternoController::class, 'logout'])->name('logout');
         Route::get('solicitudes', [SolicitudReferenciaExternoController::class, 'index'])->name('solicitudes.index');
-        Route::get('diagnosticos-cie10', [SolicitudReferenciaExternoController::class, 'buscarDiagnosticosCie10'])->name('diagnosticos-cie10');
-        Route::get('ciudades-gomedisys', [SolicitudReferenciaExternoController::class, 'listarCiudadesGomedisys'])->name('ciudades-gomedisys');
-        Route::post('solicitudes', [SolicitudReferenciaExternoController::class, 'store'])->name('solicitudes.store');
+        Route::get('diagnosticos-cie10', [SolicitudReferenciaExternoController::class, 'buscarDiagnosticosCie10'])->middleware('throttle:60,1')->name('diagnosticos-cie10');
+        Route::get('ciudades-gomedisys', [SolicitudReferenciaExternoController::class, 'listarCiudadesGomedisys'])->middleware('throttle:60,1')->name('ciudades-gomedisys');
+        Route::post('solicitudes', [SolicitudReferenciaExternoController::class, 'store'])->middleware('throttle:20,1')->name('solicitudes.store');
         Route::get('solicitudes/{id}', [SolicitudReferenciaExternoController::class, 'show'])->name('solicitudes.show');
         Route::get('solicitudes/{solicitudId}/adjuntos/{adjuntoId}/descargar', [SolicitudReferenciaExternoController::class, 'descargarAdjunto'])->name('solicitudes.adjuntos.descargar');
 
