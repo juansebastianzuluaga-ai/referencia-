@@ -68,21 +68,23 @@ class DashboardController extends BaseController
         $qDonut = $this->queryPanel($queryDims, $query, $pDonut, $fDonut);
         $distribucion = [
             'total' => (clone $qDonut)->count(),
-            'pendientes' => (clone $qDonut)->where('solicitudes_referencia.estado', 'pendiente')->count(),
+            'pendientes' => (clone $qDonut)->whereIn('solicitudes_referencia.estado', ['pendiente', 'pendiente_cama'])->count(),
             'en_espera' => (clone $qDonut)->where('solicitudes_referencia.estado', 'en_espera')->count(),
             'completadas' => (clone $qDonut)->where('solicitudes_referencia.estado', 'completado')->count(),
             'negadas' => (clone $qDonut)->where('solicitudes_referencia.estado', 'negado')->count(),
         ];
 
         $solicitudesTotal = (clone $query)->count();
-        $solicitudesPendientes = (clone $query)->where('solicitudes_referencia.estado', 'pendiente')->count();
+        // "Pendientes de gestión" incluye las nuevas (pendiente) y las
+        // aceptadas en espera de cupo (pendiente_cama) — ambas esperan acción.
+        $solicitudesPendientes = (clone $query)->whereIn('solicitudes_referencia.estado', ['pendiente', 'pendiente_cama'])->count();
         $solicitudesEnEspera = (clone $query)->where('solicitudes_referencia.estado', 'en_espera')->count();
         $solicitudesCompletadas = (clone $query)->where('solicitudes_referencia.estado', 'completado')->count();
         $solicitudesNegadas = (clone $query)->where('solicitudes_referencia.estado', 'negado')->count();
         // "Aceptadas" ya no es un estado propio (aceptar pasa directo a
         // "en espera") — para la tasa de aceptación se cuenta como toda
         // solicitud que avanzó más allá de pendiente sin ser negada.
-        $solicitudesAceptadas = $solicitudesEnEspera + $solicitudesCompletadas;
+        $solicitudesAceptadas = $solicitudesEnEspera + $solicitudesCompletadas + (clone $query)->where('solicitudes_referencia.estado', 'pendiente_cama')->count();
 
         $clinicasTotal = Clinica::count();
         $clinicasActivas = Clinica::where('is_active', true)->count();
@@ -135,8 +137,8 @@ class DashboardController extends BaseController
         $tendenciaAnterior = $this->tendenciaPeriodo(clone $queryDims, $granularidad, $fTendencia, anterior: true);
         $tendenciaClinicas = $this->tendenciaUltimosDias(Clinica::class, 14);
         $tendenciaUsuarios = $this->tendenciaUltimosDias(User::class, 14);
-        $tendenciaPendientes = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'pendiente'), 0, $queryDims);
-        $tendenciaPendientesAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'pendiente'), 14, $queryDims);
+        $tendenciaPendientes = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->whereIn('estado', ['pendiente', 'pendiente_cama']), 0, $queryDims);
+        $tendenciaPendientesAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->whereIn('estado', ['pendiente', 'pendiente_cama']), 14, $queryDims);
         $tendenciaEnEspera = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'en_espera'), 0, $queryDims);
         $tendenciaEnEsperaAnterior = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'en_espera'), 14, $queryDims);
         $tendenciaCompletadas = $this->tendenciaUltimosDias(SolicitudReferencia::class, 14, fn ($q) => $q->where('estado', 'completado'), 0, $queryDims);

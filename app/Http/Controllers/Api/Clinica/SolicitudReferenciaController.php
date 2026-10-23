@@ -127,6 +127,7 @@ class SolicitudReferenciaController extends Controller
             'direccion_paciente' => ['nullable', 'string', 'max:25'],
             'telefono_paciente' => ['nullable', 'string', 'max:15', 'regex:/^[0-9]*$/'],
             'especialidad_requerida' => ['required', 'string', 'max:120'],
+            'tipo_referencia' => ['required', 'string', 'in:Referencia redonda,Referencia integral'],
             'servicio_ubicacion_actual' => ['required', 'string', 'max:60'],
             'servicio_remision' => ['nullable', 'string', 'max:60'],
             'institucion_remitente' => ['nullable', 'string', 'max:150'],

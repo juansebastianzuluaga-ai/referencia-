@@ -70,7 +70,8 @@
               <el-option label="Completado" value="completado" />
               <el-option label="Negado" value="negado" />
               <el-option label="En espera" value="en_espera" />
-              <el-option label="Pendiente" value="pendiente" />
+              <el-option label="Pendiente" value="pendiente_cama" />
+              <el-option label="Nueva solicitud" value="pendiente" />
             </el-select>
             <el-input
               v-model="filtro.buscar"
@@ -160,8 +161,8 @@
                   <div class="sol-table-paciente">
                     <div class="sol-table-avatar"
                       :style="{
-                        background: s.estado === 'pendiente' ? '#fef3c7' : s.estado === 'en_espera' ? '#dbeafe' : s.estado === 'completado' ? '#dcfce7' : '#fee2e2',
-                        color: s.estado === 'pendiente' ? '#d97706' : s.estado === 'en_espera' ? '#2563eb' : s.estado === 'completado' ? '#16a34a' : '#dc2626'
+                        background: s.estado === 'pendiente' ? '#fef3c7' : s.estado === 'pendiente_cama' ? '#ffedd5' : s.estado === 'en_espera' ? '#dbeafe' : s.estado === 'completado' ? '#dcfce7' : '#fee2e2',
+                        color: s.estado === 'pendiente' ? '#d97706' : s.estado === 'pendiente_cama' ? '#ea580c' : s.estado === 'en_espera' ? '#2563eb' : s.estado === 'completado' ? '#16a34a' : '#dc2626'
                       }">
                       {{ inicialesPaciente(s) }}
                     </div>
@@ -200,6 +201,7 @@
                 <td class="sol-td">
                   <span class="sol-table-status" :class="{
                     'sol-status-pending': s.estado === 'pendiente',
+                    'sol-status-cama': s.estado === 'pendiente_cama',
                     'sol-status-waiting': s.estado === 'en_espera',
                     'sol-status-completed': s.estado === 'completado',
                     'sol-status-rejected': s.estado === 'negado',
@@ -237,6 +239,9 @@
                           </el-dropdown-item>
                           <el-dropdown-item @click="exportarPdfFila(s)">
                             <component :is="FileDownIcon" class="w-3.5 h-3.5 mr-1.5" /> Descargar PDF
+                          </el-dropdown-item>
+                          <el-dropdown-item @click="abrirCambiar(s)">
+                            <component :is="RotateCcwIcon" class="w-3.5 h-3.5 mr-1.5" /> Cambiar estado
                           </el-dropdown-item>
                         </el-dropdown-menu>
                       </template>
@@ -390,7 +395,18 @@
                     </div>
                   </div>
                   <p v-if="solicitudSeleccionada.observaciones_respuesta" class="timeline-obs">{{ solicitudSeleccionada.observaciones_respuesta }}</p>
-                  <p v-if="solicitudSeleccionada.motivo_negacion" class="timeline-obs timeline-obs-negada">{{ solicitudSeleccionada.motivo_negacion }}</p>
+                  <p v-if="solicitudSeleccionada.motivo_negacion" class="timeline-obs timeline-obs-negada"><template v-if="grupoNegacionLabel(solicitudSeleccionada.grupo_negacion)"><strong>{{ grupoNegacionLabel(solicitudSeleccionada.grupo_negacion) }}</strong> — </template>{{ solicitudSeleccionada.motivo_negacion }}</p>
+                  <div v-if="notasSeguimiento.length" class="notas-list">
+                    <p class="notas-list-title">Notas de seguimiento</p>
+                    <div v-for="nota in notasSeguimiento" :key="nota.id" class="nota-item">
+                      <div class="nota-item-head">
+                        <component :is="StickyNoteIcon" class="w-3 h-3 nota-item-icon" />
+                        <span class="nota-item-autor">{{ nota.titulo.replace('Nota de seguimiento — ', '') }}</span>
+                        <span class="nota-item-fecha">{{ formatFecha(nota.created_at) }} · {{ horaDeFecha(nota.created_at) }}</span>
+                      </div>
+                      <p class="nota-item-texto">{{ nota.descripcion }}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="detalle-card">
@@ -499,6 +515,99 @@
       </div>
     </el-dialog>
 
+    <!-- ── Modal: Cambiar estado ── -->
+    <el-dialog v-model="modalCambiar" width="560px" class="accion-dialog" :show-close="false" align-center>
+      <template v-if="solicitudSeleccionada">
+        <div class="detalle-content">
+          <button type="button" class="detalle-close-btn" @click="modalCambiar = false">
+            <component :is="XIcon" class="w-4 h-4" />
+          </button>
+          <div class="detalle-head">
+            <div class="detalle-head-pattern"></div>
+            <div class="detalle-head-icon accion-icon-violet">
+              <component :is="RotateCcwIcon" class="w-6 h-6" />
+            </div>
+            <div class="detalle-head-info">
+              <p class="detalle-head-title">Cambiar estado</p>
+              <p class="detalle-head-sub">ID #{{ solicitudSeleccionada.id }} · la clínica será notificada del cambio</p>
+            </div>
+          </div>
+
+          <div class="detalle-body">
+            <div class="accion-patient-card">
+              <div class="accion-patient-avatar">{{ inicialesPaciente(solicitudSeleccionada) }}</div>
+              <div class="accion-patient-info">
+                <strong>{{ nombreCompleto(solicitudSeleccionada) }}</strong>
+                <span>{{ solicitudSeleccionada.tipo_documento }} {{ solicitudSeleccionada.numero_documento }} · {{ solicitudSeleccionada.edad }} años · {{ solicitudSeleccionada.especialidad_requerida }}</span>
+              </div>
+            </div>
+
+            <div class="detalle-card">
+              <div class="card-body accion-form-body">
+                <div class="grid grid-cols-3 gap-2 mb-1.5">
+                  <div>
+                    <label class="accion-field-label">Fecha</label>
+                    <el-input :model-value="formCambiar.fecha_respuesta" disabled />
+                  </div>
+                  <div>
+                    <label class="accion-field-label">Hora</label>
+                    <el-input :model-value="formCambiar.hora_respuesta" disabled />
+                  </div>
+                  <div>
+                    <label class="accion-field-label">Quien responde</label>
+                    <el-input :model-value="formCambiar.nombre_quien_responde" disabled />
+                  </div>
+                </div>
+                <div class="mb-1.5">
+                  <label class="accion-field-label">Nuevo estado <span class="accion-required">*</span></label>
+                  <el-select v-model="formCambiar.estado" placeholder="Seleccione el estado" class="w-full" popper-class="negar-motivo-popper">
+                    <el-option v-for="op in opcionesCambioEstado" :key="op.value" :label="op.label" :value="op.value" />
+                  </el-select>
+                </div>
+                <div v-if="formCambiar.estado === 'en_espera'" class="grid grid-cols-3 gap-2 mb-1.5">
+                  <div>
+                    <label class="accion-field-label">Código Gomedisys (REF) <span class="accion-required">*</span></label>
+                    <el-input v-model="formCambiar.codigo_aceptacion" placeholder="Ej: REF00045821" />
+                  </div>
+                  <div>
+                    <label class="accion-field-label">Hora de llegada <span class="accion-required">*</span></label>
+                    <el-time-picker
+                      v-model="formCambiar.hora_llegada"
+                      placeholder="Ej: 2:30 PM"
+                      format="hh:mm A"
+                      value-format="HH:mm"
+                      :clearable="false"
+                      class="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label class="accion-field-label">Lugar <span class="accion-required">*</span></label>
+                    <el-input v-model="formCambiar.lugar_llegada" placeholder="Ej: Urgencias" />
+                  </div>
+                </div>
+                <div v-if="formCambiar.estado === 'completado'" class="mb-1.5">
+                  <label class="accion-field-label">Número de ingreso (Gomedisys) <span class="accion-required">*</span></label>
+                  <el-input v-model="formCambiar.numero_ingreso" placeholder="Ej: 1045821" />
+                </div>
+                <div>
+                  <label class="accion-field-label">Motivo del cambio <span class="accion-required">*</span></label>
+                  <el-input v-model="formCambiar.motivo" type="textarea" :rows="2" placeholder="Explique por qué cambia el estado — va en el correo a la clínica..." />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detalle-footer">
+            <button type="button" class="accion-cancelar-btn" @click="modalCambiar = false">Cancelar</button>
+            <button type="button" class="accion-confirmar-btn accion-confirmar-violet" :disabled="procesando" @click="cambiarEstado">
+              <component :is="procesando ? Loader2Icon : RotateCcwIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': procesando }" />
+              Cambiar y notificar
+            </button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
+
     <el-dialog v-model="modalHistoriaClinica" width="620px" class="historia-dialog" append-to-body align-center>
       <template #header>
         <div class="historia-dialog-header">
@@ -555,8 +664,12 @@ import {
   History as HistoryIcon,
   SlidersHorizontal as SlidersIcon,
   MoreVertical as MoreVerticalIcon,
+  RotateCcw as RotateCcwIcon,
+  Loader2 as Loader2Icon,
+  StickyNote as StickyNoteIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
+import { useAuthStore } from '@/stores/auth';
 import StatCard from '@/components/ui/StatCard.vue';
 import DateRangeFilter from '@/components/ui/DateRangeFilter.vue';
 
@@ -599,15 +712,16 @@ interface Solicitud {
   gestante?: boolean;
   condicion_especial?: string;
   observaciones?: string;
-  estado: 'pendiente' | 'en_espera' | 'completado' | 'negado';
+  estado: 'pendiente' | 'pendiente_cama' | 'en_espera' | 'completado' | 'negado';
   codigo_aceptacion?: string;
   hora_respuesta?: string;
   motivo_negacion?: string;
+  grupo_negacion?: string;
   numero_ingreso?: number;
   nombre_quien_responde?: string;
   observaciones_respuesta?: string;
   adjuntos?: { id: number; nombre_original: string; mime_type: string; tamano: number }[];
-  eventos?: { id: number; tipo: string; titulo: string; created_at: string }[];
+  eventos?: { id: number; tipo: string; titulo: string; descripcion?: string; created_at: string }[];
   created_at: string;
   updated_at?: string;
 }
@@ -634,7 +748,7 @@ onClickOutside(filtrosWrap, () => { filtrosAbiertos.value = false; });
 const rangoFechas = ref<[string, string] | null>(null);
 const filtroClinica = ref<number | ''>('');
 const filtroEspecialidad = ref('');
-const filtroEstado = ref<'' | 'completado' | 'negado' | 'en_espera' | 'pendiente'>('');
+const filtroEstado = ref<'' | 'completado' | 'negado' | 'en_espera' | 'pendiente' | 'pendiente_cama'>('');
 const seleccionadas = ref<Set<number>>(new Set());
 
 watch([itemsPorPagina, rangoFechas, filtroClinica, filtroEspecialidad, filtroEstado, buscarDebounced], () => {
@@ -935,7 +1049,13 @@ function descripcionSinCodigo(dx: { codigo_cie10: string; descripcion: string })
 }
 
 function estadoLabel(estado: string) {
-  return { pendiente: 'Pendiente', en_espera: 'En espera', completado: 'Completado', negado: 'Negado' }[estado] ?? estado;
+  return { pendiente: 'Nueva solicitud', pendiente_cama: 'Pendiente', en_espera: 'En espera', completado: 'Completado', negado: 'Negado' }[estado] ?? estado;
+}
+
+function grupoNegacionLabel(grupo?: string): string {
+  if (grupo === 'no_red') return 'Paciente no RED';
+  if (grupo === 'poblacion_objeto') return 'Población objeto';
+  return '';
 }
 
 function formatFecha(fecha: string) {
@@ -997,6 +1117,12 @@ const pasosSeguimiento = computed<PasoSeguimiento[]>(() => {
 
   pasos.push({ titulo: 'Solicitud aceptada', fecha: respuestaFecha, hecho: true, tipo: 'aceptada' });
 
+  if (s.estado === 'pendiente_cama') {
+    pasos.push({ titulo: 'En espera de cupo', fecha: '—', hecho: true, tipo: 'espera' });
+    pasos.push({ titulo: 'Paciente en espera', fecha: '—', hecho: false, tipo: 'espera' });
+    return pasos;
+  }
+
   const eventoEspera = s.eventos?.find(e => e.tipo === 'en_espera');
   if (eventoEspera || s.estado === 'en_espera' || s.estado === 'completado') {
     pasos.push({
@@ -1028,6 +1154,14 @@ const ICONO_PASO: Record<PasoSeguimiento['tipo'], any> = {
   espera: ClockIcon,
   completado: CheckCircleIcon,
 };
+
+/** Notas de seguimiento registradas, de la más reciente a la más antigua. */
+const notasSeguimiento = computed(() =>
+  (solicitudSeleccionada.value?.eventos ?? [])
+    .filter(e => e.tipo === 'nota')
+    .slice()
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+);
 
 async function exportarPdf() {
   const s = solicitudSeleccionada.value;
@@ -1220,6 +1354,80 @@ function verDetalle(s: Solicitud) {
 function cerrarDetalle() {
   modalDetalle.value = false;
   limpiarThumbnails();
+}
+
+/* ── Cambio manual de estado (también desde el histórico — permite
+   revertir una completada/negada a la cola activa) ── */
+const authStore = useAuthStore();
+const procesando = ref(false);
+const modalCambiar = ref(false);
+const formCambiar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', estado: '', motivo: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', numero_ingreso: '' });
+
+// "Nueva solicitud" queda fuera del cambio manual — las nuevas solo
+// avanzan por el flujo normal (aceptar/negar).
+const opcionesCambioEstado = computed(() => {
+  const actual = solicitudSeleccionada.value?.estado;
+  return [
+    { label: 'Pendiente — en espera de cupo', value: 'pendiente_cama' },
+    { label: 'En espera (con código)', value: 'en_espera' },
+    { label: 'Completada', value: 'completado' },
+    { label: 'Negada', value: 'negado' },
+  ].filter(op => op.value !== actual);
+});
+
+function fechaActual(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function horaActual(): string {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(Math.floor(now.getMinutes() / 5) * 5).padStart(2, '0')}`;
+}
+
+function abrirCambiar(s: Solicitud) {
+  solicitudSeleccionada.value = s;
+  formCambiar.value = {
+    fecha_respuesta: fechaActual(),
+    hora_respuesta: horaActual(),
+    nombre_quien_responde: authStore.user?.full_name ?? '',
+    estado: '',
+    motivo: '',
+    codigo_aceptacion: '',
+    hora_llegada: '',
+    lugar_llegada: '',
+    numero_ingreso: '',
+  };
+  modalCambiar.value = true;
+}
+
+async function cambiarEstado() {
+  const f = formCambiar.value;
+  if (!f.hora_respuesta || !f.estado || !f.motivo.trim() || !f.nombre_quien_responde.trim()
+    || (f.estado === 'en_espera' && (!f.codigo_aceptacion.trim() || !f.hora_llegada || !f.lugar_llegada.trim()))
+    || (f.estado === 'completado' && !String(f.numero_ingreso).trim())) {
+    notify.warning('Complete los campos obligatorios');
+    return;
+  }
+  try {
+    procesando.value = true;
+    const { data } = await http.post(`/api/solicitudes-referencia/${solicitudSeleccionada.value!.id}/cambiar-estado`, f);
+    notify.success(data.message || 'Estado actualizado');
+    const idx = solicitudes.value.findIndex(s => s.id === solicitudSeleccionada.value!.id);
+    if (idx !== -1) {
+      if (data.data.estado === 'completado' || data.data.estado === 'negado') {
+        solicitudes.value[idx] = data.data;
+      } else {
+        // Salió del histórico hacia la cola activa — se quita de esta vista.
+        solicitudes.value.splice(idx, 1);
+      }
+    }
+    modalCambiar.value = false;
+  } catch (e: any) {
+    notify.error(e.response?.data?.message || 'Error al cambiar el estado');
+  } finally {
+    procesando.value = false;
+  }
 }
 
 function abrirHistoriaClinica() {
@@ -1839,6 +2047,8 @@ usePolling(() => {
 .sol-status-dot { width: 5px; height: 5px; border-radius: 50%; }
 .sol-status-pending { background: #fef3c7; color: #d97706; }
 .sol-status-pending .sol-status-dot { background: #fbbf24; }
+.sol-status-cama { background: #ffedd5; color: #ea580c; }
+.sol-status-cama .sol-status-dot { background: #f97316; }
 .sol-status-waiting { background: #dbeafe; color: #1d4ed8; }
 .sol-status-waiting .sol-status-dot { background: #3b82f6; }
 .sol-status-completed { background: #dcfce7; color: #16a34a; }
@@ -1979,6 +2189,7 @@ usePolling(() => {
 }
 .detalle-head-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .detalle-head-badge.estado-pendiente { background: #fef3c7; color: #b45309; }
+.detalle-head-badge.estado-pendiente_cama { background: #ffedd5; color: #c2410c; }
 .detalle-head-badge.estado-en_espera { background: #dbeafe; color: #1d4ed8; }
 .detalle-head-badge.estado-completado { background: #dcfce7; color: #16a34a; }
 .detalle-head-badge.estado-negado { background: #fee2e2; color: #b91c1c; }
@@ -2247,5 +2458,111 @@ usePolling(() => {
   background: linear-gradient(135deg, #5B52F0, #8B47E8);
   box-shadow: 0 6px 20px rgba(124, 58, 237, .4);
 }
+
+/* ── Modal de acción "Cambiar estado" (mismas clases que en Solicitudes) ── */
+:deep(.accion-dialog) {
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(11, 35, 73, .4), 0 0 0 1px rgba(255,255,255,.08);
+}
+:deep(.accion-dialog .el-dialog__header) { display: none; }
+:deep(.accion-dialog .el-dialog__body) { padding: 0; overflow: hidden; }
+:deep(.accion-dialog .el-input__wrapper),
+:deep(.accion-dialog .el-select__wrapper),
+:deep(.accion-dialog .el-textarea__inner) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px #e2e8f0 inset;
+  background: #fff;
+  transition: box-shadow .15s ease;
+}
+:deep(.accion-dialog .el-input__wrapper),
+:deep(.accion-dialog .el-select__wrapper) { min-height: 33px; }
+:deep(.accion-dialog .el-input__wrapper:hover),
+:deep(.accion-dialog .el-select__wrapper:hover) { box-shadow: 0 0 0 1px #cbd5e1 inset; }
+:deep(.accion-dialog .el-input__wrapper.is-focus),
+:deep(.accion-dialog .el-select__wrapper.is-focused),
+:deep(.accion-dialog .el-textarea__inner:focus) { box-shadow: 0 0 0 2px rgba(79,70,229,.35) inset; }
+:deep(.accion-dialog .el-input__wrapper.is-disabled),
+:deep(.accion-dialog .el-select__wrapper.is-disabled) { background: #f8fafc; }
+
+.accion-icon-violet { background: linear-gradient(135deg, #818cf8, #6366f1) !important; box-shadow: 0 6px 16px rgba(99,102,241,.3) !important; }
+.accion-patient-card {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .5rem .75rem;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #0D2D6B 0%, #16468E 100%);
+  box-shadow: 0 6px 16px rgba(13,45,107,.22);
+  margin-bottom: .45rem;
+}
+.accion-patient-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 800;
+}
+.accion-patient-info { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+.accion-patient-info strong { font-size: .82rem; font-weight: 800; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.accion-patient-info span { font-size: .66rem; color: rgba(255,255,255,.75); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.accion-form-body { padding: .55rem .7rem .5rem; }
+.accion-field-label {
+  display: block;
+  font-size: .66rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: .3rem;
+}
+.accion-required { color: #dc2626; }
+.accion-cancelar-btn {
+  padding: .55rem 1.15rem;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.accion-cancelar-btn:hover { border-color: #cbd5e1; color: #334155; }
+.accion-confirmar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .55rem 1.15rem;
+  border-radius: 10px;
+  border: none;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.accion-confirmar-btn:disabled { opacity: .65; cursor: default; }
+.accion-confirmar-violet { background: linear-gradient(135deg, #818cf8, #6366f1); box-shadow: 0 4px 14px rgba(99,102,241,.3); }
+.accion-confirmar-violet:hover:not(:disabled) { background: linear-gradient(135deg, #a5b4fc, #818cf8); box-shadow: 0 6px 20px rgba(99,102,241,.4); }
+
+/* Notas de seguimiento */
+.notas-list { margin-top: .5rem; padding-top: .5rem; border-top: 1px dashed #e2e8f0; }
+.notas-list-title { font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #b45309; margin: 0 0 .4rem; }
+.nota-item {
+  padding: .45rem .55rem;
+  border-radius: 9px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  margin-bottom: .35rem;
+}
+.nota-item:last-child { margin-bottom: 0; }
+.nota-item-head { display: flex; align-items: center; gap: .3rem; margin-bottom: .15rem; }
+.nota-item-icon { color: #d97706; flex-shrink: 0; }
+.nota-item-autor { font-size: .62rem; font-weight: 700; color: #92400e; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nota-item-fecha { font-size: .58rem; color: #b45309; margin-left: auto; flex-shrink: 0; }
+.nota-item-texto { font-size: .68rem; color: #78350f; margin: 0; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
 
 </style>

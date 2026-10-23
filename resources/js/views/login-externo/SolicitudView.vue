@@ -193,12 +193,18 @@
                   <el-option v-for="e in ESPECIALIDADES" :key="e" :label="e" :value="e" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="Servicio / Ubicación actual" prop="servicio_ubicacion_actual" required :class="['rf-field rf-col-2 rf-stagger-4', { 'is-success': camposValidos.servicio_ubicacion_actual }]">
+              <el-form-item label="Tipo de referencia" prop="tipo_referencia" required :class="['rf-field rf-col-2 rf-stagger-4', { 'is-success': camposValidos.tipo_referencia }]">
+                <el-select v-model="form.tipo_referencia" class="w-full" placeholder="Seleccione" popper-class="rf-select-popper">
+                  <el-option label="Referencia redonda" value="Referencia redonda" />
+                  <el-option label="Referencia integral" value="Referencia integral" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="Servicio / Ubicación actual" prop="servicio_ubicacion_actual" required :class="['rf-field rf-col-2 rf-stagger-5', { 'is-success': camposValidos.servicio_ubicacion_actual }]">
                 <el-select v-model="form.servicio_ubicacion_actual" class="w-full" placeholder="Seleccione" popper-class="rf-select-popper">
                   <el-option v-for="s in SERVICIOS" :key="s" :label="s" :value="s" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="¿Requiere aislamiento?" :class="['rf-field rf-col-quarter rf-stagger-5', { 'is-success': camposValidos.requiere_aislamiento }]">
+              <el-form-item label="¿Requiere aislamiento?" :class="['rf-field rf-col-quarter rf-stagger-6', { 'is-success': camposValidos.requiere_aislamiento }]">
                 <div class="rf-gestante-btns">
                   <button type="button" class="rf-gestante-btn" :class="{ active: form.requiere_aislamiento === true }" @click="form.requiere_aislamiento = true">Sí</button>
                   <button type="button" class="rf-gestante-btn" :class="{ active: form.requiere_aislamiento === false }" @click="form.requiere_aislamiento = false">No</button>
@@ -313,6 +319,10 @@
               <div class="confirm-mini-stat">
                 <div class="confirm-mini-stat-icon confirm-mini-stat-green"><component :is="StethoscopeIcon" class="w-3.5 h-3.5" /></div>
                 <div><span>Especialidad</span><strong>{{ form.especialidad_requerida || '—' }}</strong></div>
+              </div>
+              <div class="confirm-mini-stat">
+                <div class="confirm-mini-stat-icon confirm-mini-stat-blue"><component :is="RepeatIcon" class="w-3.5 h-3.5" /></div>
+                <div><span>Tipo de referencia</span><strong>{{ form.tipo_referencia || '—' }}</strong></div>
               </div>
               <div class="confirm-mini-stat">
                 <div class="confirm-mini-stat-icon confirm-mini-stat-blue"><component :is="MapPinIcon" class="w-3.5 h-3.5" /></div>
@@ -531,6 +541,7 @@ import {
   MapPin as MapPinIcon,
   Shield as ShieldIcon,
   Calendar as CalendarIcon,
+  Repeat as RepeatIcon,
    Send as SendIcon,
   Building2 as BuildingIcon,
 } from '@lucide/vue';
@@ -654,6 +665,7 @@ function emptyForm() {
     primer_nombre: '', segundo_nombre: '', primer_apellido: '', segundo_apellido: '',
     genero: '', fecha_nacimiento: '', edad: null as number | null, tipo_documento: '', numero_documento: '',
     eps: '', municipio_capita: '', direccion_paciente: '', telefono_paciente: '', especialidad_requerida: '',
+    tipo_referencia: '',
     servicio_ubicacion_actual: '', institucion_remitente: '', municipio_remitente: '',
     requiere_aislamiento: null as boolean | null, tipo_aislamiento: '', quien_remitente: '', telefono_contacto: '',
     gestante: null as boolean | null, condicion_especial: '',
@@ -742,7 +754,7 @@ const progresoFormulario = computed(() => {
 const camposValidos = computed(() => {
   const required = ['tipo_documento', 'numero_documento', 'primer_nombre', 'primer_apellido',
     'genero', 'fecha_nacimiento', 'edad', 'municipio_capita', 'eps',
-    'especialidad_requerida', 'servicio_ubicacion_actual', 'resumen_historia_clinica',
+    'especialidad_requerida', 'tipo_referencia', 'servicio_ubicacion_actual', 'resumen_historia_clinica',
     'institucion_remitente', 'municipio_remitente', 'requiere_aislamiento', 'gestante', 'condicion_especial', 'direccion_paciente', 'telefono_paciente'];
   const valid: Record<string, boolean> = {};
   for (const c of required) {
@@ -781,6 +793,7 @@ const resumenRemisionCompleto = computed(() =>
   camposValidos.value.institucion_remitente
   && camposValidos.value.municipio_remitente
   && camposValidos.value.especialidad_requerida
+  && camposValidos.value.tipo_referencia
   && camposValidos.value.servicio_ubicacion_actual
   && camposValidos.value.resumen_historia_clinica
   && diagnosticos.value.some(d => d.descripcion.trim()),
@@ -799,6 +812,7 @@ const rules = {
   institucion_remitente: [{ required: true, message: 'Indique la institución que refiere', trigger: 'blur' }],
   municipio_remitente: [{ required: true, message: 'Seleccione el municipio de la entidad', trigger: 'change' }],
   especialidad_requerida: [{ required: true, message: 'Seleccione la especialidad requerida', trigger: 'change' }],
+  tipo_referencia: [{ required: true, message: 'Seleccione el tipo de referencia', trigger: 'change' }],
   servicio_ubicacion_actual: [{ required: true, message: 'Seleccione el servicio / ubicación actual', trigger: 'change' }],
   resumen_historia_clinica: [{ required: true, message: 'La historia clínica es requerida', trigger: 'blur' }],
   quien_remitente: [{ required: true, message: 'Indique quién remite al paciente', trigger: 'blur' }],
@@ -817,6 +831,7 @@ const CAMPO_LABELS: Record<string, string> = {
   eps: 'EPS / Aseguradora',
   municipio_capita: 'Municipio',
   especialidad_requerida: 'Especialidad requerida',
+  tipo_referencia: 'Tipo de referencia',
   institucion_remitente: 'Institución que refiere',
   municipio_remitente: 'Municipio de la entidad',
   servicio_ubicacion_actual: 'Servicio / Ubicación actual',

@@ -30,6 +30,7 @@
           to="/dashboard"
           icon="LayoutDashboard"
           text="Panel principal"
+          permission="dashboard.view"
         />
         <AppSidebarItem
           to="/solicitudes-referencia"
@@ -51,30 +52,31 @@
         />
       </div>
 
-      <div class="sidebar-divider"></div>
-
-      <!-- Administración -->
-      <div class="mb-1 mt-2">
-        <div class="sidebar-label" :class="{ 'opacity-0': layout.isSidebarCollapsed }">Administración</div>
-        <AppSidebarItem
-          to="/usuarios"
-          icon="Users"
-          text="Usuarios"
-          permission="users.view"
-        />
-        <AppSidebarItem
-          to="/roles"
-          icon="ShieldCheck"
-          text="Roles y permisos"
-          permission="roles.view"
-        />
-        <AppSidebarItem
-          to="/configuracion"
-          icon="Settings"
-          text="Configuración"
-          permission="settings.view"
-        />
-      </div>
+      <!-- Administración — se oculta completa si el rol no tiene ninguno de sus permisos -->
+      <template v-if="puedeVerAdministracion">
+        <div class="sidebar-divider"></div>
+        <div class="mb-1 mt-2">
+          <div class="sidebar-label" :class="{ 'opacity-0': layout.isSidebarCollapsed }">Administración</div>
+          <AppSidebarItem
+            to="/usuarios"
+            icon="Users"
+            text="Usuarios"
+            permission="users.view"
+          />
+          <AppSidebarItem
+            to="/roles"
+            icon="ShieldCheck"
+            text="Roles y permisos"
+            permission="roles.view"
+          />
+          <AppSidebarItem
+            to="/configuracion"
+            icon="Settings"
+            text="Configuración"
+            permission="settings.view"
+          />
+        </div>
+      </template>
 
     </div>
 
@@ -134,6 +136,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useLayoutStore } from '@/stores/layout';
 import { useAuthStore } from '@/stores/auth';
@@ -152,6 +155,12 @@ import {
 const layout = useLayoutStore();
 const auth = useAuthStore();
 const router = useRouter();
+
+// La sección "Administración" solo aparece si el rol tiene al menos uno de
+// sus permisos — los trabajadores no la ven en absoluto.
+const puedeVerAdministracion = computed(() =>
+  auth.hasPermission('users.view') || auth.hasPermission('roles.view') || auth.hasPermission('settings.view'),
+);
 
 // Public images served from /public — binding dinámico para que Vite no
 // intente resolverlas como imports en build.

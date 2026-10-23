@@ -68,6 +68,11 @@ const router = createRouter({
           name: 'clinica-solicitud',
           component: () => import('@/views/login-externo/SolicitudView.vue'),
         },
+        {
+          // URLs viejas del portal (/clinica/dashboard, /clinica/historial…)
+          path: ':pathMatch(.*)*',
+          redirect: '/clinica/inicio',
+        },
       ],
     },
     {
@@ -89,6 +94,7 @@ const router = createRouter({
           path: 'dashboard',
           name: 'dashboard',
           component: () => import('@/views/DashboardView.vue'),
+          meta: { permissions: ['dashboard.view'] },
         },
         {
           path: 'reportes',
@@ -138,6 +144,11 @@ const router = createRouter({
           meta: { permissions: ['clinicas.view'] },
         },
       ],
+    },
+    {
+      // Cualquier ruta desconocida → raíz (el guard manda a /login si no hay sesión)
+      path: '/:pathMatch(.*)*',
+      redirect: '/',
     },
   ],
 });
@@ -200,7 +211,13 @@ router.beforeEach(async (to) => {
     const hasAccess = required.some((p: string) => auth.hasPermission(p));
     if (!hasAccess) {
       notify.error('No tiene permisos para acceder a este módulo.');
-      return { name: 'dashboard' };
+      // Fallback por nivel: trabajadores sin dashboard van directo a
+      // solicitudes; si ni eso tienen, al perfil (siempre accesible).
+      return auth.hasPermission('dashboard.view')
+        ? { name: 'dashboard' }
+        : auth.hasPermission('clinicas.view')
+          ? { name: 'solicitudes-referencia' }
+          : { name: 'profile' };
     }
   }
 

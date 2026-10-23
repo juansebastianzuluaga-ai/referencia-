@@ -26,8 +26,8 @@ class SolicitudReferenciaController extends Controller
         abort_unless(request()->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
 
         $solicitudes = SolicitudReferencia::with(['clinica', 'adjuntos', 'diagnosticos', 'eventos'])
-            ->whereIn('estado', ['pendiente', 'en_espera'])
-            ->orderByRaw("FIELD(estado, 'pendiente', 'en_espera')")
+            ->whereIn('estado', ['pendiente', 'pendiente_cama', 'en_espera'])
+            ->orderByRaw("FIELD(estado, 'pendiente', 'pendiente_cama', 'en_espera')")
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -58,21 +58,65 @@ class SolicitudReferenciaController extends Controller
     {
         abort_unless($request->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
 
-        if ($solicitud->estado !== 'pendiente') {
-            return response()->json(['message' => 'Solo se pueden aceptar solicitudes pendientes.'], 422);
+        if (! in_array($solicitud->estado, ['pendiente', 'pendiente_cama'], true)) {
+            return response()->json(['message' => 'Solo se pueden aceptar solicitudes nuevas o pendientes de cama.'], 422);
         }
+
+        $sinDisponibilidad = $request->boolean('sin_disponibilidad');
 
         $validated = $request->validate([
             'hora_respuesta' => ['required', 'date_format:H:i'],
             'nombre_quien_responde' => ['required', 'string', 'max:200'],
+            'sin_disponibilidad' => ['nullable', 'boolean'],
             // Código real que Gomedisys generó al registrar al paciente allá
             // (ya no se inventa acá — ver flujo: primero se registra en
-            // Gomedisys, luego se acepta en la app con ese código).
-            'codigo_aceptacion' => ['required', 'string', 'max:20', Rule::unique('solicitudes_referencia', 'codigo_aceptacion')],
-            'hora_llegada' => ['required', 'date_format:H:i'],
-            'lugar_llegada' => ['required', 'string', 'max:150'],
+            // Gomedisys, luego se acepta en la app con ese código). Solo se
+            // exige cuando sí hay cupo disponible.
+            'codigo_aceptacion' => ['nullable', Rule::requiredIf(fn () => ! $sinDisponibilidad), 'string', 'max:20', Rule::unique('solicitudes_referencia', 'codigo_aceptacion')->ignore($solicitud->id)],
+            'hora_llegada' => ['nullable', Rule::requiredIf(fn () => ! $sinDisponibilidad), 'date_format:H:i'],
+            'lugar_llegada' => ['nullable', Rule::requiredIf(fn () => ! $sinDisponibilidad), 'string', 'max:150'],
             'observaciones_respuesta' => ['nullable', 'string'],
         ]);
+
+        if ($sinDisponibilidad) {
+            // Aceptada en espera de cupo: queda "pendiente" hasta que haya
+            // disponibilidad — entonces se envía el código y pasa a en_espera.
+            $solicitud->update([
+                'estado' => 'pendiente_cama',
+                'hora_respuesta' => $validated['hora_respuesta'],
+                'nombre_quien_responde' => $validated['nombre_quien_responde'],
+                'observaciones_respuesta' => $validated['observaciones_respuesta'] ?? null,
+            ]);
+
+            $solicitud->load('clinica');
+
+            SolicitudReferenciaEvento::create([
+                'solicitud_referencia_id' => $solicitud->id,
+                'tipo' => 'pendiente_cama',
+                'titulo' => 'Aceptada — en espera de cupo',
+                'descripcion' => 'La solicitud fue aceptada y quedó en espera de cupo; el código se enviará cuando haya disponibilidad.',
+            ]);
+
+            if ($solicitud->clinica?->email) {
+                Mail::send(
+                    'emails.solicitud-aceptada-sin-cama',
+                    ['solicitud' => $solicitud],
+                    function ($message) use ($solicitud) {
+                        $message->to($solicitud->clinica->email)
+                            ->subject("Solicitud de referencia ACEPTADA - {$solicitud->primer_nombre} {$solicitud->primer_apellido}");
+                    }
+                );
+            }
+
+            $this->notificarClinica(
+                $solicitud,
+                'Solicitud aceptada',
+                "La solicitud de {$solicitud->primer_nombre} {$solicitud->primer_apellido} fue aceptada y quedó en espera de cupo. Le estaremos enviando el código cuando haya disponibilidad.",
+                'success',
+            );
+
+            return response()->json(['data' => $solicitud, 'message' => 'Solicitud aceptada: en espera de cupo']);
+        }
 
         // Aceptar y marcar en espera de llegada son un solo paso — no existe
         // un estado "aceptado" intermedio.
@@ -126,6 +170,7 @@ class SolicitudReferenciaController extends Controller
 
         $validated = $request->validate([
             'hora_respuesta' => ['required', 'date_format:H:i'],
+            'grupo_negacion' => ['required', 'string', 'in:no_red,poblacion_objeto'],
             'motivo_negacion' => ['required', 'string', 'max:250'],
             'nombre_quien_responde' => ['required', 'string', 'max:200'],
             'observaciones_respuesta' => ['nullable', 'string'],
@@ -134,6 +179,7 @@ class SolicitudReferenciaController extends Controller
         $solicitud->update([
             'estado' => 'negado',
             'hora_respuesta' => $validated['hora_respuesta'],
+            'grupo_negacion' => $validated['grupo_negacion'],
             'motivo_negacion' => $validated['motivo_negacion'],
             'nombre_quien_responde' => $validated['nombre_quien_responde'],
             'observaciones_respuesta' => $validated['observaciones_respuesta'] ?? null,
@@ -163,6 +209,123 @@ class SolicitudReferenciaController extends Controller
     }
 
     /**
+     * Cambio manual de estado con motivo — para corregir decisiones o mover
+     * la solicitud cuando el flujo normal no aplica. La clínica queda
+     * notificada por correo y por la campanita del portal.
+     */
+    public function cambiarEstado(Request $request, SolicitudReferencia $solicitud): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
+
+        // "Nueva solicitud" queda fuera del cambio manual: las nuevas solo
+        // avanzan por el flujo normal (aceptar/negar).
+        $labels = [
+            'pendiente_cama' => 'Pendiente (en espera de cupo)',
+            'en_espera' => 'En espera',
+            'completado' => 'Completada',
+            'negado' => 'Negada',
+        ];
+
+        if ($solicitud->estado === 'pendiente') {
+            return response()->json(['message' => 'Las solicitudes nuevas solo avanzan por el flujo de aceptar/negar.'], 422);
+        }
+
+        $validated = $request->validate([
+            'estado' => ['required', 'string', Rule::in(array_keys($labels)), Rule::notIn([$solicitud->estado])],
+            'motivo' => ['required', 'string', 'max:500'],
+            'nombre_quien_responde' => ['required', 'string', 'max:200'],
+            'hora_respuesta' => ['required', 'date_format:H:i'],
+            // Solo se exigen cuando el destino es "en espera" (con código)
+            'codigo_aceptacion' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'en_espera'), 'string', 'max:20', Rule::unique('solicitudes_referencia', 'codigo_aceptacion')->ignore($solicitud->id)],
+            'hora_llegada' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'en_espera'), 'date_format:H:i'],
+            'lugar_llegada' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'en_espera'), 'string', 'max:150'],
+            'numero_ingreso' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'completado'), 'integer'],
+        ]);
+
+        $estadoAnterior = $solicitud->estado;
+
+        $solicitud->update([
+            'estado' => $validated['estado'],
+            'hora_respuesta' => $validated['hora_respuesta'],
+            'nombre_quien_responde' => $validated['nombre_quien_responde'],
+            'observaciones_respuesta' => $validated['motivo'],
+            'codigo_aceptacion' => $validated['estado'] === 'en_espera' ? $validated['codigo_aceptacion'] : $solicitud->codigo_aceptacion,
+            'hora_llegada' => $validated['estado'] === 'en_espera' ? $validated['hora_llegada'] : $solicitud->hora_llegada,
+            'lugar_llegada' => $validated['estado'] === 'en_espera' ? $validated['lugar_llegada'] : $solicitud->lugar_llegada,
+            'numero_ingreso' => $validated['estado'] === 'completado' ? $validated['numero_ingreso'] : $solicitud->numero_ingreso,
+            'motivo_negacion' => $validated['estado'] === 'negado' ? $validated['motivo'] : $solicitud->motivo_negacion,
+            'grupo_negacion' => $validated['estado'] === 'negado' && ! $solicitud->grupo_negacion ? 'no_red' : $solicitud->grupo_negacion,
+        ]);
+
+        $solicitud->load('clinica');
+
+        SolicitudReferenciaEvento::create([
+            'solicitud_referencia_id' => $solicitud->id,
+            'tipo' => 'cambio_estado',
+            'titulo' => "Estado cambiado: {$labels[$estadoAnterior]} → {$labels[$validated['estado']]}",
+            'descripcion' => "Cambio manual. Motivo: {$validated['motivo']}",
+        ]);
+
+        if ($solicitud->clinica?->email) {
+            Mail::send(
+                'emails.solicitud-cambio-estado',
+                [
+                    'solicitud' => $solicitud,
+                    'estadoNuevo' => $labels[$validated['estado']],
+                    'motivo' => $validated['motivo'],
+                ],
+                function ($message) use ($solicitud) {
+                    $message->to($solicitud->clinica->email)
+                        ->subject("Cambio de estado en su solicitud - {$solicitud->primer_nombre} {$solicitud->primer_apellido}");
+                }
+            );
+        }
+
+        $this->notificarClinica(
+            $solicitud,
+            'Cambio de estado',
+            "La solicitud de {$solicitud->primer_nombre} {$solicitud->primer_apellido} pasó a «{$labels[$validated['estado']]}». Motivo: {$validated['motivo']}",
+            'info',
+        );
+
+        $this->notificarPersonal(
+            'Estado modificado manualmente',
+            "{$solicitud->primer_nombre} {$solicitud->primer_apellido}: {$labels[$estadoAnterior]} → {$labels[$validated['estado']]}.",
+            'warning',
+        );
+
+        return response()->json(['data' => $solicitud, 'message' => "Estado cambiado a «{$labels[$validated['estado']]}» y clínica notificada"]);
+    }
+
+    /**
+     * Agrega una nota de seguimiento interna a la solicitud.
+     *
+     * Las notas quedan en la línea de tiempo del detalle y sirven para
+     * dejar constancia del seguimiento (llamadas, confirmaciones de cupo,
+     * contactos con la clínica, etc.). Son internas: no se notifican a la
+     * clínica ni cambian el estado.
+     */
+    public function agregarNota(Request $request, SolicitudReferencia $solicitud): JsonResponse
+    {
+        $validated = $request->validate([
+            'nota' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $autor = $request->user()?->full_name ?? 'Sistema';
+
+        SolicitudReferenciaEvento::create([
+            'solicitud_referencia_id' => $solicitud->id,
+            'tipo' => 'nota',
+            'titulo' => "Nota de seguimiento — {$autor}",
+            'descripcion' => $validated['nota'],
+        ]);
+
+        $solicitud->load(['clinica', 'diagnosticos', 'eventos']);
+
+        return response()->json(['data' => $solicitud, 'message' => 'Nota de seguimiento agregada']);
+    }
+
+    /**
      * Deshace la aceptación y devuelve la solicitud a pendiente.
      *
      * Una vez negada, la solicitud queda definitiva a propósito (el personal
@@ -173,7 +336,7 @@ class SolicitudReferenciaController extends Controller
     {
         abort_unless($request->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
 
-        if ($solicitud->estado !== 'en_espera') {
+        if (! in_array($solicitud->estado, ['en_espera', 'pendiente_cama'], true)) {
             return response()->json(['message' => 'Esta solicitud no se puede devolver a pendiente.'], 422);
         }
 

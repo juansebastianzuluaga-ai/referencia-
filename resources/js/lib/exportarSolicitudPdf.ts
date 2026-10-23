@@ -12,7 +12,8 @@ import html2canvas from 'html2canvas';
  */
 
 const ESTADOS: Record<string, { label: string; color: string }> = {
-  pendiente: { label: 'Pendiente', color: '#f59e0b' },
+  pendiente: { label: 'Nueva solicitud', color: '#f59e0b' },
+  pendiente_cama: { label: 'Pendiente', color: '#f97316' },
   en_espera: { label: 'En espera', color: '#3b82f6' },
   completado: { label: 'Completada', color: '#22c55e' },
   negado: { label: 'Negada', color: '#ef4444' },
@@ -75,6 +76,7 @@ export async function exportarSolicitudPdf(s: any): Promise<void> {
           <h2 style="font-size:.75rem; font-weight:800; color:#0d2d5e; text-transform:uppercase; letter-spacing:.04em; margin:0 0 .6rem; padding-bottom:.4rem; border-bottom:2px solid #f1f5f9;">Remisión</h2>
           <div style="display:flex; justify-content:space-between; padding:.25rem 0; font-size:.78rem;"><span style="color:#94a3b8;">Institución</span><strong>${esc(s.clinica?.nombre) || '—'}</strong></div>
           <div style="display:flex; justify-content:space-between; padding:.25rem 0; font-size:.78rem;"><span style="color:#94a3b8;">Especialidad</span><strong>${esc(s.especialidad_requerida)}</strong></div>
+          <div style="display:flex; justify-content:space-between; padding:.25rem 0; font-size:.78rem;"><span style="color:#94a3b8;">Tipo de referencia</span><strong>${esc(s.tipo_referencia) || '—'}</strong></div>
           <div style="display:flex; justify-content:space-between; padding:.25rem 0; font-size:.78rem;"><span style="color:#94a3b8;">Servicio actual</span><strong>${esc(s.servicio_ubicacion_actual)}</strong></div>
           <div style="display:flex; justify-content:space-between; padding:.25rem 0; font-size:.78rem;"><span style="color:#94a3b8;">Municipio</span><strong>${esc(s.municipio_capita)}</strong></div>
         </div>
@@ -92,7 +94,7 @@ export async function exportarSolicitudPdf(s: any): Promise<void> {
 
       ${s.nombre_quien_responde ? `<div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1rem; margin-bottom:1rem;"><h2 style="font-size:.75rem; font-weight:800; color:#0d2d5e; text-transform:uppercase; letter-spacing:.04em; margin:0 0 .5rem; padding-bottom:.4rem; border-bottom:2px solid #f1f5f9;">Respuesta del equipo</h2><p style="font-size:.78rem; line-height:1.6; color:#475569;"><strong>Respondió:</strong> ${esc(s.nombre_quien_responde)} · ${esc(s.hora_respuesta)}</p>${s.observaciones_respuesta ? `<p style="font-size:.78rem; line-height:1.6; color:#475569; margin-top:.5rem;">${esc(s.observaciones_respuesta)}</p>` : ''}</div>` : ''}
 
-      ${s.motivo_negacion ? `<div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1rem; margin-bottom:1rem;"><h2 style="font-size:.75rem; font-weight:800; color:#0d2d5e; text-transform:uppercase; letter-spacing:.04em; margin:0 0 .5rem; padding-bottom:.4rem; border-bottom:2px solid #f1f5f9;">Motivo de negación</h2><p style="font-size:.78rem; line-height:1.6; color:#475569;">${esc(s.motivo_negacion)}</p></div>` : ''}
+      ${s.motivo_negacion ? `<div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1rem; margin-bottom:1rem;"><h2 style="font-size:.75rem; font-weight:800; color:#0d2d5e; text-transform:uppercase; letter-spacing:.04em; margin:0 0 .5rem; padding-bottom:.4rem; border-bottom:2px solid #f1f5f9;">Motivo de negación</h2><p style="font-size:.78rem; line-height:1.6; color:#475569;">${s.grupo_negacion ? `<strong>${esc(s.grupo_negacion === 'no_red' ? 'Paciente no RED' : 'Población objeto')}</strong> — ` : ''}${esc(s.motivo_negacion)}</p></div>` : ''}
 
       <div style="margin-top:2rem; padding-top:1rem; border-top:1px solid #e2e8f0; text-align:center;">
         <p style="font-size:.8rem; font-weight:800; color:#0d2d6b; margin-bottom:.3rem;">Clínica CAC Santa Bárbara</p>

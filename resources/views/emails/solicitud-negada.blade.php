@@ -67,6 +67,9 @@
                   <td style="padding:20px 24px;">
                     <p style="margin:0 0 6px;font-size:13px;color:#dc2626;font-weight:bold;">Motivo de negación</p>
                     <p style="margin:0;font-size:14px;color:#7f1d1d;line-height:1.6;">
+                      @if($solicitud->grupo_negacion)
+                        <strong>{{ $solicitud->grupo_negacion === 'no_red' ? 'Paciente no RED' : 'Población objeto' }}</strong> —
+                      @endif
                       {{ $solicitud->motivo_negacion }}
                     </p>
                     @if($solicitud->hora_respuesta)

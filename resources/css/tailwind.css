@@ -540,11 +540,20 @@
 
 /* Dark mode: accion dialog inputs */
 .dark .accion-dialog .el-input__wrapper,
-.dark .accion-dialog .el-select__wrapper {
+.dark .accion-dialog .el-select__wrapper,
+.dark .accion-dialog .el-textarea__inner {
   background: #1e293b !important;
   box-shadow: 0 0 0 1px #334155 inset !important;
+  color: #e2e8f0 !important;
 }
 .dark .accion-dialog .el-input__inner { color: #e2e8f0 !important; }
+.dark .accion-dialog .el-input__wrapper.is-focus,
+.dark .accion-dialog .el-select__wrapper.is-focused,
+.dark .accion-dialog .el-textarea__inner:focus { box-shadow: 0 0 0 2px rgba(129,140,248,.4) inset !important; }
+.dark .accion-dialog-negar .el-input__wrapper.is-focus,
+.dark .accion-dialog-negar .el-select__wrapper.is-focused,
+.dark .accion-dialog-negar .el-textarea__inner:focus { box-shadow: 0 0 0 2px rgba(248,113,113,.4) inset !important; }
+.dark .accion-dialog .el-input__wrapper.is-disabled { background: #141b28 !important; }
 
 /* ── Scrollbars estilo Element Plus: invisibles hasta hover ── */
 * {

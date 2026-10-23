@@ -112,6 +112,8 @@ Route::prefix('api')->name('api.')->group(function (): void {
         Route::post('solicitudes-referencia/{solicitud}/aceptar', [SolicitudReferenciaController::class, 'aceptar'])->name('solicitudes-referencia.aceptar');
         Route::post('solicitudes-referencia/{solicitud}/negar', [SolicitudReferenciaController::class, 'negar'])->name('solicitudes-referencia.negar');
         Route::post('solicitudes-referencia/{solicitud}/pendiente', [SolicitudReferenciaController::class, 'pendiente'])->name('solicitudes-referencia.pendiente');
+        Route::post('solicitudes-referencia/{solicitud}/cambiar-estado', [SolicitudReferenciaController::class, 'cambiarEstado'])->name('solicitudes-referencia.cambiar-estado');
+        Route::post('solicitudes-referencia/{solicitud}/notas', [SolicitudReferenciaController::class, 'agregarNota'])->name('solicitudes-referencia.notas');
         Route::post('solicitudes-referencia/{solicitud}/completado', [SolicitudReferenciaController::class, 'completado'])->name('solicitudes-referencia.completado');
         Route::post('solicitudes-referencia/{solicitud}/consultar-ingreso', [SolicitudReferenciaController::class, 'consultarIngreso'])->name('solicitudes-referencia.consultar-ingreso');
         Route::get('solicitudes-referencia/{solicitud}/adjuntos/{adjunto}/descargar', [SolicitudReferenciaController::class, 'descargarAdjunto'])->name('solicitudes-referencia.adjuntos.descargar');

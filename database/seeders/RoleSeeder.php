@@ -22,21 +22,14 @@ class RoleSeeder extends Seeder
             'admin' => [
                 'display_name' => 'Administrador',
                 'description' => 'Administra usuarios y catalogos base',
-                'permissions' => [
-                    'users.view',
-                    'users.create',
-                    'users.update',
-                    'identification-types.view',
-                    'identification-types.create',
-                    'identification-types.update',
-                    'clinicas.view',
-                ],
+                'permissions' => Permission::query()->pluck('name')->all(),
             ],
             'medico' => [
                 'display_name' => 'Medico',
                 'description' => 'Acceso base para profesionales medicos',
                 'permissions' => [
                     'identification-types.view',
+                    'clinicas.view',
                 ],
             ],
         ];
