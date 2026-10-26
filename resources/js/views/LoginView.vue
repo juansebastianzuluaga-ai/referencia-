@@ -128,7 +128,9 @@ async function handleLogin() {
     loadingInterno.value = true;
     errorInterno.value = '';
     await auth.login({ username: form.username, password: form.password });
-    router.push({ name: 'dashboard' });
+    // La ruta raíz redirige al primer módulo que el rol del usuario permita —
+    // no siempre es el dashboard.
+    router.push('/');
   } catch (error: any) {
     if (error?.code === 'session_not_persisted') {
       errorInterno.value = 'La sesión no se pudo establecer. Borra las cookies del sitio (Ctrl+Shift+Supr) e inténtalo de nuevo.';

@@ -97,12 +97,12 @@ class SolicitudReferenciaController extends Controller
                 'descripcion' => 'La solicitud fue aceptada y quedó en espera de cupo; el código se enviará cuando haya disponibilidad.',
             ]);
 
-            if ($solicitud->clinica?->email) {
+            if ($solicitud->correoNotificacion()) {
                 Mail::send(
                     'emails.solicitud-aceptada-sin-cama',
                     ['solicitud' => $solicitud],
                     function ($message) use ($solicitud) {
-                        $message->to($solicitud->clinica->email)
+                        $message->to($solicitud->correoNotificacion())
                             ->subject("Solicitud de referencia ACEPTADA - {$solicitud->primer_nombre} {$solicitud->primer_apellido}");
                     }
                 );
@@ -139,12 +139,12 @@ class SolicitudReferenciaController extends Controller
             'descripcion' => 'La solicitud fue aceptada y el paciente está en espera de llegada.',
         ]);
 
-        if ($solicitud->clinica?->email) {
+        if ($solicitud->correoNotificacion()) {
             Mail::send(
                 'emails.solicitud-en-espera',
                 ['solicitud' => $solicitud],
                 function ($message) use ($solicitud) {
-                    $message->to($solicitud->clinica->email)
+                    $message->to($solicitud->correoNotificacion())
                         ->subject("Solicitud de referencia ACEPTADA - {$solicitud->primer_nombre} {$solicitud->primer_apellido}");
                 }
             );
@@ -187,12 +187,12 @@ class SolicitudReferenciaController extends Controller
 
         $solicitud->load('clinica');
 
-        if ($solicitud->clinica?->email) {
+        if ($solicitud->correoNotificacion()) {
             Mail::send(
                 'emails.solicitud-negada',
                 ['solicitud' => $solicitud],
                 function ($message) use ($solicitud) {
-                    $message->to($solicitud->clinica->email)
+                    $message->to($solicitud->correoNotificacion())
                         ->subject("Solicitud de referencia NEGADA - {$solicitud->primer_nombre} {$solicitud->primer_apellido}");
                 }
             );
@@ -266,7 +266,7 @@ class SolicitudReferenciaController extends Controller
             'descripcion' => "Cambio manual. Motivo: {$validated['motivo']}",
         ]);
 
-        if ($solicitud->clinica?->email) {
+        if ($solicitud->correoNotificacion()) {
             Mail::send(
                 'emails.solicitud-cambio-estado',
                 [
@@ -275,7 +275,7 @@ class SolicitudReferenciaController extends Controller
                     'motivo' => $validated['motivo'],
                 ],
                 function ($message) use ($solicitud) {
-                    $message->to($solicitud->clinica->email)
+                    $message->to($solicitud->correoNotificacion())
                         ->subject("Cambio de estado en su solicitud - {$solicitud->primer_nombre} {$solicitud->primer_apellido}");
                 }
             );
@@ -399,12 +399,12 @@ class SolicitudReferenciaController extends Controller
             'descripcion' => "El paciente llegó a la institución (ingreso Gomedisys #{$validated['numero_ingreso']}) y fue atendido.",
         ]);
 
-        if ($solicitud->clinica?->email) {
+        if ($solicitud->correoNotificacion()) {
             Mail::send(
                 'emails.solicitud-completada',
                 ['solicitud' => $solicitud],
                 function ($message) use ($solicitud) {
-                    $message->to($solicitud->clinica->email)
+                    $message->to($solicitud->correoNotificacion())
                         ->subject("Solicitud de referencia COMPLETADA - {$solicitud->primer_nombre} {$solicitud->primer_apellido}");
                 }
             );

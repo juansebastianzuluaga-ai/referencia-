@@ -58,7 +58,15 @@ const wrap = ref<HTMLElement | null>(null);
 const custom = ref<[string, string] | null>(props.modelValue);
 const presetActivo = ref('');
 
-onClickOutside(wrap, () => { abierto.value = false; });
+// El calendario del el-date-picker va teleportado a <body>: un clic en una
+// fecha también es "fuera" del wrap — sin esto el panel se cierra en el mismo
+// gesto.
+onClickOutside(wrap, (e) => {
+  const enPopper = e.composedPath().some(
+    el => el instanceof HTMLElement && el.matches('.el-popper, .el-popper *'),
+  );
+  if (!enPopper) abierto.value = false;
+});
 
 watch(() => props.modelValue, (val) => {
   custom.value = val;

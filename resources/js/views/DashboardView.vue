@@ -258,8 +258,7 @@
             <component :is="HospitalIcon" class="w-3.5 h-3.5" />
           </div>
           <p class="panel-head-title">Top clínicas emisoras</p>
-          <PanelHelp alinear="derecha" texto="Las clínicas que más solicitudes envían, su participación sobre el total y su tendencia reciente. Los botones cambian el período." />
-          <PeriodoSeg v-model="periodos.clinicas.p" v-model:fecha="periodos.clinicas.ref" />
+          <PanelHelp alinear="derecha" texto="Las clínicas que más solicitudes envían, su participación sobre el total y su tendencia reciente." />
         </div>
         <div class="flex-1 min-h-0 overflow-hidden">
           <table class="dash-table">
@@ -306,8 +305,7 @@
           <component :is="ClipboardListIcon" class="w-3.5 h-3.5" />
         </div>
         <p class="panel-head-title">Solicitudes recientes</p>
-        <PanelHelp texto="Las últimas solicitudes recibidas con su estado actual. Los botones cambian el período." />
-        <PeriodoSeg v-model="periodos.recientes.p" v-model:fecha="periodos.recientes.ref" />
+        <PanelHelp texto="Las últimas solicitudes recibidas con su estado actual." />
         <router-link to="/solicitudes-referencia" class="panel-link-sm ml-2">Ver todas</router-link>
       </div>
       <div class="flex-1 min-h-0 overflow-auto recientes-scroll">
@@ -538,8 +536,8 @@ const periodos = reactive<Record<string, { p: Periodo; ref: string }>>({
   actividad: { p: 'todo', ref: '' },
   especialidades: { p: 'todo', ref: '' },
   sla: { p: 'todo', ref: '' },
-  clinicas: { p: 'todo', ref: '' },
-  recientes: { p: 'todo', ref: '' },
+  clinicas: { p: 'todo', ref: '' }, // sin selector — siempre histórico completo
+  recientes: { p: 'todo', ref: '' }, // sin selector de período — siempre las últimas
   diahora: { p: 'todo', ref: '' },
   heatmap: { p: 'todo', ref: '' },
 });
@@ -566,22 +564,27 @@ function aplicarFiltros() {
 }
 
 const displayStats = ref([0, 0, 0]);
+let animFrame = 0;
 
+/** Anima desde el valor actual hacia el nuevo — en refrescos de fondo sin
+ * cambios ni siquiera se mueve (evita el barrido 0→N cada 30 s). */
 function animateCounters(targets: number[]) {
-  const duration = 900;
-  const steps = 40;
-  const interval = duration / steps;
-  let step = 0;
-  const timer = setInterval(() => {
-    step++;
-    const progress = step / steps;
-    const ease = 1 - Math.pow(1 - progress, 3);
-    displayStats.value = targets.map(t => Math.round(t * ease));
-    if (step >= steps) {
-      displayStats.value = [...targets];
-      clearInterval(timer);
+  const desde = [...displayStats.value];
+  if (desde.every((d, i) => d === targets[i])) return;
+  if (animFrame) cancelAnimationFrame(animFrame);
+  const inicio = performance.now();
+  const dur = 700;
+  const tick = (t: number) => {
+    const k = Math.min(1, (t - inicio) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    displayStats.value = targets.map((o, i) => Math.round(desde[i] + (o - desde[i]) * e));
+    if (k < 1) {
+      animFrame = requestAnimationFrame(tick);
+    } else {
+      animFrame = 0;
     }
-  }, interval);
+  };
+  animFrame = requestAnimationFrame(tick);
 }
 
 /** % de cambio entre dos series del mismo tamaño (período vs período anterior). */
@@ -1074,7 +1077,7 @@ async function descargarPdf(id: number) {
   }
 }
 
-async function cargarStats() {
+async function cargarStats(silencioso = false) {
   try {
     cargando.value = true;
     const params: Record<string, string> = { granularidad: granularidad.value };
@@ -1091,11 +1094,16 @@ async function cargarStats() {
     const { data } = await http.get('/api/dashboard/stats', { params });
     stats.value = { ...stats.value, ...data.data };
     errorCarga.value = false;
-    animateCounters([
+    const objetivos = [
       stats.value.solicitudes.total,
       stats.value.solicitudes.pendientes,
       stats.value.solicitudes.negadas,
-    ]);
+    ];
+    if (silencioso) {
+      displayStats.value = objetivos;
+    } else {
+      animateCounters(objetivos);
+    }
   } catch {
     errorCarga.value = true;
   } finally {
@@ -1108,7 +1116,7 @@ onMounted(cargarStats);
 
 // Refresco silencioso cada 30 s sin mostrar el esqueleto de carga.
 usePolling(() => {
-  if (!cargando.value) cargarStats();
+  if (!cargando.value) cargarStats(true);
 }, 30000);
 </script>
 

@@ -15,7 +15,13 @@ class EnsureUserHasPermission
      */
     public function handle(Request $request, Closure $next, string $permission): Response
     {
-        abort_unless($request->user()?->hasPermission($permission), Response::HTTP_FORBIDDEN);
+        $user = $request->user();
+        $tieneAlguno = $user !== null
+            && collect(explode('|', $permission))->contains(
+                fn (string $permiso) => $user->hasPermission($permiso),
+            );
+
+        abort_unless($tieneAlguno, Response::HTTP_FORBIDDEN);
 
         return $next($request);
     }

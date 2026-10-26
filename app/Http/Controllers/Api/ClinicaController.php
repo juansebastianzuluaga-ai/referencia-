@@ -81,8 +81,8 @@ class ClinicaController extends Controller
             'cedula_representante' => $validated['cedula_representante'] ?? null,
             'observaciones' => $validated['observaciones'] ?? null,
             'especialidades' => $validated['especialidades'] ?? null,
-            'is_active' => false,
-            'estado' => 'pendiente',
+            'is_active' => true,
+            'estado' => 'activa',
         ]);
 
         $this->geocodificar($clinica);
@@ -220,8 +220,8 @@ class ClinicaController extends Controller
                 'representante_legal' => $item['representante_legal'] ?? null,
                 'cedula_representante' => $item['cedula_representante'] ?? null,
                 'especialidades' => $item['especialidades'] ?? null,
-                'is_active' => false,
-                'estado' => 'pendiente',
+                'is_active' => true,
+                'estado' => 'activa',
             ]);
             $creadas++;
         }

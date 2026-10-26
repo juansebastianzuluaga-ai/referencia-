@@ -36,25 +36,18 @@
       <!-- ── Chips de estado + toggle de filtros ── -->
       <div class="sol-filter-bar shrink-0">
         <div class="sol-tabs">
-          <el-tooltip
+          <button
             v-for="tab in tabs"
             :key="tab.value"
-            :content="estadoTooltip(tab.value)"
-            placement="bottom"
-            effect="light"
-            popper-class="estado-tip"
-            :popper-options="{ strategy: 'fixed' }"
+            class="sol-tab"
+            :class="{ 'sol-tab-active': tabActiva === tab.value }"
+            :title="estadoTooltip(tab.value)"
+            @click="cambiarTab(tab.value)"
           >
-            <button
-              class="sol-tab"
-              :class="{ 'sol-tab-active': tabActiva === tab.value }"
-              @click="cambiarTab(tab.value)"
-            >
-              <span v-if="tab.value !== 'todas'" class="sol-tab-dot" :class="'sol-tab-dot--' + tab.value"></span>
-              {{ tab.label }}
-              <span class="sol-tab-count">{{ tab.count }}</span>
-            </button>
-          </el-tooltip>
+            <span v-if="tab.value !== 'todas'" class="sol-tab-dot" :class="'sol-tab-dot--' + tab.value"></span>
+            {{ tab.label }}
+            <span class="sol-tab-count">{{ tab.count }}</span>
+          </button>
         </div>
         <div class="sol-header-spacer"></div>
         <div class="sol-chips-actions">
@@ -152,19 +145,24 @@
         <div class="overflow-y-auto custom-scrollbar flex-1">
           <table class="sol-table">
             <colgroup>
-              <col style="width: 23%">
-              <col style="width: 16%">
-              <col style="width: 14%">
               <col style="width: 20%">
+              <col style="width: 11%">
+              <col style="width: 14%">
+              <col style="width: 11%">
+              <col style="width: 18%">
               <col style="width: 9%">
-              <col style="width: 9%">
-              <col style="width: 9%">
+              <col style="width: 10%">
+              <col style="width: 7%">
             </colgroup>
             <thead class="sol-table-thead">
               <tr>
                 <th class="sol-th sol-th-paciente sol-th-sortable" @click="toggleSort('paciente')">
                   Paciente
                   <component :is="sortIcon('paciente')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'paciente', 'opacity-30': sortKey !== 'paciente' }" />
+                </th>
+                <th class="sol-th sol-th-sortable" @click="toggleSort('eps')">
+                  Aseguradora
+                  <component :is="sortIcon('eps')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'eps', 'opacity-30': sortKey !== 'eps' }" />
                 </th>
                 <th class="sol-th sol-th-sortable" @click="toggleSort('clinica')">
                   Clínica emisora
@@ -189,7 +187,7 @@
                 :id="`sol-row-${s.id}`"
                 :key="s.id"
                 class="sol-table-row"
-                :class="{ 'sol-table-row-resaltada': resaltarId === s.id || idsActualizados.has(s.id) }"
+                :class="[{ 'sol-table-row-resaltada': resaltarId === s.id }, `sol-row-${s.estado}`]"
               >
                 <td class="sol-td">
                   <div class="sol-table-paciente">
@@ -198,9 +196,12 @@
                     </div>
                     <div class="sol-table-paciente-info">
                       <p class="sol-table-name" :class="{ 'sol-table-name-resaltada': resaltarId === s.id }" :title="nombreCompleto(s)">{{ nombreCompleto(s) }}</p>
-                      <p class="sol-table-doc">{{ s.edad }} años · {{ s.genero }} · {{ s.eps }}</p>
+                      <p class="sol-table-doc">{{ s.edad }} años · {{ s.genero }} · {{ s.tipo_documento }} {{ s.numero_documento }}</p>
                     </div>
                   </div>
+                </td>
+                <td class="sol-td">
+                  <span class="sol-eps-chip" :title="s.eps">{{ s.eps }}</span>
                 </td>
                 <td class="sol-td">
                   <p class="sol-table-clinica-name" :title="s.clinica?.nombre ?? s.institucion_remitente">{{ s.clinica?.nombre ?? s.institucion_remitente ?? '—' }}</p>
@@ -219,28 +220,25 @@
                 <td class="sol-td sol-td-fecha">
                   <p class="sol-fecha">{{ formatFecha(s.fecha) }}</p>
                   <p class="sol-hora">{{ formatHora(s.hora) }}</p>
+                  <span class="sol-edad" :class="edadRelativa(s).clase">{{ edadRelativa(s).texto }}</span>
                 </td>
                 <td class="sol-td">
-                  <el-tooltip :key="`estado-${s.id}`" :content="estadoTooltip(s.estado)" placement="top" effect="light" popper-class="estado-tip" :popper-options="{ strategy: 'fixed' }">
-                    <span class="sol-table-status" :class="{
-                      'sol-status-pending': s.estado === 'pendiente',
-                      'sol-status-cama': s.estado === 'pendiente_cama',
-                      'sol-status-waiting': s.estado === 'en_espera',
-                      'sol-status-completed': s.estado === 'completado',
-                      'sol-status-rejected': s.estado === 'negado',
-                    }">
-                      <span class="sol-status-dot"></span>
-                      {{ estadoLabel(s.estado) }}
-                    </span>
-                  </el-tooltip>
+                  <span class="sol-table-status" :title="estadoTooltip(s.estado)" :class="{
+                    'sol-status-pending': s.estado === 'pendiente',
+                    'sol-status-cama': s.estado === 'pendiente_cama',
+                    'sol-status-waiting': s.estado === 'en_espera',
+                    'sol-status-completed': s.estado === 'completado',
+                    'sol-status-rejected': s.estado === 'negado',
+                  }">
+                    <span class="sol-status-dot"></span>
+                    {{ estadoLabel(s.estado) }}
+                  </span>
                 </td>
                 <td class="sol-td">
                   <div class="sol-table-actions">
-                    <el-tooltip :key="`ver-${s.id}`" content="Ver detalle" placement="top" :popper-options="{ strategy: 'fixed' }">
-                      <el-button circle size="small" @click="verDetalle(s)">
-                        <component :is="EyeIcon" class="w-3.5 h-3.5" />
-                      </el-button>
-                    </el-tooltip>
+                    <el-button circle size="small" title="Ver detalle" @click="verDetalle(s)">
+                      <component :is="EyeIcon" class="w-3.5 h-3.5" />
+                    </el-button>
                     <el-dropdown v-if="s.estado !== 'completado'" trigger="click" placement="bottom-end" :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [8, 8] } }] }" popper-class="sol-acciones-menu" @command="(cmd: string) => manejarAccionFila(cmd, s)">
                       <el-button circle size="small" :loading="enviandoGomedisysId === s.id || consultandoIngresoId === s.id">
                         <component :is="MoreIcon" class="w-3.5 h-3.5" />
@@ -393,11 +391,9 @@
               <p class="detalle-head-title">Detalle de solicitud</p>
               <p class="detalle-head-sub">{{ idInterno(solicitudSeleccionada.id) }} · {{ formatFecha(solicitudSeleccionada.fecha) }} · {{ formatHora(solicitudSeleccionada.hora) }}</p>
             </div>
-            <el-tooltip :content="estadoTooltip(solicitudSeleccionada.estado)" placement="bottom" effect="light" popper-class="estado-tip" :popper-options="{ strategy: 'fixed' }">
-              <span class="detalle-head-badge" :class="'estado-' + solicitudSeleccionada.estado">
-                {{ estadoLabel(solicitudSeleccionada.estado) }}
-              </span>
-            </el-tooltip>
+            <span class="detalle-head-badge" :class="'estado-' + solicitudSeleccionada.estado" :title="estadoTooltip(solicitudSeleccionada.estado)">
+              {{ estadoLabel(solicitudSeleccionada.estado) }}
+            </span>
             <button class="detalle-head-pdf" @click="exportarPdf">
               <component :is="FileDownIcon" class="w-3.5 h-3.5" />
               <span>Descargar PDF</span>
@@ -1252,11 +1248,14 @@ interface Solicitud {
 const solicitudes = ref<Solicitud[]>([]);
 const cargando = ref(false);
 const procesando = ref(false);
-const filtro = useStorage('sol-filtro', { buscar: '' });
+// Los filtros se persisten por usuario — con una llave compartida, lo que
+// eligiera una sesión se le aplicaba también a otra cuenta en el mismo PC.
+const uidFiltros = authStore.user?.id ?? 0;
+const filtro = useStorage(`sol-filtro-u${uidFiltros}`, { buscar: '' });
 const buscarDebounced = ref(filtro.value.buscar);
 const updateBuscarDebounced = useDebounceFn((val: string) => { buscarDebounced.value = val; }, 300);
 watch(() => filtro.value.buscar, (val) => updateBuscarDebounced(val));
-const tabActiva = useStorage<'todas' | 'pendiente' | 'pendiente_cama' | 'en_espera'>('sol-tab', 'todas');
+const tabActiva = useStorage<'todas' | 'pendiente' | 'pendiente_cama' | 'en_espera'>(`sol-tab-u${uidFiltros}`, 'todas');
 // 'completado'/'negado' ya no viven aquí — si quedó guardado un tab así de
 // antes de mover esos estados al histórico, se reinicia para no mostrar una
 // tabla vacía sin explicación.
@@ -1264,12 +1263,11 @@ if (!['todas', 'pendiente', 'pendiente_cama', 'en_espera'].includes(tabActiva.va
   tabActiva.value = 'todas';
 }
 
-const sortKey = ref<'paciente' | 'clinica' | 'especialidad' | 'fecha'>('fecha');
+const sortKey = ref<'paciente' | 'clinica' | 'especialidad' | 'eps' | 'fecha'>('fecha');
 // Más reciente arriba por defecto, igual que en Histórico (a propósito,
 // pidió explícitamente invertir el orden que se dejó ascendente antes).
 const sortDir = ref<'asc' | 'desc'>('desc');
 const resaltarId = ref<number | null>(null);
-const idsActualizados = ref<Set<number>>(new Set());
 const paginaActual = ref(1);
 const itemsPorPagina = ref(15);
 watch(itemsPorPagina, () => { paginaActual.value = 1; });
@@ -1277,7 +1275,15 @@ watch(itemsPorPagina, () => { paginaActual.value = 1; });
 // Filtros del botón "Filtros" (todos se aplican en cliente sobre la lista ya cargada).
 const filtrosAbiertos = ref(false);
 const filtrosWrap = ref<HTMLElement | null>(null);
-onClickOutside(filtrosWrap, () => { filtrosAbiertos.value = false; });
+// Los menús de el-select/el-date-picker van teleportados a <body>: un clic en
+// una opción también es "fuera" del wrap — sin esta comprobación el panel se
+// cierra en el mismo gesto y el filtro nunca llega a aplicarse.
+onClickOutside(filtrosWrap, (e) => {
+  const enPopper = e.composedPath().some(
+    el => el instanceof HTMLElement && el.matches('.el-popper, .el-popper *'),
+  );
+  if (!enPopper) filtrosAbiertos.value = false;
+});
 const filtroClinica = ref<number | string | ''>('');
 const filtroEspecialidad = ref('');
 const rangoFechas = ref<[string, string] | null>(null);
@@ -1441,6 +1447,16 @@ const deltaEnEspera = computed(() => deltaTexto(serieEnEspera.value, (dash.value
 const deltaCompletadas = computed(() => deltaTexto(serieCompletadas.value, (dash.value?.tendencia_completadas_anterior ?? []).map(d => d.total)));
 
 /* ── Salud de la cola: gauge + antigüedad + especialidades ── */
+/** Antigüedad en cola para la celda de fecha — mismo criterio que los tramos de edad de cola. */
+function edadRelativa(s: Solicitud): { texto: string; clase: string } {
+  const h = horasDesde(s.created_at);
+  if (h < 24) return { texto: `hace ${Math.max(1, Math.round(h))}h`, clase: 'sol-edad--ok' };
+  const d = Math.floor(h / 24);
+  if (d < 3) return { texto: `hace ${d}d`, clase: 'sol-edad--warn' };
+  if (d <= 7) return { texto: `hace ${d}d`, clase: 'sol-edad--alta' };
+  return { texto: `hace ${d}d`, clase: 'sol-edad--crit' };
+}
+
 function horasDesde(fechaIso: string): number {
   return Math.abs(Date.now() - new Date(fechaIso).getTime()) / 3_600_000;
 }
@@ -1563,20 +1579,17 @@ async function cargarStats() {
 const displayStats = ref([0, 0, 0, 0]);
 
 function animateCounters(targets: number[]) {
-  const duration = 900;
-  const steps = 40;
-  const interval = duration / steps;
-  let step = 0;
-  const timer = setInterval(() => {
-    step++;
-    const progress = step / steps;
-    const ease = 1 - Math.pow(1 - progress, 3);
-    displayStats.value = targets.map(t => Math.round(t * ease));
-    if (step >= steps) {
-      displayStats.value = [...targets];
-      clearInterval(timer);
-    }
-  }, interval);
+  const desde = [...displayStats.value];
+  if (desde.every((d, i) => d === targets[i])) return;
+  const inicio = performance.now();
+  const dur = 700;
+  const tick = (t: number) => {
+    const k = Math.min(1, (t - inicio) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    displayStats.value = targets.map((o, i) => Math.round(desde[i] + (o - desde[i]) * e));
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 const solicitudesFiltradas = computed(() => {
@@ -1613,6 +1626,7 @@ const solicitudesFiltradas = computed(() => {
     if (sortKey.value === 'paciente') { va = nombreCompleto(a).toLowerCase(); vb = nombreCompleto(b).toLowerCase(); }
     else if (sortKey.value === 'clinica') { va = (a.clinica?.nombre ?? a.institucion_remitente ?? '').toLowerCase(); vb = (b.clinica?.nombre ?? b.institucion_remitente ?? '').toLowerCase(); }
     else if (sortKey.value === 'especialidad') { va = (a.especialidad_requerida ?? '').toLowerCase(); vb = (b.especialidad_requerida ?? '').toLowerCase(); }
+    else if (sortKey.value === 'eps') { va = (a.eps ?? '').toLowerCase(); vb = (b.eps ?? '').toLowerCase(); }
     else { va = `${a.fecha} ${a.hora ?? ''}`; vb = `${b.fecha} ${b.hora ?? ''}`; }
     return va < vb ? -dir : va > vb ? dir : 0;
   });
@@ -1635,7 +1649,7 @@ const paginasVisibles = computed<(number | '…')[]>(() => {
   return [1, '…', cur - 1, cur, cur + 1, '…', total];
 });
 
-function toggleSort(key: 'paciente' | 'clinica' | 'especialidad' | 'fecha') {
+function toggleSort(key: 'paciente' | 'clinica' | 'especialidad' | 'eps' | 'fecha') {
   if (key === 'fecha') {
     if (sortKey.value === 'fecha') {
       sortDir.value = sortDir.value === 'desc' ? 'asc' : 'desc';
@@ -1971,22 +1985,14 @@ async function cargar() {
   }
 }
 
-/** Refresco automático de fondo: no muestra el esqueleto de carga ni toca
- * nada si el servidor devuelve exactamente lo mismo. Si algo cambió, resalta
- * solo esas filas en vez de refrescar toda la tabla. */
+/** Refresco automático de fondo: invisible — no muestra el esqueleto de
+ * carga ni anima nada; solo actualiza los datos cuando algo cambió. */
 async function cargarSilencioso() {
   try {
-    const statsAntes = JSON.stringify(resumen.value);
     const { data } = await http.get('/api/solicitudes-referencia');
     const cambiados = actualizarSiCambio(solicitudes, data.data);
     if (cambiados.length === 0) return;
-
-    idsActualizados.value = new Set(cambiados);
-    setTimeout(() => { idsActualizados.value = new Set(); }, 3000);
-
-    if (JSON.stringify(resumen.value) !== statsAntes) {
-      animateCounters([resumen.value.total, resumen.value.pendientes, resumen.value.enEspera, statsSol.value.completadas]);
-    }
+    displayStats.value = [resumen.value.total, resumen.value.pendientes, resumen.value.enEspera, statsSol.value.completadas];
   } catch {
     // Refresco de fondo: si falla, se reintenta en el siguiente ciclo sin interrumpir al usuario.
   }
@@ -3116,6 +3122,12 @@ usePolling(() => {
   text-overflow: ellipsis;
 }
 .sol-table-row { transition: background .15s ease, box-shadow .15s ease; }
+/* Acento lateral por estado — ayuda a leer la cola de un vistazo */
+.sol-row-pendiente { box-shadow: inset 3px 0 0 #fbbf24; }
+.sol-row-pendiente_cama { box-shadow: inset 3px 0 0 #f97316; }
+.sol-row-en_espera { box-shadow: inset 3px 0 0 #3b82f6; }
+.sol-row-completado { box-shadow: inset 3px 0 0 #22c55e; }
+.sol-row-negado { box-shadow: inset 3px 0 0 #ef4444; }
 .sol-table-row:hover { background: #f8fafc; box-shadow: inset 3px 0 0 var(--rf-primary); }
 .sol-table-row:hover .sol-table-status { transform: scale(1.06); }
 .sol-table-row:last-child td { border-bottom: none; }
@@ -3141,10 +3153,21 @@ usePolling(() => {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .sol-table-doc { font-size: 10px; color: #94a3b8; margin: 1px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sol-eps-chip {
+  display: inline-block; max-width: 100%;
+  padding: 3px 9px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .01em;
+  color: #0d2d6b; background: #eef4ff; border: 1px solid #d8e4fa;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  vertical-align: middle;
+}
+.dark .sol-eps-chip {
+  color: #93c5fd; background: rgba(59,130,246,.12); border-color: rgba(96,165,250,.25);
+}
 .sol-table-status {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 10px; border-radius: 999px;
-  font-size: 10px; font-weight: 700;
+  font-size: 10px; font-weight: 700; white-space: nowrap;
   transition: transform .2s ease;
 }
 .sol-status-dot { width: 5px; height: 5px; border-radius: 50%; }
@@ -3438,6 +3461,18 @@ usePolling(() => {
 .sol-fecha { margin: 0; font-size: 11px; font-weight: 600; color: #334155; }
 .dark .sol-fecha { color: #cbd5e1; }
 .sol-hora { margin: 0; font-size: 10px; color: #94a3b8; }
+.sol-edad {
+  display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 999px;
+  font-size: 9px; font-weight: 800; letter-spacing: .02em; white-space: nowrap;
+}
+.sol-edad--ok { color: #1d4ed8; background: #dbeafe; }
+.sol-edad--warn { color: #b45309; background: #fef3c7; }
+.sol-edad--alta { color: #c2410c; background: #ffedd5; }
+.sol-edad--crit { color: #b91c1c; background: #fee2e2; }
+.dark .sol-edad--ok { color: #93c5fd; background: rgba(59,130,246,.15); }
+.dark .sol-edad--warn { color: #fbbf24; background: rgba(245,158,11,.12); }
+.dark .sol-edad--alta { color: #fb923c; background: rgba(249,115,22,.12); }
+.dark .sol-edad--crit { color: #f87171; background: rgba(239,68,68,.12); }
 
 .data-row {
   display: flex;

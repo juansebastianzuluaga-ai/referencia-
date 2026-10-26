@@ -33,6 +33,8 @@ class PermissionSeeder extends Seeder
             ['api-keys.update', 'Actualizar API keys', 'Permite actualizar y regenerar credenciales API'],
             ['api-keys.delete', 'Eliminar API keys', 'Permite eliminar credenciales API'],
             ['clinicas.view', 'Ver Clínicas', 'Permite listar y gestionar clínicas externas registradas'],
+            ['solicitudes.view', 'Ver solicitudes de referencia', 'Permite acceder a la cola de solicitudes de referencia y gestionarlas'],
+            ['historico.view', 'Ver historial de solicitudes', 'Permite consultar el historial de solicitudes finalizadas'],
             ['solicitudes.analytics', 'Ver analíticas de solicitudes', 'Permite ver los paneles de métricas de la cola de solicitudes (salud de la cola, especialidades)'],
             ['dashboard.view', 'Ver panel principal', 'Permite acceder al dashboard con todas las métricas y gráficos'],
         ])->each(fn (array $permission) => Permission::query()->updateOrCreate(

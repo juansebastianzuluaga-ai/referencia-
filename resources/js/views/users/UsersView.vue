@@ -125,7 +125,7 @@
                 v-for="(u, idx) in users"
                 :key="u.id"
                 class="users-table-row"
-                :class="{ 'users-table-row-selected': seleccionadas.has(u.id), 'users-table-row-resaltada': idsActualizados.has(u.id) }"
+                :class="{ 'users-table-row-selected': seleccionadas.has(u.id) }"
               >
                 <td class="users-td users-td-check">
                   <input type="checkbox" :checked="seleccionadas.has(u.id)" @change="toggleSeleccion(u.id)" class="users-checkbox" />
@@ -310,7 +310,6 @@ import { storeToRefs } from 'pinia';
 
 const search = ref('');
 const searchDebounced = ref('');
-const idsActualizados = ref<Set<number>>(new Set());
 const updateSearchDebounced = useDebounceFn((val: string) => { searchDebounced.value = val; }, 300);
 watch(search, (val) => updateSearchDebounced(val));
 const roleFilter = ref(null);
@@ -591,13 +590,9 @@ async function loadUsersData() {
   await usersStore.loadUsers(filtrosActuales());
 }
 
-/** Refresco automático de fondo: sin esqueleto de carga, y solo resalta las
- * filas que de verdad cambiaron. */
+/** Refresco automático de fondo: invisible — solo actualiza los datos. */
 async function loadUsersDataSilent() {
-  const cambiados = await usersStore.loadUsersSilent(filtrosActuales());
-  if (cambiados.length === 0) return;
-  idsActualizados.value = new Set(cambiados);
-  setTimeout(() => { idsActualizados.value = new Set(); }, 3000);
+  await usersStore.loadUsersSilent(filtrosActuales());
 }
 
 watch(searchDebounced, () => {
@@ -750,16 +745,6 @@ usePolling(() => {
 }
 .users-table-row:hover { background: #f8fafc; box-shadow: inset 3px 0 0 var(--rf-primary); }
 .users-table-row:hover .users-table-status { transform: scale(1.06); }
-
-/* ── Fila resaltada (actualización silenciosa en segundo plano) ── */
-.users-table-row-resaltada {
-  animation: users-row-glow 2.2s ease-in-out 2;
-  box-shadow: inset 3px 0 0 #D97706;
-}
-@keyframes users-row-glow {
-  0%, 100% { background: transparent; }
-  50% { background: rgba(217, 119, 6, .12); }
-}
 
 .users-td {
   padding: 0.6rem 0.75rem;

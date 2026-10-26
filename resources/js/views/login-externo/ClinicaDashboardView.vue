@@ -107,7 +107,6 @@ const layout = useClinicaLayoutStore();
 const isDark = computed(() => layout.isDarkMode);
 const router = useRouter();
 const solicitudes = ref<any[]>([]);
-const idsActualizados = ref<Set<number>>(new Set());
 const cargando = ref(false);
 const chartsReady = ref(false);
 const drawerVisible = ref(false);
@@ -378,20 +377,17 @@ const tasaRechazo = computed(() => {
 const displayStats = ref([0, 0, 0, 0, 0]);
 
 function animateCounters(targets: number[]) {
-  const duration = 900;
-  const steps = 40;
-  const interval = duration / steps;
-  let step = 0;
-  const timer = setInterval(() => {
-    step++;
-    const progress = step / steps;
-    const ease = 1 - Math.pow(1 - progress, 3);
-    displayStats.value = targets.map(t => Math.round(t * ease));
-    if (step >= steps) {
-      displayStats.value = [...targets];
-      clearInterval(timer);
-    }
-  }, interval);
+  const desde = [...displayStats.value];
+  if (desde.every((d, i) => d === targets[i])) return;
+  const inicio = performance.now();
+  const dur = 700;
+  const tick = (t: number) => {
+    const k = Math.min(1, (t - inicio) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    displayStats.value = targets.map((o, i) => Math.round(desde[i] + (o - desde[i]) * e));
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 const stats = computed(() => ({
@@ -492,10 +488,7 @@ async function cargar() {
 async function cargarSilencioso() {
   try {
     const { data } = await http.get('/api/externo/solicitudes');
-    const cambiados = actualizarSiCambio(solicitudes, data.data);
-    if (cambiados.length === 0) return;
-    idsActualizados.value = new Set(cambiados);
-    setTimeout(() => { idsActualizados.value = new Set(); }, 3000);
+    actualizarSiCambio(solicitudes, data.data);
   } catch {
     // Refresco de fondo: si falla, se reintenta en el siguiente ciclo sin interrumpir al usuario.
   }
@@ -1883,7 +1876,7 @@ usePolling(() => {
 .landing-photo {
   position: absolute;
   inset: 0;
-  background: url('/images/clinica-hero-banner.png') center / cover no-repeat;
+  background: url('/images/clinica-hero-banner.png?v=3') center / cover no-repeat;
   pointer-events: none;
 }
 .landing-photo::after {
@@ -2319,14 +2312,6 @@ usePolling(() => {
   box-shadow: 0 6px 16px rgba(22,70,142,.1);
   border-color: #b9c8e0;
   background: #f8fbff;
-}
-/* ── Fila resaltada (actualización silenciosa en segundo plano) ── */
-.mini-ref-row-resaltada {
-  animation: mini-ref-glow 2.2s ease-in-out 2;
-}
-@keyframes mini-ref-glow {
-  0%, 100% { background: #fff; }
-  50% { background: rgba(217, 119, 6, .12); }
 }
 .mini-ref-avatar {
   width: 32px; height: 32px;

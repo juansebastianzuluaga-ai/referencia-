@@ -38,6 +38,15 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(credentials: { username: string; password: string }) {
+    // Las cookies de sesión se comparten entre pestañas: si quedó una sesión
+    // activa de otro usuario, Fortify responde el login con un 302 sin
+    // autenticar y /api/user sigue devolviendo al usuario anterior. Se cierra
+    // esa sesión primero para garantizar que entran las credenciales nuevas.
+    await initCsrf();
+    await http
+      .post('/api/logout', {}, { headers: { 'X-Skip-Auth-Redirect': '1' } })
+      .catch(() => {});
+    // El logout regenera la sesión — hay que pedir un CSRF nuevo para el login.
     await initCsrf();
     await http.post('/api/login', credentials);
     markTab(AUTH_KEY);

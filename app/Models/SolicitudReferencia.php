@@ -69,6 +69,16 @@ class SolicitudReferencia extends Model
         return $this->belongsTo(Clinica::class);
     }
 
+    /**
+     * Correo al que van las notificaciones de estado: el de la clínica
+     * registrada cuando existe, o el correo de contacto que el remitente
+     * dejó en el formulario público cuando la solicitud no tiene clínica.
+     */
+    public function correoNotificacion(): ?string
+    {
+        return $this->clinica?->email ?? $this->correo_contacto;
+    }
+
     public function adjuntos(): HasMany
     {
         return $this->hasMany(SolicitudReferenciaAdjunto::class);

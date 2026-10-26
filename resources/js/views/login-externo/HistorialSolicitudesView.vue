@@ -138,7 +138,7 @@
               :id="`hist-row-${sol.id}`"
               :key="sol.id"
               class="table-row cursor-pointer transition-all anim-row-in"
-              :class="{ 'table-row-resaltada': idsActualizados.has(sol.id) || resaltarId === sol.id }"
+              :class="{ 'table-row-resaltada': resaltarId === sol.id }"
               :style="{ animationDelay: (idx * 0.04) + 's' }"
               @click="verDetalle(sol)"
             >
@@ -205,7 +205,7 @@
           :id="`hist-row-m-${sol.id}`"
           :key="sol.id"
           class="mobile-card rounded-xl p-3 cursor-pointer anim-row-in"
-          :class="{ 'table-row-resaltada': idsActualizados.has(sol.id) || resaltarId === sol.id }"
+          :class="{ 'table-row-resaltada': resaltarId === sol.id }"
           :style="{ animationDelay: (idx * 0.04) + 's' }"
           @click="verDetalle(sol)"
         >
@@ -465,7 +465,6 @@ const isDark = computed(() => layout.isDarkMode);
 const route = useRoute();
 const router = useRouter();
 const solicitudes = ref<any[]>([]);
-const idsActualizados = ref<Set<number>>(new Set());
 const resaltarId = ref<number | null>(null);
 const cargando = ref(false);
 const modalDetalle = ref(false);
@@ -600,10 +599,7 @@ async function cargar() {
 async function cargarSilencioso() {
   try {
     const { data } = await http.get('/api/externo/solicitudes');
-    const cambiados = actualizarSiCambio(solicitudes, data.data);
-    if (cambiados.length === 0) return;
-    idsActualizados.value = new Set(cambiados);
-    setTimeout(() => { idsActualizados.value = new Set(); }, 3000);
+    actualizarSiCambio(solicitudes, data.data);
   } catch {
     // Refresco de fondo: si falla, se reintenta en el siguiente ciclo sin interrumpir al usuario.
   }

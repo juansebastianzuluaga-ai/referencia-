@@ -222,25 +222,3 @@ body {
 .dark .el-month-table td.today .el-date-table-cell__text {
   color: #93c5fd;
 }
-
-/* ── Tooltip de estados (solicitudes) — compacto y claro ── */
-.el-popper.is-light.estado-tip {
-  max-width: 190px;
-  padding: 5px 10px;
-  font-size: 10.5px;
-  font-weight: 600;
-  line-height: 1.4;
-  color: #1e2d55;
-  border: 1px solid #dde6f2;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(15, 35, 71, .14);
-}
-.dark .el-popper.is-light.estado-tip {
-  background: #1e293b;
-  color: #e2e8f0;
-  border-color: rgba(255, 255, 255, .12);
-}
-.dark .el-popper.is-light.estado-tip .el-popper__arrow::before {
-  background: #1e293b;
-  border-color: rgba(255, 255, 255, .12);
-}

@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\ExpireStaleSessionCookies;
 use App\Http\Middleware\PreventSpaResponseCaching;
+use App\Http\Middleware\RedirectToHttps;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
         $middleware->appendToGroup('web', PreventSpaResponseCaching::class);
         $middleware->prependToGroup('web', ExpireStaleSessionCookies::class);
+        $middleware->prependToGroup('web', RedirectToHttps::class);
 
         $middleware->validateCsrfTokens(except: [
             'api/login',

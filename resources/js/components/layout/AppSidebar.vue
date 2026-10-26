@@ -36,7 +36,7 @@
           to="/solicitudes-referencia"
           icon="ClipboardList"
           text="Solicitudes de referencia"
-          permission="clinicas.view"
+          permission="solicitudes.view"
         />
         <AppSidebarItem
           to="/clinicas"
@@ -48,7 +48,7 @@
           to="/historico"
           icon="History"
           text="Historial"
-          permission="clinicas.view"
+          permission="historico.view"
         />
       </div>
 

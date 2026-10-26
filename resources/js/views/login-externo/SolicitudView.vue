@@ -170,22 +170,19 @@
           <div class="rf-subsection rf-subsection-first">
             <div class="rf-grid">
               <el-form-item label="Institución que refiere" prop="institucion_remitente" required :class="['rf-field rf-col-2 rf-stagger-1', { 'is-success': camposValidos.institucion_remitente }]">
-                <el-input v-model="form.institucion_remitente" placeholder="Nombre de la institución" autocomplete="new-password" @input="capitalizar('institucion_remitente')">
-                  <template #prefix><component :is="BuildingIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
-                </el-input>
-              </el-form-item>
-              <el-form-item label="Municipio o ciudad" prop="municipio_remitente" required :class="['rf-field rf-col-2 rf-stagger-2', { 'is-success': camposValidos.municipio_remitente }]">
-                <el-select-v2
-                  v-model="form.municipio_remitente"
-                  :options="municipiosOpciones"
+                <el-select
+                  v-model="form.clinica_id"
                   filterable
                   class="w-full"
-                  placeholder="Seleccione el municipio"
+                  placeholder="Seleccione la institución"
                   popper-class="rf-select-popper"
                   :popper-options="{ strategy: 'fixed' }"
+                  @change="onClinicaSelect"
                 >
-                  <template #prefix><component :is="MapPinIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
-                </el-select-v2>
+                  <template #prefix><component :is="BuildingIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
+                  <el-option key="__nueva_clinica" label="➕ Registrar institución que refiere..." value="__nueva_clinica" />
+                  <el-option v-for="c in clinicasOpciones" :key="c.id" :label="c.nombre" :value="c.id" />
+                </el-select>
               </el-form-item>
               <el-form-item label="Especialidad requerida" prop="especialidad_requerida" required :class="['rf-field rf-col-2 rf-stagger-3', { 'is-success': camposValidos.especialidad_requerida }]">
                 <el-select v-model="form.especialidad_requerida" filterable class="w-full" placeholder="Seleccione" popper-class="rf-select-popper" @change="onEspecialidadSelect">
@@ -288,10 +285,12 @@
         </button>
 
         <div class="confirm-hero">
+          <div class="confirm-hero-dots"></div>
           <div class="confirm-icon-wrap">
             <component :is="CheckCircleIcon" class="w-6 h-6" />
           </div>
           <div class="confirm-hero-text">
+            <p class="confirm-eyebrow">Solicitud de referencia</p>
             <h3 class="confirm-title">¿Confirmar envío?</h3>
             <p class="confirm-subtitle">Revisa el resumen de la solicitud antes de enviarla.</p>
           </div>
@@ -300,11 +299,17 @@
         <div class="confirm-main">
           <!-- Tarjeta paciente -->
           <div class="confirm-patient-card">
-            <div class="confirm-patient-avatar"><component :is="UserIcon" class="w-5 h-5" /></div>
+            <div class="confirm-patient-glow"></div>
+            <div class="confirm-patient-avatar">{{ inicialesPaciente }}</div>
             <div class="confirm-patient-info">
               <strong>{{ nombreCompleto }}</strong>
-              <span>{{ form.edad ?? '—' }} años · {{ form.genero === 'M' ? 'Masculino' : form.genero === 'F' ? 'Femenino' : '—' }} · {{ form.tipo_documento }} {{ form.numero_documento }}</span>
+              <div class="confirm-patient-chips">
+                <span class="confirm-patient-chip">{{ form.edad ?? '—' }} años</span>
+                <span class="confirm-patient-chip">{{ form.genero === 'M' ? 'Masculino' : form.genero === 'F' ? 'Femenino' : '—' }}</span>
+                <span class="confirm-patient-chip confirm-patient-chip-doc">{{ form.tipo_documento }} {{ form.numero_documento }}</span>
+              </div>
             </div>
+            <div class="confirm-patient-tag">Paciente</div>
           </div>
 
           <!-- Detalles de la solicitud -->
@@ -312,24 +317,24 @@
             <p class="confirm-detail-title"><span class="confirm-detail-bar"></span>Detalles de la solicitud</p>
 
             <div class="confirm-mini-stats">
-              <div class="confirm-mini-stat">
-                <div class="confirm-mini-stat-icon confirm-mini-stat-blue"><component :is="ShieldIcon" class="w-3.5 h-3.5" /></div>
+              <div class="confirm-mini-stat ms-blue">
+                <div class="confirm-mini-stat-icon"><component :is="ShieldIcon" class="w-3.5 h-3.5" /></div>
                 <div><span>EPS</span><strong>{{ form.eps || '—' }}</strong></div>
               </div>
-              <div class="confirm-mini-stat">
-                <div class="confirm-mini-stat-icon confirm-mini-stat-green"><component :is="StethoscopeIcon" class="w-3.5 h-3.5" /></div>
+              <div class="confirm-mini-stat ms-green">
+                <div class="confirm-mini-stat-icon"><component :is="StethoscopeIcon" class="w-3.5 h-3.5" /></div>
                 <div><span>Especialidad</span><strong>{{ form.especialidad_requerida || '—' }}</strong></div>
               </div>
-              <div class="confirm-mini-stat">
-                <div class="confirm-mini-stat-icon confirm-mini-stat-blue"><component :is="RepeatIcon" class="w-3.5 h-3.5" /></div>
+              <div class="confirm-mini-stat ms-indigo">
+                <div class="confirm-mini-stat-icon"><component :is="RepeatIcon" class="w-3.5 h-3.5" /></div>
                 <div><span>Tipo de referencia</span><strong>{{ form.tipo_referencia || '—' }}</strong></div>
               </div>
-              <div class="confirm-mini-stat">
-                <div class="confirm-mini-stat-icon confirm-mini-stat-blue"><component :is="MapPinIcon" class="w-3.5 h-3.5" /></div>
+              <div class="confirm-mini-stat ms-sky">
+                <div class="confirm-mini-stat-icon"><component :is="MapPinIcon" class="w-3.5 h-3.5" /></div>
                 <div><span>Servicio actual</span><strong>{{ form.servicio_ubicacion_actual || '—' }}</strong></div>
               </div>
-              <div class="confirm-mini-stat">
-                <div class="confirm-mini-stat-icon confirm-mini-stat-violet"><component :is="FileTextIcon" class="w-3.5 h-3.5" /></div>
+              <div class="confirm-mini-stat ms-violet">
+                <div class="confirm-mini-stat-icon"><component :is="FileTextIcon" class="w-3.5 h-3.5" /></div>
                 <div><span>Diagnóstico principal</span><strong>{{ diagnosticoPrincipalTexto }}</strong></div>
               </div>
             </div>
@@ -393,6 +398,102 @@
           </p>
           <el-button type="primary" class="rf-btn-submit confirm-submit-btn" :loading="guardando" @click="guardar">
             <component :is="SendIcon" class="w-3.5 h-3.5 mr-1" /> Confirmar y enviar
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- Modal: datos de la clínica que refiere -->
+    <el-dialog
+      v-model="showClinicaModal"
+      width="560px"
+      class="confirm-dialog clinica-dialog"
+      :close-on-click-modal="false"
+      :show-close="false"
+      append-to-body
+      align-center
+    >
+      <div class="confirm-body">
+        <button type="button" class="confirm-close-btn" @click="showClinicaModal = false">
+          <component :is="XIcon" class="w-4 h-4" />
+        </button>
+
+        <div class="confirm-hero">
+          <div class="confirm-icon-wrap clinica-icon-wrap">
+            <component :is="BuildingIcon" class="w-6 h-6" />
+          </div>
+          <div class="confirm-hero-text">
+            <h3 class="confirm-title">Datos de la institución que refiere</h3>
+            <p class="confirm-subtitle">Regístrela una sola vez — quedará en la lista y las respuestas llegarán al correo que indique.</p>
+          </div>
+        </div>
+
+        <div class="clinica-form">
+          <p class="clinica-section"><span class="clinica-section-bar clinica-bar-blue"></span>Identificación</p>
+          <label class="clinica-field clinica-field-full">
+            <span>Institución que refiere <em>*</em></span>
+            <el-input v-model="nuevaClinica.nombre" placeholder="Nombre de la clínica, EPS o IPS" autocomplete="new-password">
+              <template #prefix><component :is="BuildingIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
+            </el-input>
+          </label>
+          <label class="clinica-field">
+            <span>Municipio o ciudad <em>*</em></span>
+            <el-select-v2
+              v-model="nuevaClinica.municipio"
+              :options="municipiosOpciones"
+              filterable
+              class="w-full"
+              placeholder="Seleccione el municipio"
+              popper-class="rf-select-popper"
+              :popper-options="{ strategy: 'fixed' }"
+            >
+              <template #prefix><component :is="MapPinIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
+            </el-select-v2>
+          </label>
+          <label class="clinica-field">
+            <span>Dirección</span>
+            <el-input v-model="nuevaClinica.direccion" placeholder="Dirección de la sede" autocomplete="new-password">
+              <template #prefix><component :is="MapPinIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
+            </el-input>
+          </label>
+
+          <p class="clinica-section"><span class="clinica-section-bar clinica-bar-green"></span>Contacto y notificaciones</p>
+          <label class="clinica-field clinica-field-full">
+            <span>Correo electrónico <em>*</em></span>
+            <el-input v-model="nuevaClinica.email" type="email" placeholder="correo@institucion.com" autocomplete="new-password">
+              <template #prefix><component :is="MailIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
+            </el-input>
+            <small class="clinica-hint">
+              <component :is="ShieldIcon" class="w-3 h-3" />
+              A este correo llegan la aceptación, el código de referencia y cada cambio de estado.
+            </small>
+          </label>
+          <label class="clinica-field">
+            <span>Persona a cargo</span>
+            <el-input v-model="nuevaClinica.persona_cargo" placeholder="Nombre del responsable" autocomplete="new-password">
+              <template #prefix><component :is="UserIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
+            </el-input>
+          </label>
+          <label class="clinica-field">
+            <span>Número telefónico</span>
+            <el-input v-model="nuevaClinica.telefono" placeholder="Teléfono" autocomplete="new-password">
+              <template #prefix><component :is="PhoneIcon" class="w-3.5 h-3.5 rf-input-icon" /></template>
+            </el-input>
+          </label>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="confirm-footer">
+          <el-button class="rf-btn-back" @click="showClinicaModal = false">
+            <component :is="XIcon" class="w-3.5 h-3.5 mr-1" /> Cancelar
+          </el-button>
+          <p class="confirm-footer-note">
+            <component :is="BuildingIcon" class="w-3.5 h-3.5" />
+            Queda disponible en la lista al instante
+          </p>
+          <el-button type="primary" class="rf-btn-submit" :loading="guardandoClinica" @click="guardarClinica">
+            <component :is="BuildingIcon" class="w-3.5 h-3.5 mr-1" /> Registrar institución
           </el-button>
         </div>
       </template>
@@ -544,6 +645,7 @@ import {
   Repeat as RepeatIcon,
    Send as SendIcon,
   Building2 as BuildingIcon,
+  Mail as MailIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
 import { TIPOS_DOCUMENTO, EPS_LIST, ESPECIALIDADES, SERVICIOS } from '@/data/referencia';
@@ -588,6 +690,77 @@ function quitarDiagnostico(i: number) {
  * (no texto libre), así el valor que se envía siempre viene en el formato
  * exacto "Municipio, Departamento" que Gomedisys reconoce. */
 const municipiosOpciones = ref<{ value: string; label: string }[]>([]);
+
+/** Clínicas registradas para el desplegable "Institución que refiere".
+ * Se cargan una vez al abrir el formulario; al elegir una, la solicitud
+ * queda vinculada (clinica_id) y sus notificaciones van al correo que la
+ * clínica registró. */
+interface ClinicaOpcion { id: number; nombre: string; ciudad: string | null; departamento: string | null }
+const clinicasOpciones = ref<ClinicaOpcion[]>([]);
+
+async function cargarClinicas() {
+  try {
+    const { data } = await http.get('/api/externo/clinicas');
+    clinicasOpciones.value = data.data as ClinicaOpcion[];
+  } catch {
+    clinicasOpciones.value = [];
+  }
+}
+
+/** Modal "Datos de la institución que refiere" — registro rápido desde el
+ * formulario (puede ser clínica, EPS o IPS). Al guardar, la institución
+ * entra al desplegable y al módulo interno de clínicas como pendiente. */
+const showClinicaModal = ref(false);
+const guardandoClinica = ref(false);
+const nuevaClinica = ref({
+  nombre: '', municipio: '', direccion: '', email: '', persona_cargo: '', telefono: '',
+});
+
+/** Última clínica real elegida — si el usuario abre "Registrar institución"
+ * y cierra el modal sin guardar, la selección previa se restaura en vez
+ * de quedar borrada. */
+let ultimaClinicaValida: number | string | null = null;
+
+function onClinicaSelect(val: number | string) {
+  if (val === '__nueva_clinica') {
+    form.value.clinica_id = ultimaClinicaValida;
+    nuevaClinica.value = { nombre: '', municipio: '', direccion: '', email: '', persona_cargo: '', telefono: '' };
+    showClinicaModal.value = true;
+    return;
+  }
+  ultimaClinicaValida = val;
+  const clinica = clinicasOpciones.value.find(c => c.id === val);
+  if (clinica) {
+    form.value.institucion_remitente = clinica.nombre;
+    formRef.value?.validateField('institucion_remitente');
+  }
+}
+
+async function guardarClinica() {
+  const c = nuevaClinica.value;
+  if (!c.nombre.trim()) { notify.error('Indique el nombre de la institución.'); return; }
+  if (!c.municipio) { notify.error('Seleccione el municipio de la institución.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email.trim())) { notify.error('Indique un correo electrónico válido — a ese correo llegarán las respuestas.'); return; }
+
+  guardandoClinica.value = true;
+  try {
+    const { data } = await http.post('/api/externo/clinicas', c);
+    const clinica = data.data as ClinicaOpcion;
+    if (!clinicasOpciones.value.some(x => x.id === clinica.id)) {
+      clinicasOpciones.value = [...clinicasOpciones.value, clinica].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    }
+    form.value.clinica_id = clinica.id;
+    ultimaClinicaValida = clinica.id;
+    form.value.institucion_remitente = clinica.nombre;
+    formRef.value?.validateField('institucion_remitente');
+    showClinicaModal.value = false;
+    notify.success('Institución registrada — las respuestas llegarán al correo indicado.');
+  } catch (e: any) {
+    notify.error(e.response?.data?.message || 'No se pudo registrar la institución. Intente de nuevo.');
+  } finally {
+    guardandoClinica.value = false;
+  }
+}
 
 async function cargarMunicipios() {
   try {
@@ -666,7 +839,8 @@ function emptyForm() {
     genero: '', fecha_nacimiento: '', edad: null as number | null, tipo_documento: '', numero_documento: '',
     eps: '', municipio_capita: '', direccion_paciente: '', telefono_paciente: '', especialidad_requerida: '',
     tipo_referencia: '',
-    servicio_ubicacion_actual: '', institucion_remitente: '', municipio_remitente: '',
+    servicio_ubicacion_actual: '', institucion_remitente: '',
+    clinica_id: null as number | string | null,
     requiere_aislamiento: null as boolean | null, tipo_aislamiento: '', quien_remitente: '', telefono_contacto: '',
     gestante: null as boolean | null, condicion_especial: '',
     resumen_historia_clinica: '', observaciones: '',
@@ -679,6 +853,7 @@ const apellidos = ref('');
 
 onMounted(() => {
   cargarMunicipios();
+  cargarClinicas();
 });
 
 watch(() => form.value.fecha_nacimiento, (fecha) => {
@@ -735,11 +910,15 @@ const nombreCompleto = computed(() =>
     .join(' ') || '—'
 );
 
+const inicialesPaciente = computed(() =>
+  ((form.value.primer_nombre?.[0] ?? '') + (form.value.primer_apellido?.[0] ?? '')).toUpperCase() || '?'
+);
+
 const progresoFormulario = computed(() => {
   const campos = [
     'tipo_documento', 'numero_documento', 'primer_nombre', 'primer_apellido',
     'genero', 'fecha_nacimiento', 'edad', 'municipio_capita', 'eps',
-    'institucion_remitente', 'municipio_remitente', 'especialidad_requerida',
+    'institucion_remitente', 'especialidad_requerida',
     'servicio_ubicacion_actual', 'resumen_historia_clinica',
   ];
   const llenos = campos.filter(c => {
@@ -755,7 +934,7 @@ const camposValidos = computed(() => {
   const required = ['tipo_documento', 'numero_documento', 'primer_nombre', 'primer_apellido',
     'genero', 'fecha_nacimiento', 'edad', 'municipio_capita', 'eps',
     'especialidad_requerida', 'tipo_referencia', 'servicio_ubicacion_actual', 'resumen_historia_clinica',
-    'institucion_remitente', 'municipio_remitente', 'requiere_aislamiento', 'gestante', 'condicion_especial', 'direccion_paciente', 'telefono_paciente'];
+    'institucion_remitente', 'requiere_aislamiento', 'gestante', 'condicion_especial', 'direccion_paciente', 'telefono_paciente'];
   const valid: Record<string, boolean> = {};
   for (const c of required) {
     const v = form.value[c as keyof typeof form.value];
@@ -791,7 +970,6 @@ const resumenPacienteCompleto = computed(() =>
 
 const resumenRemisionCompleto = computed(() =>
   camposValidos.value.institucion_remitente
-  && camposValidos.value.municipio_remitente
   && camposValidos.value.especialidad_requerida
   && camposValidos.value.tipo_referencia
   && camposValidos.value.servicio_ubicacion_actual
@@ -809,8 +987,8 @@ const rules = {
   numero_documento: [{ required: true, message: 'El número de documento es requerido', trigger: 'blur' }],
   eps: [{ required: true, message: 'Seleccione la EPS / aseguradora', trigger: 'change' }],
   municipio_capita: [{ required: true, message: 'Seleccione el municipio', trigger: 'change' }],
-  institucion_remitente: [{ required: true, message: 'Indique la institución que refiere', trigger: 'blur' }],
-  municipio_remitente: [{ required: true, message: 'Seleccione el municipio de la entidad', trigger: 'change' }],
+  institucion_remitente: [{ required: true, message: 'Seleccione la institución que refiere', trigger: 'change' }],
+
   especialidad_requerida: [{ required: true, message: 'Seleccione la especialidad requerida', trigger: 'change' }],
   tipo_referencia: [{ required: true, message: 'Seleccione el tipo de referencia', trigger: 'change' }],
   servicio_ubicacion_actual: [{ required: true, message: 'Seleccione el servicio / ubicación actual', trigger: 'change' }],
@@ -833,7 +1011,6 @@ const CAMPO_LABELS: Record<string, string> = {
   especialidad_requerida: 'Especialidad requerida',
   tipo_referencia: 'Tipo de referencia',
   institucion_remitente: 'Institución que refiere',
-  municipio_remitente: 'Municipio de la entidad',
   servicio_ubicacion_actual: 'Servicio / Ubicación actual',
   resumen_historia_clinica: 'Historia clínica',
   quien_remitente: 'Quien remite',
@@ -1040,6 +1217,7 @@ async function guardar() {
 }
 
 function limpiarFormulario() {
+  ultimaClinicaValida = null;
   form.value = emptyForm();
   nombres.value = '';
   apellidos.value = '';
@@ -1838,29 +2016,128 @@ function limpiarFormulario() {
 .confirm-close-btn:hover { color: #DC2626; border-color: #FCA5A5; background: #FEF2F2; }
 
 .confirm-hero {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: .7rem;
-  padding: 1rem 2.8rem 1rem 1.1rem;
+  gap: .8rem;
+  padding: 1.15rem 2.9rem 1.15rem 1.2rem;
+  overflow: hidden;
   background:
-    radial-gradient(circle at 88% -30%, rgba(255, 255, 255, .22), transparent 42%),
-    radial-gradient(circle at 55% 140%, rgba(96, 165, 250, .4), transparent 55%),
-    linear-gradient(115deg, #16468e 0%, #1e5bbf 100%);
+    radial-gradient(circle at 88% -40%, rgba(96, 165, 250, .45), transparent 45%),
+    radial-gradient(circle at 20% 160%, rgba(56, 189, 248, .3), transparent 55%),
+    linear-gradient(118deg, #0c2c63 0%, #16468e 55%, #1e5bbf 100%);
+}
+.confirm-hero-dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, .14) 1px, transparent 1px);
+  background-size: 14px 14px;
+  mask-image: linear-gradient(115deg, transparent 30%, #000 100%);
+  -webkit-mask-image: linear-gradient(115deg, transparent 30%, #000 100%);
+  pointer-events: none;
 }
 .confirm-icon-wrap {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 40px; height: 40px;
+  width: 46px; height: 46px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, .16);
-  border: 1px solid rgba(255, 255, 255, .3);
-  box-shadow: 0 0 0 5px rgba(255, 255, 255, .08);
+  background: linear-gradient(145deg, rgba(255,255,255,.28), rgba(255,255,255,.12));
+  border: 1px solid rgba(255, 255, 255, .38);
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, .1), 0 4px 14px rgba(0, 0, 0, .18);
   color: #fff;
+  animation: confirmPop .45s cubic-bezier(.34, 1.56, .64, 1) both;
 }
-.confirm-hero-text { min-width: 0; }
-.confirm-title { margin: 0; font-size: 1rem; font-weight: 800; color: #fff; letter-spacing: -.01em; }
-.confirm-subtitle { margin: .1rem 0 0; font-size: .7rem; color: rgba(255, 255, 255, .75); }
+.confirm-hero-text { position: relative; min-width: 0; }
+.confirm-eyebrow {
+  margin: 0 0 .1rem;
+  font-size: .58rem;
+  font-weight: 800;
+  color: rgba(165, 200, 255, .95);
+  text-transform: uppercase;
+  letter-spacing: .14em;
+}
+.confirm-title { margin: 0; font-size: 1.08rem; font-weight: 800; color: #fff; letter-spacing: -.015em; }
+.confirm-subtitle { margin: .15rem 0 0; font-size: .72rem; color: rgba(255, 255, 255, .72); }
+
+/* ── Animaciones de entrada del resumen ── */
+@keyframes confirmFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes confirmPop {
+  from { opacity: 0; transform: scale(.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+.confirm-main > * { animation: confirmFadeUp .38s ease-out both; }
+.confirm-main > *:nth-child(1) { animation-delay: .05s; }
+.confirm-main > *:nth-child(2) { animation-delay: .12s; }
+.confirm-main > *:nth-child(3) { animation-delay: .19s; }
+
+/* ── Modal registro de clínica ── */
+.clinica-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .6rem .75rem;
+  padding: .8rem 1.1rem .45rem;
+}
+.clinica-section {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  margin: .35rem 0 0;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.clinica-section:first-child { margin-top: 0; }
+.clinica-section-bar {
+  width: 3px; height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.clinica-bar-blue { background: linear-gradient(180deg, #3b82f6, #1d4ed8); }
+.clinica-bar-green { background: linear-gradient(180deg, #34d399, #059669); }
+.clinica-field { display: flex; flex-direction: column; gap: .26rem; min-width: 0; }
+.clinica-field-full { grid-column: 1 / -1; }
+.clinica-field > span {
+  font-size: .68rem;
+  font-weight: 700;
+  color: #475569;
+}
+.clinica-field > span em { color: #dc2626; font-style: normal; }
+.clinica-field :deep(.el-input__wrapper),
+.clinica-field :deep(.el-select__wrapper) {
+  border-radius: 10px;
+  min-height: 38px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  box-shadow: none;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.clinica-field :deep(.el-input__wrapper.is-focus),
+.clinica-field :deep(.el-select__wrapper.is-focused) {
+  background: #fff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .14);
+}
+.clinica-field :deep(.el-input__prefix) { color: #94a3b8; }
+.clinica-field :deep(.el-input__wrapper.is-focus .el-input__prefix) { color: #3b82f6; }
+.clinica-hint {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  font-size: .62rem;
+  color: #059669;
+  background: #ecfdf5;
+  border: 1px solid #d1fae5;
+  border-radius: 8px;
+  padding: .3rem .5rem;
+}
 
 .confirm-main {
   display: flex;
@@ -1872,34 +2149,79 @@ function limpiarFormulario() {
 
 /* Tarjeta paciente */
 .confirm-patient-card {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: .55rem;
-  padding: .45rem .7rem;
-  border-radius: 12px;
-  background: linear-gradient(120deg, #4338CA 0%, #6D28D9 100%);
-  box-shadow: 0 6px 16px rgba(79, 70, 229, .22);
+  gap: .7rem;
+  padding: .7rem .85rem;
+  border-radius: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 95% -60%, rgba(167, 139, 250, .5), transparent 55%),
+    linear-gradient(120deg, #312E81 0%, #4338CA 55%, #6D28D9 100%);
+  box-shadow: 0 8px 22px rgba(67, 56, 202, .28);
   min-width: 0;
 }
+.confirm-patient-glow {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, .16) 1px, transparent 1px);
+  background-size: 12px 12px;
+  mask-image: linear-gradient(105deg, #000 0%, transparent 45%);
+  -webkit-mask-image: linear-gradient(105deg, #000 0%, transparent 45%);
+  pointer-events: none;
+}
 .confirm-patient-avatar {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 32px; height: 32px;
+  width: 42px; height: 42px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: rgba(255,255,255,.18);
+  background: linear-gradient(145deg, rgba(255,255,255,.32), rgba(255,255,255,.12));
+  border: 1.5px solid rgba(255, 255, 255, .45);
   color: #fff;
+  font-size: .85rem;
+  font-weight: 800;
+  letter-spacing: .03em;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, .1);
 }
-.confirm-patient-info { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
-.confirm-patient-info strong { font-size: .78rem; font-weight: 800; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.confirm-patient-info span { font-size: .62rem; color: rgba(255,255,255,.78); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.confirm-patient-info { position: relative; display: flex; flex-direction: column; gap: .28rem; min-width: 0; flex: 1; }
+.confirm-patient-info strong { font-size: .82rem; font-weight: 800; color: #fff; letter-spacing: .01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.confirm-patient-chips { display: flex; flex-wrap: wrap; gap: .3rem; min-width: 0; }
+.confirm-patient-chip {
+  padding: .14rem .5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .16);
+  border: 1px solid rgba(255, 255, 255, .22);
+  font-size: .58rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, .92);
+  white-space: nowrap;
+}
+.confirm-patient-chip-doc { background: rgba(255, 255, 255, .24); font-weight: 800; }
+.confirm-patient-tag {
+  position: relative;
+  flex-shrink: 0;
+  align-self: flex-start;
+  padding: .16rem .55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .18);
+  border: 1px solid rgba(255, 255, 255, .28);
+  font-size: .52rem;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
 
 /* Tarjeta detalles */
 .confirm-detail-card {
   background: #fff;
-  border: 1px solid #E2E8F0;
-  border-radius: 12px;
-  padding: .55rem .7rem;
+  border: 1px solid #E8EDF5;
+  border-radius: 14px;
+  padding: .65rem .8rem .7rem;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .05);
   min-width: 0;
 }
 .confirm-detail-title {
@@ -1926,23 +2248,31 @@ function limpiarFormulario() {
 .confirm-mini-stat {
   display: flex;
   align-items: center;
-  gap: .35rem;
+  gap: .4rem;
   min-width: 0;
-  padding: .4rem .45rem;
-  border-radius: 9px;
-  background: #F8FAFC;
-  border: 1px solid #EEF2F7;
+  padding: .42rem .5rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: transform .15s ease;
 }
+.confirm-mini-stat:hover { transform: translateY(-1px); }
 .confirm-mini-stat-icon {
   display: grid;
   place-items: center;
-  width: 24px; height: 24px;
+  width: 26px; height: 26px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: 8px;
 }
-.confirm-mini-stat-blue { background: #DBEAFE; color: #2563EB; }
-.confirm-mini-stat-green { background: #DCFCE7; color: #16A34A; }
-.confirm-mini-stat-violet { background: #EDE9FE; color: #7C3AED; }
+.ms-blue   { background: #EFF6FF; border-color: #DBEAFE; }
+.ms-blue   .confirm-mini-stat-icon { background: #DBEAFE; color: #2563EB; }
+.ms-green  { background: #F0FDF4; border-color: #BBF7D0; }
+.ms-green  .confirm-mini-stat-icon { background: #DCFCE7; color: #16A34A; }
+.ms-indigo { background: #EEF2FF; border-color: #C7D2FE; }
+.ms-indigo .confirm-mini-stat-icon { background: #E0E7FF; color: #4F46E5; }
+.ms-sky    { background: #F0F9FF; border-color: #BAE6FD; }
+.ms-sky    .confirm-mini-stat-icon { background: #E0F2FE; color: #0284C7; }
+.ms-violet { background: #F5F3FF; border-color: #DDD6FE; }
+.ms-violet .confirm-mini-stat-icon { background: #EDE9FE; color: #7C3AED; }
 .confirm-mini-stat > div { min-width: 0; display: flex; flex-direction: column; }
 .confirm-mini-stat span { font-size: .52rem; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: .02em; }
 .confirm-mini-stat strong { font-size: .64rem; font-weight: 700; color: #1E293B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1973,10 +2303,11 @@ function limpiarFormulario() {
 .confirm-hc-box {
   max-height: 2.9rem;
   overflow-y: auto;
-  padding: .4rem .55rem;
-  border-radius: 8px;
+  padding: .45rem .6rem .45rem .7rem;
+  border-radius: 0 8px 8px 0;
   background: #F8FAFC;
   border: 1px solid #EEF2F7;
+  border-left: 3px solid #4F46E5;
   font-size: .66rem;
   font-weight: 600;
   color: #1E293B;
@@ -2000,10 +2331,11 @@ function limpiarFormulario() {
   grid-template-columns: repeat(3, 1fr);
   gap: .35rem .5rem;
   align-content: start;
-  padding: .5rem .65rem;
-  border-radius: 12px;
-  background: #FFFBEB;
+  padding: .55rem .7rem;
+  border-radius: 14px;
+  background: linear-gradient(120deg, #FFFBEB, #FEF3C7);
   border: 1px solid #FDE68A;
+  box-shadow: 0 3px 10px rgba(217, 119, 6, .08);
   min-width: 0;
 }
 .confirm-remite-item {
@@ -2025,11 +2357,12 @@ function limpiarFormulario() {
 
 /* Adjuntos */
 .confirm-adjuntos-card {
-  border-radius: 12px;
-  padding: .55rem .65rem;
+  border-radius: 14px;
+  padding: .55rem .7rem;
   min-width: 0;
   background: #fff;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E8EDF5;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .05);
 }
 .confirm-side-title {
   display: flex;
@@ -2427,6 +2760,19 @@ function limpiarFormulario() {
 </style>
 
 <style>
+/* El modal de registro de clínica se teleporta a <body> — estos overrides
+   viven en el bloque global para que el header azul quede pegado a los
+   bordes redondeados del diálogo (sin el marco blanco del padding por
+   defecto de el-dialog). */
+.clinica-dialog.el-dialog {
+  padding: 0 !important;
+  border-radius: 20px;
+  overflow: hidden;
+}
+.clinica-dialog .el-dialog__header { display: none; }
+.clinica-dialog .el-dialog__body { padding: 0 !important; }
+.clinica-dialog .el-dialog__footer { padding: 0 !important; }
+
 /* ── Select dropdown personalizado ── */
 .rf-select-popper {
   border-radius: 14px !important;

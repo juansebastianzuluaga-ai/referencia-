@@ -172,10 +172,10 @@ interface NavItem {
 }
 
 const mainItems: NavItem[] = [
-  { to: '/dashboard', icon: 'LayoutDashboard', text: 'Panel principal' },
-  { to: '/solicitudes-referencia', icon: 'ClipboardList', text: 'Solicitudes', permission: 'clinicas.view' },
+  { to: '/dashboard', icon: 'LayoutDashboard', text: 'Panel principal', permission: 'dashboard.view' },
+  { to: '/solicitudes-referencia', icon: 'ClipboardList', text: 'Solicitudes', permission: 'solicitudes.view' },
   { to: '/clinicas', icon: 'Hospital', text: 'Clínicas', permission: 'clinicas.view' },
-  { to: '/historico', icon: 'History', text: 'Historial', permission: 'clinicas.view' },
+  { to: '/historico', icon: 'History', text: 'Historial', permission: 'historico.view' },
 ];
 
 const adminItems: NavItem[] = [

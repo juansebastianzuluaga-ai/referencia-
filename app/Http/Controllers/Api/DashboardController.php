@@ -617,7 +617,11 @@ class DashboardController extends BaseController
      */
     private function slaDiario(string $periodo, ?Carbon $ref = null): array
     {
-        $expresion = "TIMESTAMPDIFF(MINUTE, CONCAT(fecha, ' ', hora), CONCAT(fecha, ' ', hora_respuesta))";
+        // Si la respuesta fue después de medianoche (solicitud 23:30,
+        // respuesta 00:15) TIMESTAMPDIFF da negativo porque ambas horas
+        // cuelgan de la misma `fecha` — se le suma un día en ese caso.
+        $expresion = "TIMESTAMPDIFF(MINUTE, CONCAT(fecha, ' ', hora), CONCAT(fecha, ' ', hora_respuesta))"
+            ." + IF(TIMESTAMPDIFF(MINUTE, CONCAT(fecha, ' ', hora), CONCAT(fecha, ' ', hora_respuesta)) < 0, 1440, 0)";
 
         // El período del panel define la ventana y el bucket:
         // día → bloques de 2h; semana/mes/todo → días; año → meses.
@@ -727,7 +731,11 @@ class DashboardController extends BaseController
      */
     private function slaRespuesta($query): array
     {
-        $expresion = "TIMESTAMPDIFF(MINUTE, CONCAT(fecha, ' ', hora), CONCAT(fecha, ' ', hora_respuesta))";
+        // Si la respuesta fue después de medianoche (solicitud 23:30,
+        // respuesta 00:15) TIMESTAMPDIFF da negativo porque ambas horas
+        // cuelgan de la misma `fecha` — se le suma un día en ese caso.
+        $expresion = "TIMESTAMPDIFF(MINUTE, CONCAT(fecha, ' ', hora), CONCAT(fecha, ' ', hora_respuesta))"
+            ." + IF(TIMESTAMPDIFF(MINUTE, CONCAT(fecha, ' ', hora), CONCAT(fecha, ' ', hora_respuesta)) < 0, 1440, 0)";
 
         $filas = $query->whereNotNull('hora_respuesta')
             ->selectRaw("{$expresion} as minutos")

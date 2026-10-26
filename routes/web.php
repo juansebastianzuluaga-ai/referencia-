@@ -37,6 +37,8 @@ Route::prefix('api')->name('api.')->group(function (): void {
         Route::get('solicitudes', [SolicitudReferenciaExternoController::class, 'index'])->name('solicitudes.index');
         Route::get('diagnosticos-cie10', [SolicitudReferenciaExternoController::class, 'buscarDiagnosticosCie10'])->middleware('throttle:60,1')->name('diagnosticos-cie10');
         Route::get('ciudades-gomedisys', [SolicitudReferenciaExternoController::class, 'listarCiudadesGomedisys'])->middleware('throttle:60,1')->name('ciudades-gomedisys');
+        Route::get('clinicas', [SolicitudReferenciaExternoController::class, 'listarClinicas'])->middleware('throttle:60,1')->name('clinicas.lista');
+        Route::post('clinicas', [SolicitudReferenciaExternoController::class, 'registrarClinica'])->middleware('throttle:10,1')->name('clinicas.registro');
         Route::post('solicitudes', [SolicitudReferenciaExternoController::class, 'store'])->middleware('throttle:20,1')->name('solicitudes.store');
         Route::get('solicitudes/{id}', [SolicitudReferenciaExternoController::class, 'show'])->name('solicitudes.show');
         Route::get('solicitudes/{solicitudId}/adjuntos/{adjuntoId}/descargar', [SolicitudReferenciaExternoController::class, 'descargarAdjunto'])->name('solicitudes.adjuntos.descargar');
@@ -53,7 +55,9 @@ Route::prefix('api')->name('api.')->group(function (): void {
     Route::get('user/password-policy', [CurrentUserController::class, 'passwordPolicy'])->name('user.password-policy');
 
     Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
-        Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats');
+        // La cola de solicitudes también consulta este endpoint para su panel
+        // lateral de métricas — por eso acepta ambos permisos.
+        Route::get('dashboard/stats', [DashboardController::class, 'stats'])->name('dashboard.stats')->middleware('permission:dashboard.view|solicitudes.view');
         Route::get('search', [DashboardController::class, 'search'])->name('search');
 
         Route::get('user', CurrentUserController::class)->name('user');
@@ -98,25 +102,26 @@ Route::prefix('api')->name('api.')->group(function (): void {
         Route::get('api-credentials/{id}/logs', [ApiCredentialController::class, 'logs'])->name('api-credentials.logs')->middleware('permission:api-keys.view');
         Route::get('api-credentials/{id}/stats', [ApiCredentialController::class, 'stats'])->name('api-credentials.stats')->middleware('permission:api-keys.view');
 
-        Route::get('clinicas', [ClinicaController::class, 'index'])->name('clinicas.index');
-        Route::post('clinicas', [ClinicaController::class, 'store'])->name('clinicas.store');
-        Route::put('clinicas/{clinica}', [ClinicaController::class, 'update'])->name('clinicas.update');
-        Route::post('clinicas/carga-masiva', [ClinicaController::class, 'cargaMasiva'])->name('clinicas.carga-masiva');
-        Route::post('clinicas/{clinica}/aprobar', [ClinicaController::class, 'aprobar'])->name('clinicas.aprobar');
-        Route::post('clinicas/{clinica}/rechazar', [ClinicaController::class, 'rechazar'])->name('clinicas.rechazar');
-        Route::post('clinicas/{clinica}/reactivar', [ClinicaController::class, 'reactivar'])->name('clinicas.reactivar');
+        Route::get('clinicas', [ClinicaController::class, 'index'])->name('clinicas.index')->middleware('permission:clinicas.view');
+        Route::post('clinicas', [ClinicaController::class, 'store'])->name('clinicas.store')->middleware('permission:clinicas.view');
+        Route::put('clinicas/{clinica}', [ClinicaController::class, 'update'])->name('clinicas.update')->middleware('permission:clinicas.view');
+        Route::post('clinicas/carga-masiva', [ClinicaController::class, 'cargaMasiva'])->name('clinicas.carga-masiva')->middleware('permission:clinicas.view');
+        Route::post('clinicas/{clinica}/aprobar', [ClinicaController::class, 'aprobar'])->name('clinicas.aprobar')->middleware('permission:clinicas.view');
+        Route::post('clinicas/{clinica}/rechazar', [ClinicaController::class, 'rechazar'])->name('clinicas.rechazar')->middleware('permission:clinicas.view');
+        Route::post('clinicas/{clinica}/reactivar', [ClinicaController::class, 'reactivar'])->name('clinicas.reactivar')->middleware('permission:clinicas.view');
 
-        Route::get('solicitudes-referencia', [SolicitudReferenciaController::class, 'index'])->name('solicitudes-referencia.index');
-        Route::get('solicitudes-referencia/historico', [SolicitudReferenciaController::class, 'historico'])->name('solicitudes-referencia.historico');
-        Route::get('solicitudes-referencia/{solicitud}', [SolicitudReferenciaController::class, 'show'])->name('solicitudes-referencia.show');
-        Route::post('solicitudes-referencia/{solicitud}/aceptar', [SolicitudReferenciaController::class, 'aceptar'])->name('solicitudes-referencia.aceptar');
-        Route::post('solicitudes-referencia/{solicitud}/negar', [SolicitudReferenciaController::class, 'negar'])->name('solicitudes-referencia.negar');
-        Route::post('solicitudes-referencia/{solicitud}/pendiente', [SolicitudReferenciaController::class, 'pendiente'])->name('solicitudes-referencia.pendiente');
-        Route::post('solicitudes-referencia/{solicitud}/cambiar-estado', [SolicitudReferenciaController::class, 'cambiarEstado'])->name('solicitudes-referencia.cambiar-estado');
-        Route::post('solicitudes-referencia/{solicitud}/notas', [SolicitudReferenciaController::class, 'agregarNota'])->name('solicitudes-referencia.notas');
-        Route::post('solicitudes-referencia/{solicitud}/completado', [SolicitudReferenciaController::class, 'completado'])->name('solicitudes-referencia.completado');
-        Route::post('solicitudes-referencia/{solicitud}/consultar-ingreso', [SolicitudReferenciaController::class, 'consultarIngreso'])->name('solicitudes-referencia.consultar-ingreso');
-        Route::get('solicitudes-referencia/{solicitud}/adjuntos/{adjunto}/descargar', [SolicitudReferenciaController::class, 'descargarAdjunto'])->name('solicitudes-referencia.adjuntos.descargar');
+        Route::get('solicitudes-referencia', [SolicitudReferenciaController::class, 'index'])->name('solicitudes-referencia.index')->middleware('permission:solicitudes.view');
+        Route::get('solicitudes-referencia/historico', [SolicitudReferenciaController::class, 'historico'])->name('solicitudes-referencia.historico')->middleware('permission:historico.view');
+        // El detalle también lo abre el dashboard (modal) y el historial.
+        Route::get('solicitudes-referencia/{solicitud}', [SolicitudReferenciaController::class, 'show'])->name('solicitudes-referencia.show')->middleware('permission:solicitudes.view|historico.view|dashboard.view');
+        Route::post('solicitudes-referencia/{solicitud}/aceptar', [SolicitudReferenciaController::class, 'aceptar'])->name('solicitudes-referencia.aceptar')->middleware('permission:solicitudes.view|historico.view');
+        Route::post('solicitudes-referencia/{solicitud}/negar', [SolicitudReferenciaController::class, 'negar'])->name('solicitudes-referencia.negar')->middleware('permission:solicitudes.view|historico.view');
+        Route::post('solicitudes-referencia/{solicitud}/pendiente', [SolicitudReferenciaController::class, 'pendiente'])->name('solicitudes-referencia.pendiente')->middleware('permission:solicitudes.view|historico.view');
+        Route::post('solicitudes-referencia/{solicitud}/cambiar-estado', [SolicitudReferenciaController::class, 'cambiarEstado'])->name('solicitudes-referencia.cambiar-estado')->middleware('permission:solicitudes.view|historico.view');
+        Route::post('solicitudes-referencia/{solicitud}/notas', [SolicitudReferenciaController::class, 'agregarNota'])->name('solicitudes-referencia.notas')->middleware('permission:solicitudes.view|historico.view');
+        Route::post('solicitudes-referencia/{solicitud}/completado', [SolicitudReferenciaController::class, 'completado'])->name('solicitudes-referencia.completado')->middleware('permission:solicitudes.view|historico.view');
+        Route::post('solicitudes-referencia/{solicitud}/consultar-ingreso', [SolicitudReferenciaController::class, 'consultarIngreso'])->name('solicitudes-referencia.consultar-ingreso')->middleware('permission:solicitudes.view|historico.view');
+        Route::get('solicitudes-referencia/{solicitud}/adjuntos/{adjunto}/descargar', [SolicitudReferenciaController::class, 'descargarAdjunto'])->name('solicitudes-referencia.adjuntos.descargar')->middleware('permission:solicitudes.view|historico.view|dashboard.view');
 
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');

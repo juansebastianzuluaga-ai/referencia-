@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import notify from '@/plugins/toast';
 import { useAuthStore } from '@/stores/auth';
 import { useClinicaAuthStore } from '@/stores/clinicaAuth';
 
@@ -88,7 +87,18 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: '/dashboard',
+          // El usuario aterriza en el primer módulo que su rol le permite —
+          // así un rol sin dashboard no recibe el error de permisos al entrar.
+          // Si el usuario aún no está hidratado (carga directa de /), se manda
+          // al dashboard y el guard lo reubica después de cargar los permisos.
+          redirect: () => {
+            const auth = useAuthStore();
+            if (!auth.user || auth.hasPermission('dashboard.view')) return '/dashboard';
+            if (auth.hasPermission('solicitudes.view')) return '/solicitudes-referencia';
+            if (auth.hasPermission('clinicas.view')) return '/clinicas';
+            if (auth.hasPermission('historico.view')) return '/historico';
+            return '/perfil';
+          },
         },
         {
           path: 'dashboard',
@@ -100,13 +110,13 @@ const router = createRouter({
           path: 'reportes',
           name: 'reportes',
           redirect: '/',
-          meta: { permissions: ['clinicas.view'] },
+          meta: { permissions: ['solicitudes.view'] },
         },
         {
           path: 'historico',
           name: 'historico',
           component: () => import('@/views/historico/HistoricoView.vue'),
-          meta: { permissions: ['clinicas.view'] },
+          meta: { permissions: ['historico.view'] },
         },
         {
           path: 'usuarios',
@@ -141,7 +151,7 @@ const router = createRouter({
           path: 'solicitudes-referencia',
           name: 'solicitudes-referencia',
           component: () => import('@/views/solicitudes/SolicitudesReferenciaView.vue'),
-          meta: { permissions: ['clinicas.view'] },
+          meta: { permissions: ['solicitudes.view'] },
         },
       ],
     },
@@ -210,14 +220,17 @@ router.beforeEach(async (to) => {
     const required = permissions as string[];
     const hasAccess = required.some((p: string) => auth.hasPermission(p));
     if (!hasAccess) {
-      notify.error('No tiene permisos para acceder a este módulo.');
-      // Fallback por nivel: trabajadores sin dashboard van directo a
-      // solicitudes; si ni eso tienen, al perfil (siempre accesible).
+      // Sin toast: el usuario simplemente aterriza en el primer módulo que su
+      // rol le permite — mostrar "sin permisos" tras el login solo confunde.
       return auth.hasPermission('dashboard.view')
         ? { name: 'dashboard' }
-        : auth.hasPermission('clinicas.view')
+        : auth.hasPermission('solicitudes.view')
           ? { name: 'solicitudes-referencia' }
-          : { name: 'profile' };
+          : auth.hasPermission('clinicas.view')
+            ? { name: 'clinicas' }
+            : auth.hasPermission('historico.view')
+              ? { name: 'historico' }
+              : { name: 'profile' };
     }
   }
 

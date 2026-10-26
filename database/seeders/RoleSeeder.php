@@ -25,11 +25,12 @@ class RoleSeeder extends Seeder
                 'permissions' => Permission::query()->pluck('name')->all(),
             ],
             'medico' => [
-                'display_name' => 'Medico',
-                'description' => 'Acceso base para profesionales medicos',
+                'display_name' => 'Personal de referencia',
+                'description' => 'Personal que gestiona las solicitudes de referencia',
                 'permissions' => [
-                    'identification-types.view',
+                    'solicitudes.view',
                     'clinicas.view',
+                    'historico.view',
                 ],
             ],
         ];

@@ -151,7 +151,7 @@
                 :id="`sol-row-${s.id}`"
                 :key="s.id"
                 class="sol-table-row"
-                :class="{ 'sol-table-row-resaltada': resaltarId === s.id || idsActualizados.has(s.id) }"
+                :class="{ 'sol-table-row-resaltada': resaltarId === s.id }"
               >
                 <td class="sol-td sol-td-check">
                   <el-checkbox :model-value="seleccionadas.has(s.id)" @change="toggleSeleccion(s.id)" />
@@ -215,16 +215,12 @@
                 </td>
                 <td class="sol-td">
                   <div class="sol-table-actions">
-                    <el-tooltip :key="`ver-${s.id}`" content="Ver detalle" placement="top" :popper-options="{ strategy: 'fixed' }">
-                      <el-button circle size="small" @click="verDetalle(s)">
-                        <component :is="EyeIcon" class="w-3.5 h-3.5" />
-                      </el-button>
-                    </el-tooltip>
-                    <el-tooltip :key="`pdf-${s.id}`" content="Descargar PDF" placement="top" :popper-options="{ strategy: 'fixed' }">
-                      <el-button circle size="small" @click="exportarPdfFila(s)">
-                        <component :is="FileDownIcon" class="w-3.5 h-3.5" />
-                      </el-button>
-                    </el-tooltip>
+                    <el-button circle size="small" title="Ver detalle" @click="verDetalle(s)">
+                      <component :is="EyeIcon" class="w-3.5 h-3.5" />
+                    </el-button>
+                    <el-button circle size="small" title="Descargar PDF" @click="exportarPdfFila(s)">
+                      <component :is="FileDownIcon" class="w-3.5 h-3.5" />
+                    </el-button>
                     <el-dropdown trigger="click" placement="bottom-end">
                       <el-button circle size="small">
                         <component :is="MoreVerticalIcon" class="w-3.5 h-3.5" />
@@ -728,22 +724,32 @@ interface Solicitud {
 
 const solicitudes = ref<Solicitud[]>([]);
 const cargando = ref(false);
-const filtro = useStorage('historico-filtro', { buscar: '' });
+// Los filtros se persisten por usuario — con una llave compartida, lo que
+// eligiera una sesión se le aplicaba también a otra cuenta en el mismo PC.
+const uidFiltros = useAuthStore().user?.id ?? 0;
+const filtro = useStorage(`historico-filtro-u${uidFiltros}`, { buscar: '' });
 const buscarDebounced = ref(filtro.value.buscar);
 const updateBuscarDebounced = useDebounceFn((val: string) => { buscarDebounced.value = val; }, 300);
 watch(() => filtro.value.buscar, (val) => updateBuscarDebounced(val));
-const tabActiva = useStorage<'todas' | 'completado' | 'negado'>('historico-tab', 'todas');
+const tabActiva = useStorage<'todas' | 'completado' | 'negado'>(`historico-tab-u${uidFiltros}`, 'todas');
 
 const sortKey = ref<'paciente' | 'clinica' | 'especialidad' | 'fecha'>('fecha');
 const sortDir = ref<'asc' | 'desc'>('desc');
 const resaltarId = ref<number | null>(null);
-const idsActualizados = ref<Set<number>>(new Set());
 const paginaActual = ref(1);
 const itemsPorPagina = ref(10);
 
 const filtrosAbiertos = ref(false);
 const filtrosWrap = ref<HTMLElement | null>(null);
-onClickOutside(filtrosWrap, () => { filtrosAbiertos.value = false; });
+// Los menús de el-select/el-date-picker van teleportados a <body>: un clic en
+// una opción también es "fuera" del wrap — sin esta comprobación el panel se
+// cierra en el mismo gesto y el filtro nunca llega a aplicarse.
+onClickOutside(filtrosWrap, (e) => {
+  const enPopper = e.composedPath().some(
+    el => el instanceof HTMLElement && el.matches('.el-popper, .el-popper *'),
+  );
+  if (!enPopper) filtrosAbiertos.value = false;
+});
 
 const rangoFechas = ref<[string, string] | null>(null);
 const filtroClinica = ref<number | ''>('');
@@ -827,20 +833,17 @@ const deltaNegadas = computed(() => deltaUltimos7('negado'));
 const displayStats = ref([0, 0, 0]);
 
 function animateCounters(targets: number[]) {
-  const duration = 900;
-  const steps = 40;
-  const interval = duration / steps;
-  let step = 0;
-  const timer = setInterval(() => {
-    step++;
-    const progress = step / steps;
-    const ease = 1 - Math.pow(1 - progress, 3);
-    displayStats.value = targets.map(t => Math.round(t * ease));
-    if (step >= steps) {
-      displayStats.value = [...targets];
-      clearInterval(timer);
-    }
-  }, interval);
+  const desde = [...displayStats.value];
+  if (desde.every((d, i) => d === targets[i])) return;
+  const inicio = performance.now();
+  const dur = 700;
+  const tick = (t: number) => {
+    const k = Math.min(1, (t - inicio) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    displayStats.value = targets.map((o, i) => Math.round(desde[i] + (o - desde[i]) * e));
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 const clinicasUnicas = computed(() => {
@@ -1293,22 +1296,14 @@ async function cargar() {
   }
 }
 
-/** Refresco automático de fondo: no muestra el esqueleto de carga ni toca
- * nada si el servidor devuelve exactamente lo mismo. Si algo cambió, resalta
- * solo esas filas en vez de refrescar toda la tabla. */
+/** Refresco automático de fondo: invisible — no muestra el esqueleto de
+ * carga ni anima nada; solo actualiza los datos cuando algo cambió. */
 async function cargarSilencioso() {
   try {
-    const statsAntes = JSON.stringify(resumen.value);
     const { data } = await http.get('/api/solicitudes-referencia/historico');
     const cambiados = actualizarSiCambio(solicitudes, data.data);
     if (cambiados.length === 0) return;
-
-    idsActualizados.value = new Set(cambiados);
-    setTimeout(() => { idsActualizados.value = new Set(); }, 3000);
-
-    if (JSON.stringify(resumen.value) !== statsAntes) {
-      animateCounters([resumen.value.total, resumen.value.completadas, resumen.value.negadas]);
-    }
+    displayStats.value = [resumen.value.total, resumen.value.completadas, resumen.value.negadas];
   } catch {
     // Refresco de fondo: si falla, se reintenta en el siguiente ciclo sin interrumpir al usuario.
   }

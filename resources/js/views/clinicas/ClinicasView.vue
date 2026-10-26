@@ -9,19 +9,19 @@
         :icon="HospitalIcon" :sparkline="crecimientoClinicas"
       />
       <StatCard
-        variant="pastel" tone="warning" solid-icon
-        label="Pendientes" :value="displayStats[1]" comparacion="= En revisión"
-        :icon="ClockIcon" :sparkline="seriePendientes"
-      />
-      <StatCard
         variant="pastel" tone="success" solid-icon
-        label="Activas" :value="displayStats[2]" :comparacion="deltaActivas"
-        :icon="ShieldCheck" :sparkline="serieActivas"
+        label="Con referencias" :value="displayStats[1]" :comparacion="deltaConReferencias"
+        :icon="SendIcon" :sparkline="serieConReferencias"
       />
       <StatCard
-        variant="pastel" tone="danger" solid-icon
-        label="Rechazadas" :value="displayStats[3]" :comparacion="deltaRechazadas"
-        :icon="AlertTriangle" :sparkline="serieRechazadas"
+        variant="pastel" tone="warning" solid-icon
+        label="Nuevas este mes" :value="displayStats[2]" comparacion="= Altas recientes"
+        :icon="PlusIcon" :sparkline="serieNuevasMes"
+      />
+      <StatCard
+        variant="pastel" tone="violet" solid-icon
+        label="Ciudades cubiertas" :value="displayStats[3]" comparacion="= Cobertura"
+        :icon="MapPinIcon" :sparkline="serieCiudades"
       />
     </div>
 
@@ -53,19 +53,6 @@
       <div class="clinic-list-head shrink-0">
         <component :is="BuildingIcon" class="w-3.5 h-3.5 clinic-list-head-icon" />
         <p class="clinic-list-title">Listado de clínicas</p>
-        <div class="clinic-tabs">
-          <button
-            v-for="tab in tabs"
-            :key="tab.value"
-            class="clinic-tab"
-            :class="{ 'clinic-tab-active': tabActiva === tab.value }"
-            @click="cambiarTab(tab.value)"
-          >
-            <span v-if="tab.value !== 'todas'" class="clinic-tab-dot" :class="'clinic-tab-dot--' + tab.value"></span>
-            {{ tab.label }}
-            <span class="clinic-tab-count">{{ tab.count }}</span>
-          </button>
-        </div>
         <div class="clinic-head-actions">
           <el-tooltip content="Actualizar" placement="top">
             <button class="clinic-head-btn clinic-head-btn-icon" @click="cargar">
@@ -98,21 +85,6 @@
             <label class="clinic-filtros-label">Ciudad</label>
             <el-select v-model="filtroCiudad" placeholder="Todas las ciudades" clearable filterable size="small" class="clinic-select">
               <el-option v-for="c in ciudadesUnicas" :key="c" :label="c" :value="c" />
-            </el-select>
-          </div>
-          <div class="clinic-filtros-field">
-            <label class="clinic-filtros-label">Estado</label>
-            <el-select
-              :model-value="tabActiva"
-              placeholder="Todos los estados"
-              size="small"
-              class="clinic-select"
-              @update:model-value="(v: string) => cambiarTab(v as 'todas' | 'pendiente' | 'activa' | 'rechazada')"
-            >
-              <el-option label="Todos los estados" value="todas" />
-              <el-option label="Activas" value="activa" />
-              <el-option label="Pendientes" value="pendiente" />
-              <el-option label="Rechazadas" value="rechazada" />
             </el-select>
           </div>
           <div class="clinic-filtros-field clinic-filtros-field--grow">
@@ -181,7 +153,6 @@
                   <component :is="sortIcon('ciudad')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'ciudad', 'opacity-30': sortKey !== 'ciudad' }" />
                 </th>
                 <th class="clinic-table-th">Contacto</th>
-                <th class="clinic-table-th">Estado</th>
                 <th class="clinic-table-th clinic-th-right">Solicitudes</th>
                 <th class="clinic-table-th">Última actividad</th>
                 <th class="clinic-table-th clinic-table-th-actions">Acciones</th>
@@ -192,7 +163,7 @@
                 v-for="(clinica, idx) in clinicasPaginadas"
                 :key="clinica.id"
                 class="clinic-table-row"
-                :class="{ 'clinic-table-row-selected': seleccionadas.has(clinica.id), 'clinic-table-row-resaltada': idsActualizados.has(clinica.id) }"
+                :class="{ 'clinic-table-row-selected': seleccionadas.has(clinica.id) }"
               >
                 <td class="clinic-table-td clinic-table-td-check">
                   <input type="checkbox" :checked="seleccionadas.has(clinica.id)" :title="seleccionadas.has(clinica.id) ? 'Quitar del mapa' : 'Ver en el mapa'" @change="toggleSeleccion(clinica.id)" class="clinic-checkbox" />
@@ -200,7 +171,7 @@
                 <td class="clinic-table-td clinic-td-num">{{ (paginaActual - 1) * itemsPorPagina + idx + 1 }}</td>
                 <td class="clinic-table-td">
                   <div class="clinic-table-clinica">
-                    <div class="clinic-table-avatar" :style="avatarStyle(clinica.estado)">
+                    <div class="clinic-table-avatar" :style="avatarStyle()">
                       {{ iniciales(clinica.nombre) }}
                     </div>
                     <div>
@@ -209,19 +180,9 @@
                     </div>
                   </div>
                 </td>
-                <td class="clinic-table-td font-mono">{{ clinica.nit }}</td>
-                <td class="clinic-table-td">{{ clinica.ciudad }}</td>
+                <td class="clinic-table-td font-mono">{{ clinica.nit || '—' }}</td>
+                <td class="clinic-table-td">{{ clinica.ciudad || '—' }}</td>
                 <td class="clinic-table-td clinic-td-contacto">{{ clinica.telefono || '—' }}</td>
-                <td class="clinic-table-td">
-                  <span class="clinic-table-status" :class="{
-                    'clinic-status-pending': clinica.estado === 'pendiente',
-                    'clinic-status-active': clinica.estado === 'activa',
-                    'clinic-status-rejected': clinica.estado === 'rechazada',
-                  }">
-                    <span class="clinic-status-dot"></span>
-                    {{ estadoLabel(clinica.estado) }}
-                  </span>
-                </td>
                 <td class="clinic-table-td clinic-td-right">
                   <span class="clinic-sol-count">{{ clinica.solicitudes_count ?? 0 }}</span>
                 </td>
@@ -233,20 +194,16 @@
                 </td>
                 <td class="clinic-table-td">
                   <div class="clinic-table-actions">
-                    <el-tooltip :key="`ver-${clinica.id}`" content="Ver detalle" placement="top" :popper-options="{ strategy: 'fixed' }">
-                      <el-button circle size="small" @click="verDetalle(clinica)">
-                        <component :is="EyeIcon" class="w-3.5 h-3.5" />
-                      </el-button>
-                    </el-tooltip>
+                    <el-button circle size="small" title="Ver detalle" @click="verDetalle(clinica)">
+                      <component :is="EyeIcon" class="w-3.5 h-3.5" />
+                    </el-button>
                     <el-dropdown trigger="click" placement="bottom-end" :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [8, 8] } }] }" popper-class="clinic-acciones-menu" @command="(cmd: string) => manejarAccionFila(cmd, clinica)">
-                      <el-button circle size="small" :loading="procesando === clinica.id + '_aprobar' || procesando === clinica.id + '_rechazar'">
+                      <el-button circle size="small">
                         <component :is="MoreIcon" class="w-3.5 h-3.5" />
                       </el-button>
                       <template #dropdown>
                         <el-dropdown-menu>
-                          <el-dropdown-item v-if="clinica.estado !== 'activa'" command="aprobar" :icon="CheckIcon" class="clinic-accion-success">{{ clinica.estado === 'rechazada' ? 'Reactivar' : 'Aprobar' }}</el-dropdown-item>
-                          <el-dropdown-item v-if="clinica.estado !== 'rechazada'" command="rechazar" :icon="XIcon" class="clinic-accion-danger">Rechazar</el-dropdown-item>
-                          <el-dropdown-item command="editar" :icon="EditIcon" class="clinic-accion-neutral" divided>Editar</el-dropdown-item>
+                          <el-dropdown-item command="editar" :icon="EditIcon" class="clinic-accion-neutral">Editar</el-dropdown-item>
                         </el-dropdown-menu>
                       </template>
                     </el-dropdown>
@@ -309,15 +266,8 @@
             </div>
             <div class="detalle-head-info">
               <p class="detalle-head-title">Detalle de clínica</p>
-              <p class="detalle-head-sub">{{ clinicaSeleccionada.nit }} · {{ clinicaSeleccionada.nombre }}</p>
+              <p class="detalle-head-sub">{{ clinicaSeleccionada.nit || 'Sin NIT' }} · {{ clinicaSeleccionada.nombre }}</p>
             </div>
-            <span class="detalle-head-badge" :class="{
-              'detalle-badge-pending': clinicaSeleccionada.estado === 'pendiente',
-              'detalle-badge-active': clinicaSeleccionada.estado === 'activa',
-              'detalle-badge-rejected': clinicaSeleccionada.estado === 'rechazada',
-            }">
-              {{ estadoLabel(clinicaSeleccionada.estado) }}
-            </span>
           </div>
 
           <!-- Body con cards -->
@@ -414,40 +364,6 @@
               Cerrar
             </button>
           </div>
-        </div>
-      </template>
-    </el-dialog>
-
-    <!-- Modal: Motivo de rechazo -->
-    <el-dialog v-model="modalRechazo" width="440px" :close-on-click-modal="false" class="nueva-clinica-dialog" align-center>
-      <template #header>
-        <div class="accion-head">
-          <div class="accion-head-glow"></div>
-          <div class="accion-head-icon accion-head-icon-red">
-            <component :is="XIcon" class="w-5 h-5" />
-          </div>
-          <div class="accion-head-info">
-            <p class="accion-head-title">Rechazar clínica</p>
-            <p class="accion-head-sub">{{ clinicaSeleccionada?.nit }} · {{ clinicaSeleccionada?.nombre }}</p>
-          </div>
-        </div>
-      </template>
-      <div class="px-5 py-4">
-        <label class="block text-xs font-semibold mb-1.5" style="color:#475569;">Motivo del rechazo <span class="text-red-500">*</span></label>
-        <el-input
-          v-model="motivoRechazo"
-          type="textarea"
-          :rows="3"
-          placeholder="Ej: La institución no cuenta con convenio vigente con la Clínica Santa Bárbara..."
-        />
-      </div>
-      <template #footer>
-        <div class="px-5 pb-4 flex justify-end gap-2">
-          <el-button @click="modalRechazo = false">Cancelar</el-button>
-          <el-button type="danger" :loading="procesando !== null" @click="rechazar">
-            <component :is="XIcon" class="w-3.5 h-3.5 mr-1" />
-            Confirmar rechazo
-          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -798,36 +714,6 @@
 .clinic-limpiar:hover { background: #fef2f2; }
 
 /* ── Tabs ── */
-.clinic-tabs {
-  display: flex; gap: 2px;
-  padding: 2px;
-  background: rgba(255,255,255,.1);
-  border: 1px solid rgba(255,255,255,.16);
-  border-radius: 9px;
-  width: fit-content;
-}
-.clinic-tab {
-  display: flex; align-items: center; gap: 5px;
-  padding: 3.5px 10px;
-  border-radius: 7px;
-  font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,.75);
-  background: transparent;
-  border: none; cursor: pointer;
-  transition: all .18s ease;
-}
-.clinic-tab:hover { color: #fff; background: rgba(255,255,255,.12); }
-.clinic-tab-active {
-  background: #fff;
-  color: #0d2d5e;
-  box-shadow: 0 2px 8px rgba(0,0,0,.3);
-}
-.clinic-tab-count {
-  padding: 0 6px; border-radius: 999px;
-  font-size: 9px; font-weight: 800; line-height: 15px;
-  background: rgba(255,255,255,.16); color: rgba(255,255,255,.9);
-}
-.clinic-tab-active .clinic-tab-count { background: rgba(13,45,107,.1); color: #16468E; }
-
 /* ── Table panel ── */
 .clinic-table-panel {
   background: #fff;
@@ -955,17 +841,7 @@
 }
 .clinic-table-row { transition: background .15s ease, box-shadow .15s ease; }
 .clinic-table-row:hover { background: #f8fafc; box-shadow: inset 3px 0 0 var(--rf-primary); }
-.clinic-table-row:hover .clinic-table-status { transform: scale(1.06); }
 
-/* ── Fila resaltada (actualización silenciosa en segundo plano) ── */
-.clinic-table-row-resaltada {
-  animation: clinic-row-glow 2.2s ease-in-out 2;
-  box-shadow: inset 3px 0 0 #D97706;
-}
-@keyframes clinic-row-glow {
-  0%, 100% { background: transparent; }
-  50% { background: rgba(217, 119, 6, .12); }
-}
 .clinic-table-row:last-child td { border-bottom: none; }
 .clinic-table-th-clinica { min-width: 200px; }
 .clinic-table-th-actions { text-align: right; }
@@ -990,19 +866,6 @@
   text-decoration: none;
 }
 .clinic-table-email:hover { color: var(--rf-primary); text-decoration: underline; }
-.clinic-table-status {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 10px; border-radius: 999px;
-  font-size: 10px; font-weight: 700;
-  transition: transform .2s ease;
-}
-.clinic-status-dot { width: 5px; height: 5px; border-radius: 50%; }
-.clinic-status-pending { background: #fef3c7; color: #d97706; }
-.clinic-status-pending .clinic-status-dot { background: #fbbf24; }
-.clinic-status-active { background: #dcfce7; color: #15966a; }
-.clinic-status-active .clinic-status-dot { background: #22c55e; }
-.clinic-status-rejected { background: #fee2e2; color: #dc2626; }
-.clinic-status-rejected .clinic-status-dot { background: #ef4444; }
 .clinic-table-actions { display: flex; justify-content: flex-end; align-items: center; gap: 4px; }
 
 /* ── Modal detalle ── */
@@ -1065,16 +928,6 @@
 .detalle-head-info { position: relative; z-index: 1; flex: 1; min-width: 0; }
 .detalle-head-title { margin: 0; color: #0F172A; font-size: 1rem; font-weight: 800; }
 .detalle-head-sub { margin: .15rem 0 0; color: #64748b; font-size: .7rem; }
-
-.detalle-head-badge {
-  padding: 4px 12px; border-radius: 999px;
-  font-size: 10.5px; font-weight: 700; flex-shrink: 0;
-  white-space: nowrap;
-  z-index: 1;
-}
-.detalle-badge-pending { background: #fef3c7; color: #d97706; }
-.detalle-badge-active { background: #dcfce7; color: #15966a; }
-.detalle-badge-rejected { background: #fee2e2; color: #dc2626; }
 
 /* Body */
 .detalle-body {
@@ -1226,17 +1079,6 @@
   grid-template-columns: repeat(4, 1fr);
   gap: .75rem;
 }
-
-/* ── Tab dots ── */
-.clinic-tab-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  display: inline-block;
-  margin-right: .3rem;
-}
-.clinic-tab-dot--pendiente { background: #f59e0b; }
-.clinic-tab-dot--activa { background: #22c55e; }
-.clinic-tab-dot--rechazada { background: #ef4444; }
 
 /* Mientras la barra de filtros entra y empuja el layout, bloquear clics
    sobre el contenido que se mueve */
@@ -1646,12 +1488,6 @@
 .clinic-acciones-menu .el-dropdown-menu__item--divided::before {
   margin-bottom: 6px;
 }
-.clinic-acciones-menu .clinic-accion-success { color: #15803d !important; }
-.clinic-acciones-menu .clinic-accion-success svg { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
-.clinic-acciones-menu .clinic-accion-success:not(.is-disabled):hover { background: #f0fdf4 !important; color: #15803d !important; }
-.clinic-acciones-menu .clinic-accion-danger { color: #b91c1c !important; }
-.clinic-acciones-menu .clinic-accion-danger svg { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
-.clinic-acciones-menu .clinic-accion-danger:not(.is-disabled):hover { background: #fef2f2 !important; color: #b91c1c !important; }
 .clinic-acciones-menu .clinic-accion-neutral { color: #334155 !important; }
 .clinic-acciones-menu .clinic-accion-neutral svg { background: #e0e9f8; color: #16468E; border: 1px solid #cbdaf0; }
 .clinic-acciones-menu .clinic-accion-neutral:not(.is-disabled):hover { background: #eef3fb !important; color: #16468E !important; }
@@ -1664,12 +1500,6 @@ html.dark .el-popper.clinic-acciones-menu {
 }
 html.dark .clinic-acciones-menu .el-dropdown-menu__item { color: #cbd5e1; }
 html.dark .clinic-acciones-menu .el-dropdown-menu__item--divided { border-top-color: rgba(255,255,255,0.07); }
-html.dark .clinic-acciones-menu .clinic-accion-success { color: #4ade80 !important; }
-html.dark .clinic-acciones-menu .clinic-accion-success svg { background: rgba(34,197,94,0.14); color: #4ade80; border-color: rgba(34,197,94,0.25); }
-html.dark .clinic-acciones-menu .clinic-accion-success:not(.is-disabled):hover { background: rgba(34,197,94,0.12) !important; }
-html.dark .clinic-acciones-menu .clinic-accion-danger { color: #f87171 !important; }
-html.dark .clinic-acciones-menu .clinic-accion-danger svg { background: rgba(239,68,68,0.14); color: #f87171; border-color: rgba(239,68,68,0.25); }
-html.dark .clinic-acciones-menu .clinic-accion-danger:not(.is-disabled):hover { background: rgba(239,68,68,0.12) !important; }
 html.dark .clinic-acciones-menu .clinic-accion-neutral { color: #cbd5e1 !important; }
 html.dark .clinic-acciones-menu .clinic-accion-neutral svg { background: rgba(59,130,246,0.16); color: #93c5fd; border-color: rgba(59,130,246,0.25); }
 html.dark .clinic-acciones-menu .clinic-accion-neutral:not(.is-disabled):hover { background: rgba(255,255,255,0.06) !important; color: #93c5fd !important; }
@@ -1679,8 +1509,8 @@ html.dark .clinic-acciones-menu .clinic-accion-neutral:not(.is-disabled):hover {
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { usePolling } from '@/lib/usePolling';
 import { actualizarSiCambio } from '@/lib/silentRefresh';
-import { useStorage, useDebounceFn, onClickOutside } from '@vueuse/core';
-import { ElMessageBox } from 'element-plus';
+import { useAuthStore } from '@/stores/auth';
+import { useStorage, useDebounceFn } from '@vueuse/core';
 import notify from '@/plugins/toast';
 import {
   RefreshCw as RefreshIcon,
@@ -1688,9 +1518,7 @@ import {
   X as XIcon,
   Eye as EyeIcon,
   Building2 as BuildingIcon,
-  Clock as ClockIcon,
   Hospital as HospitalIcon,
-  ShieldCheck,
   AlertTriangle,
   Search as SearchIcon,
   Upload as UploadIcon,
@@ -1722,7 +1550,7 @@ import MapaClinicas from '@/components/clinicas/MapaClinicas.vue';
 
 interface Clinica {
   id: number;
-  nit: string;
+  nit: string | null;
   nombre: string;
   razon_social: string;
   email: string;
@@ -1747,8 +1575,6 @@ interface Clinica {
 const clinicas = ref<Clinica[]>([]);
 const mapaRef = ref<InstanceType<typeof MapaClinicas> | null>(null);
 const cargando = ref(false);
-const procesando = ref<string | null>(null);
-const modalRechazo = ref(false);
 const modalDetalle = ref(false);
 const modalCargaMasiva = ref(false);
 const clinicaSeleccionada = ref<Clinica | null>(null);
@@ -1793,7 +1619,6 @@ const rulesEditar: FormRules = {
   email: [{ required: true, message: 'Obligatorio', trigger: 'blur' }, { type: 'email', message: 'Correo inválido', trigger: 'blur' }],
 };
 
-const idsActualizados = ref<Set<number>>(new Set());
 const sortKey = ref<'nombre' | 'nit' | 'ciudad'>('nombre');
 const sortDir = ref<'asc' | 'desc'>('asc');
 const paginaActual = ref(1);
@@ -1861,9 +1686,9 @@ const rulesNueva: FormRules = {
   representante_legal: [{ required: true, message: 'Obligatorio', trigger: 'blur' }],
   cedula_representante: [{ required: true, message: 'Obligatorio', trigger: 'blur' }],
 };
-const tabActiva = useStorage<'todas' | 'pendiente' | 'activa' | 'rechazada'>('clinica-tab', 'todas');
-const motivoRechazo = ref('');
-const filtroBuscar = useStorage('clinica-buscar', '');
+// El filtro persiste por usuario — con llave compartida se le aplicaba a
+// otras cuentas en el mismo PC.
+const filtroBuscar = useStorage(`clinica-buscar-u${useAuthStore().user?.id ?? 0}`, '');
 const filtroCiudad = ref('');
 const filtroBuscarDebounced = ref(filtroBuscar.value);
 const updateDebounced = useDebounceFn((val: string) => { filtroBuscarDebounced.value = val; }, 300);
@@ -1886,7 +1711,7 @@ const estadisticasCiudad = computed(() => {
   return { lista, max: lista[0]?.total ?? 1 };
 });
 
-const hayFiltros = computed(() => !!filtroBuscar.value.trim() || !!filtroCiudad.value || tabActiva.value !== 'todas');
+const hayFiltros = computed(() => !!filtroBuscar.value.trim() || !!filtroCiudad.value);
 
 /* ── Barra de filtros inline (botón "Filtros") — queda dentro del card,
    empuja la tabla hacia abajo en vez de montarse encima. Se cierra solo
@@ -1903,21 +1728,14 @@ const conteoFiltros = computed(() =>
 function limpiarFiltros() {
   filtroBuscar.value = '';
   filtroCiudad.value = '';
-  tabActiva.value = 'todas';
 }
 
-const resumen = computed(() => ({
-  pendientes: clinicas.value.filter(c => c.estado === 'pendiente').length,
-  activas: clinicas.value.filter(c => c.estado === 'activa').length,
-  rechazadas: clinicas.value.filter(c => c.estado === 'rechazada').length,
-}));
+const conReferencias = computed(() => clinicas.value.filter(c => (c.solicitudes_count ?? 0) > 0));
 
-const tabs = computed<{ label: string; value: 'todas' | 'pendiente' | 'activa' | 'rechazada'; count: number }[]>(() => [
-  { label: 'Todas', value: 'todas', count: clinicas.value.length },
-  { label: 'Activas', value: 'activa', count: resumen.value.activas },
-  { label: 'Pendientes', value: 'pendiente', count: resumen.value.pendientes },
-  { label: 'Rechazadas', value: 'rechazada', count: resumen.value.rechazadas },
-]);
+const nuevasEsteMes = computed(() => {
+  const mes = new Date().toISOString().slice(0, 7);
+  return clinicas.value.filter(c => c.created_at?.startsWith(mes));
+});
 
 /** Densidad de registros suavizada: cada alta se reparte en buckets vecinos
  * (picos curvos en vez de escalones) y se suma una ondulación sutil
@@ -1953,9 +1771,9 @@ function serieCrecimiento(lista: Clinica[]): number[] {
 }
 
 const crecimientoClinicas = computed(() => serieCrecimiento(clinicas.value));
-const seriePendientes = computed(() => serieCrecimiento(clinicas.value.filter(c => c.estado === 'pendiente')));
-const serieActivas = computed(() => serieCrecimiento(clinicas.value.filter(c => c.estado === 'activa')));
-const serieRechazadas = computed(() => serieCrecimiento(clinicas.value.filter(c => c.estado === 'rechazada')));
+const serieConReferencias = computed(() => serieCrecimiento(conReferencias.value));
+const serieNuevasMes = computed(() => serieCrecimiento(nuevasEsteMes.value));
+const serieCiudades = computed(() => serieCrecimiento(clinicas.value.filter(c => c.ciudad)));
 
 const deltaTotal = computed(() => {
   const hoy = new Date();
@@ -1966,49 +1784,28 @@ const deltaTotal = computed(() => {
   if (!antes) return '↑ Nuevas este mes';
   return `↑${Math.round((nuevas / antes) * 100)}% este mes`;
 });
-const deltaActivas = computed(() => `= ${clinicas.value.length ? Math.round((resumen.value.activas / clinicas.value.length) * 100) : 0}% del total`);
-const deltaRechazadas = computed(() => `= ${clinicas.value.length ? Math.round((resumen.value.rechazadas / clinicas.value.length) * 100) : 0}% del total`);
+const deltaConReferencias = computed(() => `= ${clinicas.value.length ? Math.round((conReferencias.value.length / clinicas.value.length) * 100) : 0}% del total`);
 
 
-function estadoLabel(estado: string) {
-  return estado === 'pendiente' ? 'Pendiente' : estado === 'activa' ? 'Activa' : 'Rechazada';
-}
-
-function estadoColor(estado: string) {
-  if (estado === 'pendiente') return { bg: 'rgba(245,158,11,0.2)', color: '#fbbf24' };
-  if (estado === 'activa') return { bg: 'rgba(34,197,94,0.2)', color: '#22c55e' };
-  return { bg: 'rgba(239,68,68,0.2)', color: '#ef4444' };
-}
-
-function avatarStyle(estado: string) {
-  if (estado === 'pendiente') return { background: 'linear-gradient(135deg, #fef3c7, #fde68a)', color: '#d97706', border: '1px solid #fde68a' };
-  if (estado === 'activa') return { background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', color: '#15966a', border: '1px solid #bbf7d0' };
-  return { background: 'linear-gradient(135deg, #fee2e2, #fecaca)', color: '#dc2626', border: '1px solid #fecaca' };
+function avatarStyle() {
+  return { background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)', color: '#2563eb', border: '1px solid #bfdbfe' };
 }
 
 const clinicasFiltradas = computed(() => {
   let result = clinicas.value;
-  if (tabActiva.value !== 'todas') {
-    result = result.filter(c => c.estado === tabActiva.value);
-  }
   if (filtroCiudad.value) {
     result = result.filter(c => c.ciudad === filtroCiudad.value);
   }
   if (filtroBuscarDebounced.value.trim()) {
     const q = filtroBuscarDebounced.value.toLowerCase().trim();
     result = result.filter(c =>
-      c.nit.toLowerCase().includes(q) ||
-      c.ciudad.toLowerCase().includes(q) ||
-      c.nombre.toLowerCase().includes(q) ||
-      c.estado.toLowerCase().includes(q)
+      (c.nit ?? '').toLowerCase().includes(q) ||
+      (c.ciudad ?? '').toLowerCase().includes(q) ||
+      c.nombre.toLowerCase().includes(q)
     );
   }
   const dir = sortDir.value === 'asc' ? 1 : -1;
-  const ordenEstado: Record<string, number> = { pendiente: 0, activa: 1, rechazada: 2 };
   result = [...result].sort((a, b) => {
-    // Las pendientes van siempre primero — son la cola de trabajo pendiente
-    const prio = (ordenEstado[a.estado] ?? 3) - (ordenEstado[b.estado] ?? 3);
-    if (prio !== 0) return prio;
     const va = (a[sortKey.value] ?? '').toString().toLowerCase();
     const vb = (b[sortKey.value] ?? '').toString().toLowerCase();
     return va < vb ? -dir : va > vb ? dir : 0;
@@ -2071,11 +1868,6 @@ function sortIcon(key: string) {
   return sortDir.value === 'asc' ? ArrowUpIcon : ArrowDownIcon;
 }
 
-function cambiarTab(tab: 'todas' | 'pendiente' | 'activa' | 'rechazada') {
-  tabActiva.value = tab;
-  paginaActual.value = 1;
-}
-
 // Selección en el mapa — solo controla el foco/vista, no acciones masivas
 const seleccionadas = ref<Set<number>>(new Set());
 
@@ -2116,13 +1908,13 @@ function iniciales(nombre: string) {
 
 function exportarExcel() {
   const rows = clinicasFiltradas.value;
-  const headers = ['NIT', 'Nombre', 'Email', 'Teléfono', 'Ciudad', 'Departamento', 'Dirección', 'Persona a cargo', 'Cédula', 'Estado', 'Fecha registro'];
+  const headers = ['NIT', 'Nombre', 'Email', 'Teléfono', 'Ciudad', 'Departamento', 'Dirección', 'Persona a cargo', 'Cédula', 'Fecha registro'];
   const csv = [
     headers.join('\t'),
     ...rows.map(c => [
       c.nit, c.nombre, c.email, c.telefono ?? '', c.ciudad ?? '', c.departamento ?? '',
       c.direccion ?? '', c.representante_legal ?? '', c.cedula_representante ?? '',
-      estadoLabel(c.estado), formatFecha(c.created_at),
+      formatFecha(c.created_at),
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join('\t')),
   ].join('\n');
   const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
@@ -2202,9 +1994,9 @@ async function cargar() {
     clinicas.value = data.data;
     animateCounters([
       data.data.length,
-      data.data.filter((c: Clinica) => c.estado === 'pendiente').length,
-      data.data.filter((c: Clinica) => c.estado === 'activa').length,
-      data.data.filter((c: Clinica) => c.estado === 'rechazada').length,
+      conReferencias.value.length,
+      nuevasEsteMes.value.length,
+      ciudadesUnicas.value.length,
     ]);
   } catch {
     notify.error('Error al cargar las clínicas');
@@ -2213,39 +2005,14 @@ async function cargar() {
   }
 }
 
-/** Refresco automático de fondo: sin esqueleto de carga, y solo toca lo que
- * de verdad cambió, resaltando esas filas puntuales. */
+/** Refresco automático de fondo: invisible — sin esqueleto de carga y
+ * solo actualiza los datos cuando algo realmente cambió. */
 async function cargarSilencioso() {
   try {
     const { data } = await http.get('/api/clinicas');
-    const cambiados = actualizarSiCambio(clinicas, data.data);
-    if (cambiados.length === 0) return;
-    idsActualizados.value = new Set(cambiados);
-    setTimeout(() => { idsActualizados.value = new Set(); }, 3000);
+    actualizarSiCambio(clinicas, data.data);
   } catch {
     // Refresco de fondo: si falla, se reintenta en el siguiente ciclo sin interrumpir al usuario.
-  }
-}
-
-async function aprobar(clinica: Clinica) {
-  const esReactivar = clinica.estado === 'rechazada';
-  try {
-    await ElMessageBox.confirm(
-      esReactivar
-        ? `¿Reactivar la clínica ${clinica.nombre}?`
-        : `¿Aprobar y activar la clínica ${clinica.nombre}? Se le notificará por correo.`,
-      esReactivar ? 'Confirmar reactivación' : 'Confirmar aprobación',
-      { confirmButtonText: esReactivar ? 'Reactivar' : 'Aprobar', cancelButtonText: 'Cancelar', type: 'success' }
-    );
-    procesando.value = clinica.id + '_aprobar';
-    const endpoint = esReactivar ? 'reactivar' : 'aprobar';
-    await http.post(`/api/clinicas/${clinica.id}/${endpoint}`);
-    notify.success(esReactivar ? 'Clínica reactivada correctamente' : 'Clínica aprobada correctamente');
-    await cargar();
-  } catch (e: any) {
-    if (e !== 'cancel') notify.error('Error al procesar la clínica');
-  } finally {
-    procesando.value = null;
   }
 }
 
@@ -2256,38 +2023,9 @@ function verDetalle(clinica: Clinica) {
 
 function manejarAccionFila(comando: string, clinica: Clinica) {
   const acciones: Record<string, (c: Clinica) => void> = {
-    aprobar,
-    rechazar: abrirRechazo,
     editar: abrirEditar,
   };
   acciones[comando]?.(clinica);
-}
-
-function abrirRechazo(clinica: Clinica) {
-  clinicaSeleccionada.value = clinica;
-  motivoRechazo.value = '';
-  modalDetalle.value = false;
-  modalRechazo.value = true;
-}
-
-async function rechazar() {
-  if (!motivoRechazo.value.trim()) {
-    notify.warning('Ingrese el motivo de rechazo');
-    return;
-  }
-  try {
-    procesando.value = clinicaSeleccionada.value!.id + '_rechazar';
-    await http.post(`/api/clinicas/${clinicaSeleccionada.value!.id}/rechazar`, {
-      motivo: motivoRechazo.value,
-    });
-    notify.success('Clínica rechazada');
-    modalRechazo.value = false;
-    await cargar();
-  } catch {
-    notify.error('Error al rechazar la clínica');
-  } finally {
-    procesando.value = null;
-  }
 }
 
 function formatFecha(fecha: string) {
@@ -2396,6 +2134,6 @@ onMounted(() => {
 });
 
 usePolling(() => {
-  if (!cargando.value && !modalRechazo.value && !modalDetalle.value && !modalCargaMasiva.value && !modalNuevaClinica.value && !modalEditar.value) cargarSilencioso();
+  if (!cargando.value && !modalDetalle.value && !modalCargaMasiva.value && !modalNuevaClinica.value && !modalEditar.value) cargarSilencioso();
 }, 30000);
 </script>

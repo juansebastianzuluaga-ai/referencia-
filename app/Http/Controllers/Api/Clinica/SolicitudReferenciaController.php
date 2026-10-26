@@ -13,6 +13,7 @@ use App\Models\SolicitudReferencia;
 use App\Models\SolicitudReferenciaAdjunto;
 use App\Models\SolicitudReferenciaEvento;
 use App\Models\User;
+use App\Services\NominatimGeocodingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -20,6 +21,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SolicitudReferenciaController extends Controller
 {
+    public function __construct(private NominatimGeocodingService $geocoding) {}
+
     private function getClinicaId(Request $request): ?int
     {
         $token = $request->bearerToken() ?? $request->header('X-Clinica-Token');
@@ -100,12 +103,83 @@ class SolicitudReferenciaController extends Controller
         return response()->json(['data' => $ciudades]);
     }
 
+    /**
+     * Lista de clínicas registradas para el desplegable "Institución que
+     * refiere" del formulario público. Solo se expone id + nombre +
+     * ubicación (el correo es dato de contacto interno, no se publica).
+     * Las rechazadas no aparecen — toda clínica registrada queda activa
+     * de inmediato (no hay flujo de aprobación).
+     */
+    public function listarClinicas(): JsonResponse
+    {
+        $clinicas = Clinica::where('estado', '!=', 'rechazada')
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'ciudad', 'departamento']);
+
+        return response()->json(['data' => $clinicas]);
+    }
+
+    /**
+     * Registro público de una clínica desde el modal "Datos de la clínica
+     * que refiere" del formulario. No pide NIT (el personal puede
+     * completarlo después en el módulo de clínicas): queda activa de una
+     * — no hay aprobación —, aparece en el desplegable y en el mapa de
+     * una, y su correo es al que llegan las notificaciones de estado de
+     * sus solicitudes.
+     */
+    public function registrarClinica(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'nombre' => ['required', 'string', 'max:150'],
+            'municipio' => ['nullable', 'string', 'max:150'],
+            'direccion' => ['nullable', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:150'],
+            'persona_cargo' => ['nullable', 'string', 'max:150'],
+            'telefono' => ['nullable', 'string', 'max:30'],
+        ]);
+
+        // Misma institución = misma clínica (match sin importar mayúsculas)
+        // — así dos remisiones no crean duplicados.
+        [$ciudad, $departamento] = $validated['municipio']
+            ? array_pad(array_map('trim', explode(',', $validated['municipio'], 2)), 2, null)
+            : [null, null];
+
+        $clinica = Clinica::query()
+            ->whereRaw('LOWER(nombre) = ?', [mb_strtolower(trim($validated['nombre']))])
+            ->first();
+
+        if (! $clinica) {
+            $clinica = Clinica::create([
+                'nombre' => trim($validated['nombre']),
+                'ciudad' => $ciudad,
+                'departamento' => $departamento,
+                'direccion' => $validated['direccion'] ?? null,
+                'email' => $validated['email'],
+                'telefono' => $validated['telefono'] ?? null,
+                'representante_legal' => $validated['persona_cargo'] ?? null,
+                'is_active' => true,
+                'estado' => 'activa',
+            ]);
+
+            $coords = $this->geocoding->geocode($clinica->direccion, $clinica->ciudad, $clinica->departamento);
+
+            if ($coords) {
+                $clinica->update([
+                    'latitud' => $coords['lat'],
+                    'longitud' => $coords['lon'],
+                    'geocoded_at' => now(),
+                ]);
+            }
+        }
+
+        return response()->json([
+            'data' => $clinica->only(['id', 'nombre', 'ciudad', 'departamento']),
+            'message' => 'Clínica registrada correctamente.',
+        ], 201);
+    }
+
     public function store(Request $request): JsonResponse
     {
-        // El formulario de remisión es público: si llega una sesión de clínica
-        // válida se asocia, si no queda como remisión externa sin clínica.
-        $clinicaId = $this->getClinicaId($request);
-
         $validated = $request->validate([
             'fecha' => ['nullable', 'date'],
             'hora' => ['nullable', 'date_format:H:i'],
@@ -131,6 +205,10 @@ class SolicitudReferenciaController extends Controller
             'servicio_ubicacion_actual' => ['required', 'string', 'max:60'],
             'servicio_remision' => ['nullable', 'string', 'max:60'],
             'institucion_remitente' => ['nullable', 'string', 'max:150'],
+            // Clínica elegida del desplegable "Institución que refiere" —
+            // vincula la solicitud para que las notificaciones lleguen al
+            // correo registrado de esa clínica.
+            'clinica_id' => ['nullable', 'integer', 'exists:clinicas,id'],
             'municipio_remitente' => ['nullable', 'string', 'max:120'],
             'requiere_aislamiento' => ['nullable', 'boolean'],
             'tipo_aislamiento' => ['nullable', 'string', 'in:contacto,respiratorio,cohortizado'],
@@ -145,6 +223,17 @@ class SolicitudReferenciaController extends Controller
             'adjuntos' => ['nullable', 'array', 'max:10'],
             'adjuntos.*' => ['file', 'mimes:pdf,jpg,jpeg,png,gif,webp,bmp,tiff,svg,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,rar', 'max:10240'],
         ]);
+
+        // El formulario de remisión es público: la clínica puede venir de una
+        // sesión de clínica válida o del desplegable "Institución que refiere".
+        $clinicaId = $this->getClinicaId($request) ?? ($validated['clinica_id'] ?? null);
+        $clinica = $clinicaId ? Clinica::find($clinicaId) : null;
+
+        if ($clinica) {
+            $validated['institucion_remitente'] = $clinica->nombre;
+            // El correo de la clínica es al que llegan las notificaciones.
+            $validated['correo_contacto'] = $clinica->email;
+        }
 
         $validated['fecha'] ??= now()->toDateString();
         $validated['hora'] ??= now()->format('H:i');
@@ -189,7 +278,6 @@ class SolicitudReferenciaController extends Controller
         ]);
 
         // Notificar en campana a usuarios con permisos de referencia
-        $clinica = $clinicaId ? Clinica::find($clinicaId) : null;
         $institucion = $clinica?->nombre ?? $validated['institucion_remitente'] ?? 'Entidad externa';
         $paciente = trim("{$validated['primer_nombre']} {$validated['primer_apellido']}");
         $this->notificarUsuarios(
