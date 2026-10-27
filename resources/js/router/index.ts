@@ -68,6 +68,11 @@ const router = createRouter({
           component: () => import('@/views/login-externo/SolicitudView.vue'),
         },
         {
+          path: 'evolucion',
+          name: 'clinica-evolucion',
+          component: () => import('@/views/login-externo/EvolucionView.vue'),
+        },
+        {
           // URLs viejas del portal (/clinica/dashboard, /clinica/historial…)
           path: ':pathMatch(.*)*',
           redirect: '/clinica/inicio',

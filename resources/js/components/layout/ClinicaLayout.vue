@@ -110,6 +110,7 @@ interface NavItem {
 const mainItems: NavItem[] = [
   { to: '/clinica/dashboard', icon: 'Home', text: 'Inicio' },
   { to: '/clinica/solicitud', icon: 'FilePlus', text: 'Nueva solicitud' },
+  { to: '/clinica/evolucion', icon: 'Activity', text: 'Evolución' },
 ];
 
 const logoColor = '/images/logo-avatar.png';

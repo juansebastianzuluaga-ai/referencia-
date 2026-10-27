@@ -40,6 +40,8 @@ Route::prefix('api')->name('api.')->group(function (): void {
         Route::get('clinicas', [SolicitudReferenciaExternoController::class, 'listarClinicas'])->middleware('throttle:60,1')->name('clinicas.lista');
         Route::post('clinicas', [SolicitudReferenciaExternoController::class, 'registrarClinica'])->middleware('throttle:10,1')->name('clinicas.registro');
         Route::post('solicitudes', [SolicitudReferenciaExternoController::class, 'store'])->middleware('throttle:20,1')->name('solicitudes.store');
+        Route::get('evoluciones', [SolicitudReferenciaExternoController::class, 'evoluciones'])->middleware('throttle:60,1')->name('evoluciones.index');
+        Route::post('solicitudes/{id}/evoluciones', [SolicitudReferenciaExternoController::class, 'agregarEvolucion'])->middleware('throttle:30,1')->name('evoluciones.store');
         Route::get('solicitudes/{id}', [SolicitudReferenciaExternoController::class, 'show'])->name('solicitudes.show');
         Route::get('solicitudes/{solicitudId}/adjuntos/{adjuntoId}/descargar', [SolicitudReferenciaExternoController::class, 'descargarAdjunto'])->name('solicitudes.adjuntos.descargar');
 

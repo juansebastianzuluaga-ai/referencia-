@@ -13,6 +13,10 @@ class SolicitudReferencia extends Model
 
     protected $table = 'solicitudes_referencia';
 
+    protected $attributes = [
+        'urgencia_vital' => false,
+    ];
+
     protected $fillable = [
         'clinica_id',
         'fecha',
@@ -32,6 +36,7 @@ class SolicitudReferencia extends Model
         'telefono_paciente',
         'especialidad_requerida',
         'tipo_referencia',
+        'urgencia_vital',
         'servicio_ubicacion_actual',
         'servicio_remision',
         'institucion_remitente',
@@ -51,6 +56,7 @@ class SolicitudReferencia extends Model
         'hora_respuesta',
         'hora_llegada',
         'lugar_llegada',
+        'sede',
         'motivo_negacion',
         'grupo_negacion',
         'motivo_no_ingreso',
@@ -62,6 +68,7 @@ class SolicitudReferencia extends Model
     protected $casts = [
         'fecha' => 'date',
         'gestante' => 'boolean',
+        'urgencia_vital' => 'boolean',
     ];
 
     public function clinica(): BelongsTo
@@ -92,6 +99,11 @@ class SolicitudReferencia extends Model
     public function diagnosticos(): HasMany
     {
         return $this->hasMany(DiagnosticoSolicitud::class)->orderBy('id');
+    }
+
+    public function evoluciones(): HasMany
+    {
+        return $this->hasMany(SolicitudEvolucion::class)->latest();
     }
 
     protected static function booted(): void

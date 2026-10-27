@@ -116,8 +116,14 @@
                 @endif
                 @if($solicitud->lugar_llegada)
                 <tr style="background:#ffffff;">
-                  <td style="padding:10px 16px;font-size:13px;color:#64748b;">Lugar de llegada</td>
-                  <td style="padding:10px 16px;font-size:13px;color:#1e2d55;">{{ $solicitud->lugar_llegada }}</td>
+                  <td style="padding:10px 16px;font-size:13px;color:#64748b;border-bottom:1px solid #e8edf2;">Lugar de llegada</td>
+                  <td style="padding:10px 16px;font-size:13px;color:#1e2d55;border-bottom:1px solid #e8edf2;">{{ $solicitud->lugar_llegada }}</td>
+                </tr>
+                @endif
+                @if($solicitud->sede)
+                <tr style="background:#f8fafc;">
+                  <td style="padding:10px 16px;font-size:13px;color:#64748b;">Sede</td>
+                  <td style="padding:10px 16px;font-size:13px;color:#1e2d55;font-weight:700;">{{ $solicitud->sede }}</td>
                 </tr>
                 @endif
               </table>

@@ -202,6 +202,7 @@ class SolicitudReferenciaController extends Controller
             'telefono_paciente' => ['nullable', 'string', 'max:15', 'regex:/^[0-9]*$/'],
             'especialidad_requerida' => ['required', 'string', 'max:120'],
             'tipo_referencia' => ['required', 'string', 'in:Referencia redonda,Referencia integral'],
+            'urgencia_vital' => ['sometimes', 'boolean'],
             'servicio_ubicacion_actual' => ['required', 'string', 'max:60'],
             'servicio_remision' => ['nullable', 'string', 'max:60'],
             'institucion_remitente' => ['nullable', 'string', 'max:150'],
@@ -323,9 +324,97 @@ class SolicitudReferenciaController extends Controller
         }
     }
 
+    /**
+     * Referencias aún pendientes con sus notas de evolución — el listado
+     * del módulo "Evolución" del portal público. Con sesión de clínica se
+     * devuelven todas las de esa clínica; sin sesión (portal público) hay
+     * que buscar primero: el acceso es por el ID único de la referencia
+     * (ID000865 → 865) o la cédula exacta del paciente — nunca se lista
+     * todo sin un dato que identifique al paciente.
+     */
+    public function evoluciones(Request $request): JsonResponse
+    {
+        $clinicaId = $this->getClinicaId($request);
+        $buscar = trim((string) $request->query('buscar', ''));
+
+        if (! $clinicaId && strlen($buscar) < 3) {
+            return response()->json(['data' => []]);
+        }
+
+        $query = SolicitudReferencia::whereIn('estado', ['pendiente', 'pendiente_cama', 'en_espera'])
+            ->with([
+                'evoluciones',
+                'diagnosticos',
+                'clinica:id,nombre',
+                'adjuntos:id,solicitud_referencia_id,nombre_original,mime_type,tamano',
+            ])
+            ->orderBy('created_at', 'desc');
+
+        if ($clinicaId) {
+            $query->where('clinica_id', $clinicaId);
+        }
+
+        if ($buscar !== '') {
+            $digitos = preg_replace('/\D/', '', $buscar);
+            $query->where(function ($q) use ($buscar, $digitos, $clinicaId): void {
+                // Sin sesión la cédula debe ser exacta — un LIKE parcial
+                // dejaría adivinar documentos ajenos por fuerza bruta.
+                if ($clinicaId) {
+                    $q->where('numero_documento', 'like', '%'.$buscar.'%');
+                } else {
+                    $q->where('numero_documento', $buscar);
+                }
+                if ($digitos !== '') {
+                    $q->orWhere('id', (int) $digitos);
+                }
+            });
+        }
+
+        return response()->json(['data' => $query->limit(25)->get()]);
+    }
+
+    /**
+     * Nota de evolución diaria que la clínica registra sobre un paciente
+     * cuya referencia sigue pendiente. Solo se permite mientras la
+     * solicitud no haya terminado (completada o negada) y queda también en
+     * la línea de tiempo interna como evento "evolucion". El acceso
+     * público se respalda en que solo se llega al registro conociendo el
+     * ID de la referencia o la cédula del paciente.
+     */
+    public function agregarEvolucion(Request $request, int $id): JsonResponse
+    {
+        $clinicaId = $this->getClinicaId($request);
+
+        $validated = $request->validate([
+            'nota' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $solicitud = SolicitudReferencia::whereIn('estado', ['pendiente', 'pendiente_cama', 'en_espera'])
+            ->when($clinicaId, fn ($q) => $q->where('clinica_id', $clinicaId))
+            ->findOrFail($id);
+
+        $evolucion = $solicitud->evoluciones()->create(['nota' => trim($validated['nota'])]);
+
+        SolicitudReferenciaEvento::create([
+            'solicitud_referencia_id' => $solicitud->id,
+            'tipo' => 'evolucion',
+            'titulo' => 'Evolución del paciente',
+            'descripcion' => $evolucion->nota,
+        ]);
+
+        return response()->json(['data' => $evolucion, 'message' => 'Evolución registrada'], 201);
+    }
+
     public function show(int $id, Request $request): JsonResponse
     {
         $clinicaId = $this->getClinicaId($request);
+
+        // Sin sesión, where('clinica_id', null) compila como "IS NULL" y
+        // expondría las solicitudes creadas sin clínica registrada —
+        // mismo bloqueo que index().
+        if (! $clinicaId) {
+            return response()->json(['message' => 'No autenticado'], 401);
+        }
 
         $solicitud = SolicitudReferencia::where('clinica_id', $clinicaId)
             ->with(['adjuntos', 'eventos', 'diagnosticos'])

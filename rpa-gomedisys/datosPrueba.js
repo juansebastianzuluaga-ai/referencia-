@@ -12,6 +12,7 @@ const solicitud = {
   ciudadOrigen: 'Palmira', // se escribe y se filtra — no hace falta el nombre exacto completo
   direccionPaciente: '', // no lo capturamos hoy en nuestro sistema — queda vacío hasta que se agregue
   telefonoPaciente: '', // ídem — vacío hasta que tengamos este dato
+  sede: 'URGENCIAS', // sede de trabajo de Gomedisys: 'URGENCIAS', 'CENTRAL DE ESPECIALISTAS' o 'CAC SANTA BARBARA'
 };
 
 // Equivalencias de catálogos: valor de nuestro sistema → texto exacto de

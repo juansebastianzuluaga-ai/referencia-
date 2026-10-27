@@ -5,7 +5,15 @@ import tailwindcss from '@tailwindcss/vite';
 import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'path';
+
+const laragonSslDir = path.join(process.env.LARAGON_ROOT ?? 'C:/laragon', 'etc', 'ssl');
+const devKeyPath = process.env.VITE_DEV_SERVER_KEY ?? path.join(laragonSslDir, 'laragon.key');
+const devCertPath = process.env.VITE_DEV_SERVER_CERT ?? path.join(laragonSslDir, 'laragon.crt');
+const devHttps = existsSync(devKeyPath) && existsSync(devCertPath)
+    ? { key: readFileSync(devKeyPath), cert: readFileSync(devCertPath) }
+    : undefined;
 
 export default defineConfig({
     plugins: [
@@ -30,8 +38,10 @@ export default defineConfig({
     ],
     server: {
         host: '127.0.0.1',
+        ...(devHttps ? { https: devHttps } : {}),
         hmr: {
             host: '127.0.0.1',
+            ...(devHttps ? { protocol: 'wss' as const } : {}),
         },
     },
     resolve: {

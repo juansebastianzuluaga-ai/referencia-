@@ -84,6 +84,16 @@
                 <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
               </template>
             </el-input>
+            <el-select v-model="sortKey" aria-label="Ordenar por" size="small">
+              <el-option label="Ordenar por fecha" value="fecha" />
+              <el-option label="Ordenar por paciente" value="paciente" />
+              <el-option label="Ordenar por clínica" value="clinica" />
+              <el-option label="Ordenar por especialidad" value="especialidad" />
+            </el-select>
+            <el-select v-model="sortDir" aria-label="Dirección del orden" size="small">
+              <el-option label="Descendente" value="desc" />
+              <el-option label="Ascendente" value="asc" />
+            </el-select>
             <button v-if="hayFiltrosActivos" class="sol-limpiar" @click="limpiarFiltros">Limpiar filtros</button>
           </div>
         </Transition>
@@ -116,137 +126,104 @@
         <p class="text-xs max-w-[260px]" style="color:#64748b;">No se encontraron solicitudes en esta categoría.</p>
       </div>
 
-      <!-- Tabla real -->
+      <!-- Lista en tarjetas -->
       <div v-else class="flex flex-col h-full overflow-hidden">
-        <div class="overflow-auto custom-scrollbar flex-1">
-          <table class="sol-table">
-            <thead class="sol-table-thead">
-              <tr>
-                <th class="sol-th sol-th-check">
-                  <el-checkbox :model-value="paginaSeleccionada" @change="toggleSeleccionPagina" />
-                </th>
-                <th class="sol-th sol-th-num">#</th>
-                <th class="sol-th sol-th-paciente sol-th-sortable" @click="toggleSort('paciente')">
-                  Paciente
-                  <component :is="sortIcon('paciente')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'paciente', 'opacity-30': sortKey !== 'paciente' }" />
-                </th>
-                <th class="sol-th sol-th-sortable" @click="toggleSort('clinica')">
-                  Clínica
-                  <component :is="sortIcon('clinica')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'clinica', 'opacity-30': sortKey !== 'clinica' }" />
-                </th>
-                <th class="sol-th sol-th-sortable" @click="toggleSort('especialidad')">
-                  Especialidad
-                  <component :is="sortIcon('especialidad')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'especialidad', 'opacity-30': sortKey !== 'especialidad' }" />
-                </th>
-                <th class="sol-th">Diagnóstico</th>
-                <th class="sol-th">Fecha y hora</th>
-                <th class="sol-th">Estado</th>
-                <th class="sol-th">Tiempo</th>
-                <th class="sol-th sol-th-actions">Acciones</th>
-              </tr>
-            </thead>
-            <TransitionGroup name="sol-row" tag="tbody">
-              <tr
-                v-for="(s, i) in solicitudesPaginadas"
-                :id="`sol-row-${s.id}`"
-                :key="s.id"
-                class="sol-table-row"
-                :class="{ 'sol-table-row-resaltada': resaltarId === s.id }"
-              >
-                <td class="sol-td sol-td-check">
-                  <el-checkbox :model-value="seleccionadas.has(s.id)" @change="toggleSeleccion(s.id)" />
-                </td>
-                <td class="sol-td sol-td-num">{{ (paginaActual - 1) * itemsPorPagina + i + 1 }}</td>
-                <td class="sol-td">
-                  <div class="sol-table-paciente">
-                    <div class="sol-table-avatar"
-                      :style="{
-                        background: s.estado === 'pendiente' ? '#fef3c7' : s.estado === 'pendiente_cama' ? '#ffedd5' : s.estado === 'en_espera' ? '#dbeafe' : s.estado === 'completado' ? '#dcfce7' : '#fee2e2',
-                        color: s.estado === 'pendiente' ? '#d97706' : s.estado === 'pendiente_cama' ? '#ea580c' : s.estado === 'en_espera' ? '#2563eb' : s.estado === 'completado' ? '#16a34a' : '#dc2626'
-                      }">
-                      {{ inicialesPaciente(s) }}
-                    </div>
-                    <div class="sol-table-paciente-info">
-                      <p class="sol-table-name" :class="{ 'sol-table-name-resaltada': resaltarId === s.id }">{{ nombreCompleto(s) }}</p>
-                      <p class="sol-table-doc">{{ s.tipo_documento }} {{ s.numero_documento }}</p>
-                    </div>
-                  </div>
-                </td>
-                <td class="sol-td">
-                  <p class="sol-table-clinica-name">{{ s.clinica?.nombre ?? '—' }}</p>
-                  <p class="sol-table-remitente" v-if="s.quien_remitente || s.telefono_contacto">
-                    {{ s.quien_remitente || '—' }}<span v-if="s.telefono_contacto"> · {{ s.telefono_contacto }}</span>
-                  </p>
-                </td>
-                <td class="sol-td">{{ s.especialidad_requerida }}</td>
-                <td class="sol-td">
-                  <div v-if="s.diagnosticos?.length" class="sol-dx-cell">
-                    <span
-                      v-for="dx in s.diagnosticos.slice(0, 2)"
-                      :key="dx.id"
-                      class="sol-dx-tag"
-                    >
-                      <strong>{{ dx.codigo_cie10 }}</strong>
-                      <span class="sol-dx-desc">{{ dx.descripcion }}</span>
-                    </span>
-                    <span v-if="s.diagnosticos.length > 2" class="sol-dx-more">+{{ s.diagnosticos.length - 2 }}</span>
-                  </div>
-                  <p v-else-if="s.diagnostico" class="sol-dx-text">{{ s.diagnostico }}</p>
-                  <span v-else class="sol-dx-none">—</span>
-                </td>
-                <td class="sol-td sol-td-fecha">
-                  <p class="sol-fecha">{{ formatFecha(s.created_at) }}</p>
-                  <p class="sol-hora">{{ horaDeFecha(s.created_at) }}</p>
-                </td>
-                <td class="sol-td">
-                  <span class="sol-table-status" :class="{
-                    'sol-status-pending': s.estado === 'pendiente',
-                    'sol-status-cama': s.estado === 'pendiente_cama',
-                    'sol-status-waiting': s.estado === 'en_espera',
-                    'sol-status-completed': s.estado === 'completado',
-                    'sol-status-rejected': s.estado === 'negado',
+        <div class="hist-selectbar shrink-0">
+          <label class="hist-selectbar-label" title="Seleccionar todas las de esta página para exportar">
+            <el-checkbox :model-value="paginaSeleccionada" @change="toggleSeleccionPagina" />
+            Seleccionar página para exportar
+          </label>
+          <span v-if="seleccionadas.size" class="hist-selectbar-count">{{ seleccionadas.size }} seleccionadas</span>
+        </div>
+        <div class="hist-card-scroll custom-scrollbar">
+          <TransitionGroup name="sol-row" tag="div" class="hist-card-list" role="list" aria-label="Histórico de solicitudes">
+            <article
+              v-for="s in solicitudesPaginadas"
+              :id="`sol-row-${s.id}`"
+              :key="s.id"
+              role="listitem"
+              class="hist-card"
+              :class="[
+                { 'hist-card-resaltada': resaltarId === s.id, 'hist-card-urgent': s.urgencia_vital },
+                !s.urgencia_vital ? `hist-card--${s.estado}` : ''
+              ]"
+            >
+              <div class="hist-card-identity">
+                <el-checkbox :model-value="seleccionadas.has(s.id)" @change="toggleSeleccion(s.id)" />
+                <div class="hist-card-avatar"
+                  :style="{
+                    background: s.estado === 'pendiente' ? '#fef3c7' : s.estado === 'pendiente_cama' ? '#ffedd5' : s.estado === 'en_espera' ? '#dbeafe' : s.estado === 'completado' ? '#dcfce7' : '#fee2e2',
+                    color: s.estado === 'pendiente' ? '#d97706' : s.estado === 'pendiente_cama' ? '#ea580c' : s.estado === 'en_espera' ? '#2563eb' : s.estado === 'completado' ? '#16a34a' : '#dc2626'
                   }">
-                    <span class="sol-status-dot"></span>
-                    {{ estadoLabel(s.estado) }}
-                  </span>
-                </td>
-                <td class="sol-td sol-td-tiempo">
-                  <span class="sol-tiempo-chip" :class="{ 'sol-tiempo-chip--lento': tiempoLento(s) }">{{ tiempoResolucion(s) }}</span>
-                </td>
-                <td class="sol-td">
-                  <div class="sol-table-actions">
-                    <el-button circle size="small" title="Ver detalle" @click="verDetalle(s)">
-                      <component :is="EyeIcon" class="w-3.5 h-3.5" />
-                    </el-button>
-                    <el-button circle size="small" title="Descargar PDF" @click="exportarPdfFila(s)">
-                      <component :is="FileDownIcon" class="w-3.5 h-3.5" />
-                    </el-button>
-                    <el-dropdown trigger="click" placement="bottom-end">
-                      <el-button circle size="small">
-                        <component :is="MoreVerticalIcon" class="w-3.5 h-3.5" />
-                      </el-button>
-                      <template #dropdown>
-                        <el-dropdown-menu>
-                          <el-dropdown-item @click="verDetalle(s)">
-                            <component :is="EyeIcon" class="w-3.5 h-3.5 mr-1.5" /> Ver detalle
-                          </el-dropdown-item>
-                          <el-dropdown-item @click="verHistoria(s)">
-                            <component :is="FileTextIcon" class="w-3.5 h-3.5 mr-1.5" /> Historia clínica
-                          </el-dropdown-item>
-                          <el-dropdown-item @click="exportarPdfFila(s)">
-                            <component :is="FileDownIcon" class="w-3.5 h-3.5 mr-1.5" /> Descargar PDF
-                          </el-dropdown-item>
-                          <el-dropdown-item @click="abrirCambiar(s)">
-                            <component :is="RotateCcwIcon" class="w-3.5 h-3.5 mr-1.5" /> Cambiar estado
-                          </el-dropdown-item>
-                        </el-dropdown-menu>
-                      </template>
-                    </el-dropdown>
-                  </div>
-                </td>
-              </tr>
-            </TransitionGroup>
-          </table>
+                  {{ inicialesPaciente(s) }}
+                </div>
+                <div class="hist-card-idtext">
+                  <button type="button" class="hist-card-name" :class="{ 'hist-card-name-resaltada': resaltarId === s.id }" :title="nombreCompleto(s)" @click="verDetalle(s)">{{ nombreCompleto(s) }}</button>
+                  <p class="hist-card-doc">{{ s.tipo_documento }} {{ s.numero_documento }}</p>
+                </div>
+              </div>
+              <div class="hist-card-block hist-card-block--clinic hist-card-divider">
+                <span class="hist-card-label">Clínica emisora</span>
+                <p class="hist-card-clinic" :title="s.clinica?.nombre">{{ s.clinica?.nombre ?? '—' }}</p>
+                <p class="hist-card-remitente" v-if="s.quien_remitente || s.telefono_contacto" :title="[s.quien_remitente, s.telefono_contacto].filter(Boolean).join(' · ')">
+                  {{ s.quien_remitente || '—' }}<span v-if="s.telefono_contacto"> · {{ s.telefono_contacto }}</span>
+                </p>
+              </div>
+              <div class="hist-card-block hist-card-block--clinical hist-card-divider">
+                <span class="hist-card-label">Especialidad</span>
+                <p class="hist-card-specialty" :title="s.especialidad_requerida">{{ s.especialidad_requerida }}</p>
+                <span class="hist-card-label hist-card-label-gap">Diagnóstico</span>
+                <p v-if="s.diagnosticos?.length" class="hist-card-dx" :title="s.diagnosticos[0].descripcion">
+                  <strong class="hist-card-dx-code">{{ s.diagnosticos[0].codigo_cie10 }}</strong>
+                  {{ s.diagnosticos[0].descripcion }}<span v-if="s.diagnosticos.length > 1" class="sol-dx-more"> +{{ s.diagnosticos.length - 1 }}</span>
+                </p>
+                <p v-else class="hist-card-dx" :title="s.diagnostico">{{ s.diagnostico || '—' }}</p>
+              </div>
+              <div class="hist-card-state hist-card-divider">
+                <span class="sol-table-status" :class="{
+                  'sol-status-pending': s.estado === 'pendiente',
+                  'sol-status-cama': s.estado === 'pendiente_cama',
+                  'sol-status-waiting': s.estado === 'en_espera',
+                  'sol-status-completed': s.estado === 'completado',
+                  'sol-status-rejected': s.estado === 'negado',
+                }">
+                  <span class="sol-status-dot"></span>
+                  {{ estadoLabel(s.estado) }}
+                </span>
+                <p class="hist-card-fecha">{{ formatFecha(s.created_at) }} · {{ horaDeFecha(s.created_at) }}</p>
+                <span class="sol-tiempo-chip" :class="{ 'sol-tiempo-chip--lento': tiempoLento(s) }">{{ tiempoResolucion(s) }}</span>
+              </div>
+              <div class="hist-card-actions">
+                <el-button circle size="small" title="Ver detalle" aria-label="Ver detalle de la solicitud" @click="verDetalle(s)">
+                  <component :is="EyeIcon" class="w-3.5 h-3.5" />
+                </el-button>
+                <el-button circle size="small" title="Descargar PDF" aria-label="Descargar PDF" @click="exportarPdfFila(s)">
+                  <component :is="FileDownIcon" class="w-3.5 h-3.5" />
+                </el-button>
+                <el-dropdown trigger="click" placement="bottom-end">
+                  <el-button circle size="small" aria-label="Más acciones">
+                    <component :is="MoreVerticalIcon" class="w-3.5 h-3.5" />
+                  </el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item @click="verDetalle(s)">
+                        <component :is="EyeIcon" class="w-3.5 h-3.5 mr-1.5" /> Ver detalle
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="verHistoria(s)">
+                        <component :is="FileTextIcon" class="w-3.5 h-3.5 mr-1.5" /> Historia clínica
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="exportarPdfFila(s)">
+                        <component :is="FileDownIcon" class="w-3.5 h-3.5 mr-1.5" /> Descargar PDF
+                      </el-dropdown-item>
+                      <el-dropdown-item @click="abrirCambiar(s)">
+                        <component :is="RotateCcwIcon" class="w-3.5 h-3.5 mr-1.5" /> Cambiar estado
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </div>
+            </article>
+          </TransitionGroup>
         </div>
         <!-- Pagination -->
         <div class="sol-pagination">
@@ -560,7 +537,15 @@
                     <el-option v-for="op in opcionesCambioEstado" :key="op.value" :label="op.label" :value="op.value" />
                   </el-select>
                 </div>
-                <div v-if="formCambiar.estado === 'en_espera'" class="grid grid-cols-3 gap-2 mb-1.5">
+                <div v-if="formCambiar.estado === 'en_espera'" class="grid grid-cols-2 gap-2 mb-1.5">
+                  <div>
+                    <label class="accion-field-label">Sede <span class="accion-required">*</span></label>
+                    <el-select v-model="formCambiar.sede" placeholder="Seleccione la sede" class="w-full" popper-class="negar-motivo-popper">
+                      <el-option label="Urgencias" value="URGENCIAS" />
+                      <el-option label="Central de Especialistas" value="CENTRAL DE ESPECIALISTAS" />
+                      <el-option label="CAC Santa Bárbara" value="CAC SANTA BARBARA" />
+                    </el-select>
+                  </div>
                   <div>
                     <label class="accion-field-label">Código Gomedisys (REF) <span class="accion-required">*</span></label>
                     <el-input v-model="formCambiar.codigo_aceptacion" placeholder="Ej: REF00045821" />
@@ -648,9 +633,7 @@ import {
   Minimize as MinimizeIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
-  ArrowUp as ArrowUpIcon,
-  ArrowDown as ArrowDownIcon,
-  ArrowUpDown as ArrowUpDownIcon,
+
   Send as SendIcon,
   Shield as ShieldIcon,
   User as UserIcon,
@@ -707,10 +690,12 @@ interface Solicitud {
   via_contacto?: string;
   gestante?: boolean;
   condicion_especial?: string;
+  urgencia_vital?: boolean;
   observaciones?: string;
   estado: 'pendiente' | 'pendiente_cama' | 'en_espera' | 'completado' | 'negado';
   codigo_aceptacion?: string;
   hora_respuesta?: string;
+  sede?: string;
   motivo_negacion?: string;
   grupo_negacion?: string;
   numero_ingreso?: number;
@@ -985,19 +970,6 @@ function verHistoria(s: Solicitud) {
   abrirHistoriaClinica();
 }
 
-function toggleSort(key: 'paciente' | 'clinica' | 'especialidad') {
-  if (sortKey.value === key) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortKey.value = key;
-    sortDir.value = 'asc';
-  }
-}
-
-function sortIcon(key: string) {
-  if (sortKey.value !== key) return ArrowUpDownIcon;
-  return sortDir.value === 'asc' ? ArrowUpIcon : ArrowDownIcon;
-}
 
 function cambiarTab(tab: 'todas' | 'completado' | 'negado') {
   tabActiva.value = tab;
@@ -1356,7 +1328,7 @@ function cerrarDetalle() {
 const authStore = useAuthStore();
 const procesando = ref(false);
 const modalCambiar = ref(false);
-const formCambiar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', estado: '', motivo: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', numero_ingreso: '' });
+const formCambiar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', estado: '', motivo: '', sede: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', numero_ingreso: '' });
 
 // "Nueva solicitud" queda fuera del cambio manual — las nuevas solo
 // avanzan por el flujo normal (aceptar/negar).
@@ -1388,6 +1360,7 @@ function abrirCambiar(s: Solicitud) {
     nombre_quien_responde: authStore.user?.full_name ?? '',
     estado: '',
     motivo: '',
+    sede: s.sede || '',
     codigo_aceptacion: '',
     hora_llegada: '',
     lugar_llegada: '',
@@ -1399,7 +1372,7 @@ function abrirCambiar(s: Solicitud) {
 async function cambiarEstado() {
   const f = formCambiar.value;
   if (!f.hora_respuesta || !f.estado || !f.motivo.trim() || !f.nombre_quien_responde.trim()
-    || (f.estado === 'en_espera' && (!f.codigo_aceptacion.trim() || !f.hora_llegada || !f.lugar_llegada.trim()))
+    || (f.estado === 'en_espera' && (!f.codigo_aceptacion.trim() || !f.hora_llegada || !f.lugar_llegada.trim() || !f.sede))
     || (f.estado === 'completado' && !String(f.numero_ingreso).trim())) {
     notify.warning('Complete los campos obligatorios');
     return;
@@ -1542,14 +1515,6 @@ usePolling(() => {
 }
 
 /* ── Columnas nuevas de la tabla ── */
-.sol-th-check, .sol-td-check { width: 34px; text-align: center; }
-.sol-th-num, .sol-td-num { width: 36px; text-align: center; color: #94a3b8; font-weight: 600; }
-.dark .sol-th-num, .dark .sol-td-num { color: #64748b; }
-.sol-td-fecha { white-space: nowrap; }
-.sol-fecha { margin: 0; font-size: 11px; font-weight: 600; color: #334155; }
-.dark .sol-fecha { color: #cbd5e1; }
-.sol-hora { margin: 0; font-size: 10px; color: #94a3b8; }
-.sol-td-tiempo { white-space: nowrap; }
 .sol-tiempo-chip {
   display: inline-block;
   padding: 2px 8px; border-radius: 999px;
@@ -1599,28 +1564,10 @@ usePolling(() => {
 .sol-tab-dot--completado { background: #22c55e; }
 .sol-tab-dot--negado { background: #ef4444; }
 
-/* ── Sortable headers ── */
-.sol-th-sortable {
-  cursor: pointer;
-  user-select: none;
-  transition: color .15s ease;
-}
-.sol-th-sortable:hover { color: #fff; }
-
 /* ── Fila resaltada (llegó desde una notificación) ── */
-.sol-table-row-resaltada {
-  animation: sol-row-glow 2.2s ease-in-out 2;
-  box-shadow: inset 3px 0 0 #D97706;
-}
 @keyframes sol-row-glow {
   0%, 100% { background: transparent; }
   50% { background: rgba(217, 119, 6, .12); }
-}
-.sol-table-name-resaltada {
-  text-decoration: underline;
-  text-decoration-color: #D97706;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
 }
 
 /* ── Row transitions ── */
@@ -1848,58 +1795,13 @@ usePolling(() => {
   box-shadow: 0 8px 22px rgba(13,45,107,.32);
 }
 
-/* ── Diagnóstico column ── */
-.sol-dx-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  max-width: 220px;
-}
-.sol-dx-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sol-dx-tag strong {
-  flex-shrink: 0;
-  font-size: 10px;
-  font-weight: 800;
-  color: #6d28d9;
-  background: #ede9fe;
-  padding: 1px 5px;
-  border-radius: 4px;
-  letter-spacing: .02em;
-}
-.sol-dx-desc {
-  color: #64748b;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* ── Diagnóstico ── */
 .sol-dx-more {
   font-size: 10px;
   font-weight: 700;
   color: #7c3aed;
   padding-left: 2px;
 }
-.sol-dx-text {
-  font-size: 11px;
-  color: #64748b;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sol-dx-none {
-  color: #cbd5e1;
-  font-size: 12px;
-}
-
 /* ── Header ── */
 /* ── Filter bar ── */
 .sol-filter-bar {
@@ -1987,52 +1889,123 @@ usePolling(() => {
   border: 1px solid #e2e8f0;
 }
 
-/* ── Table ── */
-.sol-table { width: 100%; min-width: 1120px; border-collapse: separate; border-spacing: 0; }
-.sol-th {
+/* ── Tarjetas del histórico ── */
+.hist-selectbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 12px;
+  border-bottom: 1px solid #eef2f9;
+}
+.hist-selectbar-label {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 10.5px; font-weight: 600; color: #486996;
+  cursor: pointer; user-select: none;
+}
+.hist-selectbar-count {
+  font-size: 10px; font-weight: 700; color: #16468E;
+  background: #e9f2ff; border-radius: 999px; padding: 2px 8px;
+}
+.hist-card-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 8px 10px 10px; }
+.hist-card-list { display: flex; flex-direction: column; gap: 8px; }
+.hist-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, .8fr) minmax(0, 1.2fr) minmax(175px, .7fr) auto;
+  grid-template-areas: "identity clinic clinical state actions";
+  align-items: center;
+  gap: 14px;
+  min-height: 80px;
   padding: 8px 12px;
-  text-align: left;
-  font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .05em;
-  color: rgba(255,255,255,.85);
-  background: #16468E;
-  border-bottom: 1px solid #123a78;
-  text-shadow: 0 1px 2px rgba(0,0,0,.25);
+  border: 1px solid rgba(225,235,248,.7);
+  border-radius: 9px;
+  background: linear-gradient(115deg, #fff, #fbfdff);
+  box-shadow: 0 3px 10px rgba(42,88,149,.045);
+  transition: border-color .18s ease, box-shadow .18s ease;
 }
-.sol-th:first-child { border-radius: 8px 0 0 8px; }
-.sol-th:last-child { border-radius: 0 8px 8px 0; }
-.sol-table-thead th { position: sticky; top: 0; z-index: 10; }
-.sol-td {
-  padding: 9px 12px;
-  font-size: 12px; color: #334155;
-  border-bottom: 1px solid #f1f5f9;
-  vertical-align: middle;
-  white-space: nowrap;
+.hist-card:hover { border-color: #bfd4f5; box-shadow: 0 4px 14px rgba(42,88,149,.1); }
+.hist-card:hover .sol-table-status { transform: scale(1.06); }
+.hist-card > div { min-width: 0; }
+.hist-card--pendiente { border-color: #f5dda6; background: linear-gradient(110deg, #fff6e3, #fffbef); box-shadow: inset 3px 0 0 #f59e0b; }
+.hist-card--pendiente_cama { border-color: #f7cd9e; background: linear-gradient(110deg, #fff0dd, #fff8ec); box-shadow: inset 3px 0 0 #f97316; }
+.hist-card--en_espera { border-color: #b5d3fb; background: linear-gradient(110deg, #e8f2ff, #f3f9ff); box-shadow: inset 3px 0 0 #3b82f6; }
+.hist-card--completado { border-color: #b8e6c8; background: linear-gradient(110deg, #edf9f0, #f7fcf8); box-shadow: inset 3px 0 0 #22c55e; }
+.hist-card--negado { border-color: #f3b4bc; background: linear-gradient(110deg, #fff0f2, #fff7f8); box-shadow: inset 3px 0 0 #ef4444; }
+.hist-card-urgent { border-color: #f7829a; background: linear-gradient(110deg, #ffe7ed, #fff1f4); box-shadow: inset 3px 0 0 #e11d48; }
+.hist-card-urgent:hover { border-color: #f43f5e; box-shadow: inset 3px 0 0 #be123c, 0 4px 14px rgba(225,29,72,.12); }
+.hist-card-resaltada { animation: sol-row-glow 2.2s ease-in-out 2; box-shadow: inset 3px 0 0 #D97706 !important; }
+.hist-card-identity { grid-area: identity; display: flex; align-items: center; gap: 9px; }
+.hist-card-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  display: grid; place-items: center; flex-shrink: 0;
+  font-size: 12px; font-weight: 800;
 }
-.sol-table-row { transition: background .15s ease, box-shadow .15s ease; }
-.sol-table-row:hover { background: #f8fafc; box-shadow: inset 3px 0 0 var(--rf-primary); }
-.sol-table-row:hover .sol-table-status { transform: scale(1.06); }
-.sol-table-row:last-child td { border-bottom: none; }
-.sol-th-paciente { min-width: 220px; }
-.sol-th-actions { text-align: right; }
+.hist-card-idtext { min-width: 0; flex: 1; }
+.hist-card-name {
+  display: block; max-width: 100%;
+  padding: 0; border: 0; background: none;
+  color: #102451; font: inherit; font-size: 13px; font-weight: 750;
+  cursor: pointer; text-align: left;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hist-card-name:hover { color: #2563eb; }
+.hist-card-name:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; border-radius: 3px; }
+.hist-card-name-resaltada {
+  text-decoration: underline;
+  text-decoration-color: #D97706;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.hist-card-doc { margin: 2px 0 0; color: #758db5; font-size: 10.5px; white-space: nowrap; }
+.hist-card-block--clinic { grid-area: clinic; }
+.hist-card-block--clinical { grid-area: clinical; }
+.hist-card-divider { padding-left: 15px; border-left: 1px solid #dfe8f7; }
+.hist-card-label { display: block; color: #6c87b0; font-size: 8.5px; font-weight: 600; text-transform: uppercase; line-height: 1.3; letter-spacing: .03em; }
+.hist-card-label-gap { margin-top: 5px; }
+.hist-card-clinic { margin: 3px 0; color: #18345e; font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-card-remitente { margin: 0; color: #728bb3; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-card-specialty { margin: 3px 0 0; color: #075ce8; font-size: 12.5px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-card-dx { margin: 2px 0 0; color: #34517a; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-card-dx-code {
+  flex-shrink: 0; font-size: 10px; font-weight: 800; color: #6d28d9;
+  background: #ede9fe; padding: 1px 5px; border-radius: 4px; letter-spacing: .02em;
+}
+.hist-card-state { grid-area: state; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.hist-card-fecha { margin: 0; color: #506b95; font-size: 10.5px; white-space: nowrap; }
+.hist-card-actions { grid-area: actions; display: flex; align-items: center; gap: 5px; }
+.hist-card-actions :deep(.el-button) { width: 30px; height: 30px; margin-left: 0 !important; border-color: #dbe5f5; background: #fff; color: #244671; }
+.hist-card-actions :deep(.el-button:hover) { color: #2563eb; border-color: #93b9f5; background: #f0f6ff; }
+.dark .hist-selectbar { border-bottom-color: rgba(255,255,255,.07); }
+.dark .hist-selectbar-label { color: #94a3b8; }
+.dark .hist-selectbar-count { background: rgba(96,165,250,.16); color: #93c5fd; }
+.dark .hist-card { background: linear-gradient(115deg, #192439, #162133); border-color: #293b56; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
+.dark .hist-card:hover { border-color: #4771ab; }
+.dark .hist-card--pendiente { border-color: #6b5526; background: linear-gradient(110deg, #33290f, #28220f); box-shadow: inset 3px 0 0 #d9a028; }
+.dark .hist-card--pendiente_cama { border-color: #7a4d21; background: linear-gradient(110deg, #35240f, #2a1f10); box-shadow: inset 3px 0 0 #f07d22; }
+.dark .hist-card--en_espera { border-color: #2e5a9c; background: linear-gradient(110deg, #16263f, #182135); box-shadow: inset 3px 0 0 #4d8ef7; }
+.dark .hist-card--completado { border-color: #2f6b44; background: linear-gradient(110deg, #14291c, #16241b); box-shadow: inset 3px 0 0 #34c468; }
+.dark .hist-card--negado { border-color: #7c3a44; background: linear-gradient(110deg, #331e24, #2a1d22); box-shadow: inset 3px 0 0 #f05656; }
+.dark .hist-card-urgent { border-color: #b03d5c; background: linear-gradient(110deg, #3d1f2e, #2c1d2b); box-shadow: inset 3px 0 0 #fb4d78; }
+.dark .hist-card-name { color: #dbe7fb; }
+.dark .hist-card-name:hover { color: #93c5fd; }
+.dark .hist-card-doc { color: #6d84a8; }
+.dark .hist-card-divider { border-left-color: #314666; }
+.dark .hist-card-label { color: #7d95bb; }
+.dark .hist-card-clinic { color: #d3e1f5; }
+.dark .hist-card-remitente { color: #8ba3c9; }
+.dark .hist-card-specialty { color: #7db0f8; }
+.dark .hist-card-dx { color: #9db4d6; }
+.dark .hist-card-fecha { color: #8ba3c9; }
+.dark .hist-card-actions :deep(.el-button) { border-color: #314666; background: #1c2d46; color: #bcd1ef; }
+.dark .hist-card-actions :deep(.el-button:hover) { border-color: #4771ab; background: #263d5d; color: #93c5fd; }
 
-.sol-table-paciente { display: flex; align-items: center; gap: 10px; }
-.sol-table-paciente-info { min-width: 0; }
-.sol-table-avatar {
-  width: 32px; height: 32px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; font-size: 11px; font-weight: 800;
+@media (max-width: 1100px) {
+  .hist-card { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; grid-template-areas: "identity clinic actions" "clinical state state"; gap: 10px 14px; }
 }
-.sol-table-name {
-  font-size: 13px; font-weight: 700; color: #1e2d55;
-  margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  max-width: 200px;
+@media (max-width: 640px) {
+  .hist-card { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "identity actions" "clinic clinic" "clinical clinical" "state state"; gap: 8px; padding: 10px; }
+  .hist-card-divider { padding-left: 0; border-left: 0; }
+  .hist-card-state { flex-direction: row; flex-wrap: wrap; align-items: center; }
 }
-.sol-table-clinica { font-size: 10px; color: #3b82f6; margin: 1px 0 0; font-weight: 600; }
-.sol-table-clinica-name { font-size: 12px; font-weight: 700; color: #1e40af; margin: 0; }
-.sol-table-remitente { font-size: 10px; color: #94a3b8; margin: 2px 0 0; }
-.sol-table-doc { font-size: 10px; color: #94a3b8; margin: 1px 0 0; }
-.sol-table-doc-inline { font-size: 10px; color: #94a3b8; font-weight: 400; }
+
+/* ── Estado chip ── */
 .sol-table-status {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 10px; border-radius: 999px;
@@ -2050,29 +2023,6 @@ usePolling(() => {
 .sol-status-completed .sol-status-dot { background: #22c55e; }
 .sol-status-rejected { background: #fee2e2; color: #dc2626; }
 .sol-status-rejected .sol-status-dot { background: #ef4444; }
-.sol-table-actions { display: flex; justify-content: flex-end; gap: 6px; }
-.sol-table-actions .el-button {
-  margin-left: 0 !important;
-  transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s ease, filter .2s ease;
-}
-.sol-table-actions .el-button:hover {
-  filter: brightness(1.08);
-}
-.sol-table-actions .el-button:active {
-  filter: brightness(0.95);
-}
-.sol-table-actions .el-button--success:hover {
-  box-shadow: 0 6px 16px rgba(22,163,74,.30);
-}
-.sol-table-actions .el-button--primary:hover {
-  box-shadow: 0 6px 16px rgba(37,99,235,.30);
-}
-.sol-table-actions .el-button--danger:hover {
-  box-shadow: 0 6px 16px rgba(220,38,38,.30);
-}
-.sol-table-actions .el-button--default:hover {
-  box-shadow: 0 6px 16px rgba(13,45,107,.15);
-}
 
 /* ── Empty state ── */
 .sol-empty-wrap {

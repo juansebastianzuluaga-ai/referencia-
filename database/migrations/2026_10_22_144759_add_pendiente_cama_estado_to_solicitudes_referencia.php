@@ -10,7 +10,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE solicitudes_referencia MODIFY COLUMN estado ENUM('pendiente','pendiente_cama','en_espera','completado','negado') NOT NULL DEFAULT 'pendiente'");
+        // En SQLite la columna ya quedó como string en migraciones previas.
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE solicitudes_referencia MODIFY COLUMN estado ENUM('pendiente','pendiente_cama','en_espera','completado','negado') NOT NULL DEFAULT 'pendiente'");
+        }
     }
 
     /**
@@ -18,6 +21,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE solicitudes_referencia MODIFY COLUMN estado ENUM('pendiente','en_espera','completado','negado') NOT NULL DEFAULT 'pendiente'");
     }
 };

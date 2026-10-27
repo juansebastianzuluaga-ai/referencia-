@@ -22,7 +22,15 @@ class RoleSeeder extends Seeder
             'admin' => [
                 'display_name' => 'Administrador',
                 'description' => 'Administra usuarios y catalogos base',
-                'permissions' => Permission::query()->pluck('name')->all(),
+                // Todo menos lo reservado al super-admin: roles, permisos,
+                // configuracion del sistema y credenciales API.
+                'permissions' => Permission::query()
+                    ->where('name', 'not like', 'roles.%')
+                    ->where('name', 'not like', 'permissions.%')
+                    ->where('name', 'not like', 'settings.%')
+                    ->where('name', 'not like', 'api-keys.%')
+                    ->pluck('name')
+                    ->all(),
             ],
             'medico' => [
                 'display_name' => 'Personal de referencia',

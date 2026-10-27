@@ -91,7 +91,7 @@
             <label class="clinic-filtros-label">Buscar</label>
             <el-input
               v-model="filtroBuscar"
-              placeholder="NIT, clínica, ciudad, contacto..."
+              placeholder="Clínica, ciudad, contacto..."
               class="clinic-search"
               clearable
               size="small"
@@ -100,6 +100,19 @@
                 <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
               </template>
             </el-input>
+          </div>
+          <div class="clinic-filtros-field">
+            <label class="clinic-filtros-label">Ordenar</label>
+            <el-select v-model="sortKey" size="small" class="clinic-select">
+              <el-option label="Nombre" value="nombre" />
+              <el-option label="Ciudad" value="ciudad" />
+            </el-select>
+          </div>
+          <div class="clinic-filtros-field clinic-filtros-field--dir">
+            <el-select v-model="sortDir" size="small" class="clinic-select">
+              <el-option label="Ascendente" value="asc" />
+              <el-option label="Descendente" value="desc" />
+            </el-select>
           </div>
           <button v-if="hayFiltros" class="clinic-limpiar" @click="limpiarFiltros">Limpiar</button>
         </div>
@@ -130,88 +143,64 @@
         <p class="text-xs max-w-[280px] relative z-10" style="color:#64748b;">No hay instituciones en esta categoría.</p>
       </div>
 
-      <!-- Tabla real -->
+      <!-- Lista en tarjetas -->
       <div v-else class="flex flex-col h-full overflow-hidden">
-        <div class="overflow-y-auto overflow-x-auto custom-scrollbar flex-1">
-          <table class="clinic-table">
-            <thead class="clinic-table-thead">
-              <tr>
-                <th class="clinic-table-th clinic-table-th-check" title="Seleccionar todas las visibles para verlas en el mapa">
-                  <input type="checkbox" :checked="todasSeleccionadas" @change="toggleSeleccionTodas" class="clinic-checkbox" />
-                </th>
-                <th class="clinic-table-th clinic-th-num">#</th>
-                <th class="clinic-table-th clinic-table-th-clinica clinic-th-sortable" @click="toggleSort('nombre')">
-                  Clínica
-                  <component :is="sortIcon('nombre')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'nombre', 'opacity-30': sortKey !== 'nombre' }" />
-                </th>
-                <th class="clinic-table-th clinic-th-sortable" @click="toggleSort('nit')">
-                  NIT
-                  <component :is="sortIcon('nit')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'nit', 'opacity-30': sortKey !== 'nit' }" />
-                </th>
-                <th class="clinic-table-th clinic-th-sortable" @click="toggleSort('ciudad')">
-                  Ciudad
-                  <component :is="sortIcon('ciudad')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'ciudad', 'opacity-30': sortKey !== 'ciudad' }" />
-                </th>
-                <th class="clinic-table-th">Contacto</th>
-                <th class="clinic-table-th clinic-th-right">Solicitudes</th>
-                <th class="clinic-table-th">Última actividad</th>
-                <th class="clinic-table-th clinic-table-th-actions">Acciones</th>
-              </tr>
-            </thead>
-            <TransitionGroup name="clinic-row" tag="tbody">
-              <tr
-                v-for="(clinica, idx) in clinicasPaginadas"
-                :key="clinica.id"
-                class="clinic-table-row"
-                :class="{ 'clinic-table-row-selected': seleccionadas.has(clinica.id) }"
-              >
-                <td class="clinic-table-td clinic-table-td-check">
-                  <input type="checkbox" :checked="seleccionadas.has(clinica.id)" :title="seleccionadas.has(clinica.id) ? 'Quitar del mapa' : 'Ver en el mapa'" @change="toggleSeleccion(clinica.id)" class="clinic-checkbox" />
-                </td>
-                <td class="clinic-table-td clinic-td-num">{{ (paginaActual - 1) * itemsPorPagina + idx + 1 }}</td>
-                <td class="clinic-table-td">
-                  <div class="clinic-table-clinica">
-                    <div class="clinic-table-avatar" :style="avatarStyle()">
-                      {{ iniciales(clinica.nombre) }}
-                    </div>
-                    <div>
-                      <p class="clinic-table-name">{{ clinica.nombre }}</p>
-                      <a :href="`mailto:${clinica.email}`" class="clinic-table-email" @click.stop>{{ clinica.email }}</a>
-                    </div>
-                  </div>
-                </td>
-                <td class="clinic-table-td font-mono">{{ clinica.nit || '—' }}</td>
-                <td class="clinic-table-td">{{ clinica.ciudad || '—' }}</td>
-                <td class="clinic-table-td clinic-td-contacto">{{ clinica.telefono || '—' }}</td>
-                <td class="clinic-table-td clinic-td-right">
-                  <span class="clinic-sol-count">{{ clinica.solicitudes_count ?? 0 }}</span>
-                </td>
-                <td class="clinic-table-td">
-                  <span class="clinic-act">
-                    {{ formatFechaCorta(ultimaActividad(clinica)) }}
-                    <span class="clinic-act-dot" :class="actividadClase(clinica)"></span>
-                  </span>
-                </td>
-                <td class="clinic-table-td">
-                  <div class="clinic-table-actions">
-                    <el-button circle size="small" title="Ver detalle" @click="verDetalle(clinica)">
-                      <component :is="EyeIcon" class="w-3.5 h-3.5" />
-                    </el-button>
-                    <el-dropdown trigger="click" placement="bottom-end" :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [8, 8] } }] }" popper-class="clinic-acciones-menu" @command="(cmd: string) => manejarAccionFila(cmd, clinica)">
-                      <el-button circle size="small">
-                        <component :is="MoreIcon" class="w-3.5 h-3.5" />
-                      </el-button>
-                      <template #dropdown>
-                        <el-dropdown-menu>
-                          <el-dropdown-item command="editar" :icon="EditIcon" class="clinic-accion-neutral">Editar</el-dropdown-item>
-                        </el-dropdown-menu>
-                      </template>
-                    </el-dropdown>
-                  </div>
-                </td>
-              </tr>
-            </TransitionGroup>
-          </table>
+        <div class="clinic-selectbar shrink-0">
+          <label class="clinic-selectbar-label" title="Seleccionar todas las visibles para verlas en el mapa">
+            <input type="checkbox" :checked="todasSeleccionadas" @change="toggleSeleccionTodas" class="clinic-checkbox" />
+            Seleccionar visibles en el mapa
+          </label>
+          <span v-if="seleccionadas.size" class="clinic-selectbar-count">{{ seleccionadas.size }} en el mapa</span>
+        </div>
+        <div class="clinic-card-scroll custom-scrollbar">
+          <TransitionGroup name="clinic-row" tag="div" class="clinic-card-list" role="list" aria-label="Listado de clínicas">
+            <article
+              v-for="clinica in clinicasPaginadas"
+              :key="clinica.id"
+              role="listitem"
+              class="clinic-card"
+              :class="{ 'clinic-card-selected': seleccionadas.has(clinica.id) }"
+            >
+              <div class="clinic-card-identity">
+                <input type="checkbox" :checked="seleccionadas.has(clinica.id)" :title="seleccionadas.has(clinica.id) ? 'Quitar del mapa' : 'Ver en el mapa'" @change="toggleSeleccion(clinica.id)" class="clinic-checkbox" />
+                <div class="clinic-card-avatar" :style="avatarStyle(clinica.nombre)">
+                  {{ iniciales(clinica.nombre) }}
+                </div>
+                <div class="clinic-card-idtext">
+                  <button type="button" class="clinic-card-name" :title="clinica.nombre" @click="verDetalle(clinica)">{{ clinica.nombre }}</button>
+                  <a :href="`mailto:${clinica.email}`" class="clinic-card-email" :title="clinica.email" @click.stop>{{ clinica.email }}</a>
+                </div>
+              </div>
+              <div class="clinic-card-block clinic-card-info-block clinic-card-divider">
+                <span class="clinic-card-label">Ciudad</span>
+                <p class="clinic-card-value" :title="clinica.ciudad">{{ clinica.ciudad || '—' }}</p>
+                <span class="clinic-card-label clinic-card-label-gap">Contacto</span>
+                <p class="clinic-card-sub" :title="clinica.telefono">{{ clinica.telefono || '—' }}</p>
+              </div>
+              <div class="clinic-card-activity clinic-card-divider">
+                <span class="clinic-card-sol" :title="`${clinica.solicitudes_count ?? 0} solicitudes`">{{ clinica.solicitudes_count ?? 0 }} solicitudes</span>
+                <span class="clinic-act">
+                  {{ formatFechaCorta(ultimaActividad(clinica)) }}
+                  <span class="clinic-act-dot" :class="actividadClase(clinica)"></span>
+                </span>
+              </div>
+              <div class="clinic-card-actions">
+                <el-button circle size="small" title="Ver detalle" aria-label="Ver detalle de la clínica" @click="verDetalle(clinica)">
+                  <component :is="EyeIcon" class="w-3.5 h-3.5" />
+                </el-button>
+                <el-dropdown trigger="click" placement="bottom-end" :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [8, 8] } }] }" popper-class="clinic-acciones-menu" @command="(cmd: string) => manejarAccionFila(cmd, clinica)">
+                  <el-button circle size="small" aria-label="Más acciones">
+                    <component :is="MoreIcon" class="w-3.5 h-3.5" />
+                  </el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="editar" :icon="EditIcon" class="clinic-accion-neutral">Editar</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </div>
+            </article>
+          </TransitionGroup>
         </div>
         <!-- Pagination -->
         <div class="clinic-pagination">
@@ -819,54 +808,89 @@
   border: 1px solid #e2e8f0;
 }
 
-/* ── Table ── */
-.clinic-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-.clinic-table th {
-  padding: 8px 12px;
-  text-align: left;
-  font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .05em;
-  color: #64748b;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-}
-.clinic-table th:first-child { border-radius: 8px 0 0 8px; }
-.clinic-table th:last-child { border-radius: 0 8px 8px 0; }
-.clinic-table td {
-  padding: 9px 12px;
-  font-size: 12px; color: #334155;
-  border-bottom: 1px solid #f1f5f9;
-  vertical-align: middle;
-  white-space: nowrap;
-}
-.clinic-table-row { transition: background .15s ease, box-shadow .15s ease; }
-.clinic-table-row:hover { background: #f8fafc; box-shadow: inset 3px 0 0 var(--rf-primary); }
-
-.clinic-table-row:last-child td { border-bottom: none; }
-.clinic-table-th-clinica { min-width: 200px; }
-.clinic-table-th-actions { text-align: right; }
-.clinic-table-thead th { position: sticky; top: 0; z-index: 10; }
-
-.clinic-table-clinica {
+/* ── Tarjetas de clínica ── */
+.clinic-selectbar {
   display: flex; align-items: center; gap: 10px;
+  padding: 5px 12px;
+  border-bottom: 1px solid #eef2f9;
 }
-.clinic-table-avatar {
-  width: 32px; height: 32px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+.clinic-selectbar-label {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 10.5px; font-weight: 600; color: #486996;
+  cursor: pointer; user-select: none;
 }
-.clinic-table-name {
-  font-size: 13px; font-weight: 700; color: #1e2d55;
-  margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  max-width: 180px;
+.clinic-selectbar-count {
+  font-size: 10px; font-weight: 700; color: #16468E;
+  background: #e9f2ff; border-radius: 999px; padding: 2px 8px;
 }
-.clinic-table-email {
-  display: block;
-  font-size: 10px; color: #94a3b8; margin: 1px 0 0;
-  text-decoration: none;
+.clinic-card-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 8px 10px 10px; }
+.clinic-card-list { display: flex; flex-direction: column; gap: 8px; }
+.clinic-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, .9fr) minmax(140px, .8fr) auto;
+  grid-template-areas: "identity info activity actions";
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 6px 10px;
+  border: 1px solid rgba(225,235,248,.7);
+  border-radius: 9px;
+  background: linear-gradient(115deg, #fff, #fbfdff);
+  box-shadow: 0 3px 10px rgba(42,88,149,.045);
+  transition: border-color .18s ease, box-shadow .18s ease;
 }
-.clinic-table-email:hover { color: var(--rf-primary); text-decoration: underline; }
-.clinic-table-actions { display: flex; justify-content: flex-end; align-items: center; gap: 4px; }
+.clinic-card:hover { border-color: #bfd4f5; box-shadow: 0 4px 14px rgba(42,88,149,.1); }
+.clinic-card-selected { border-color: #93b9f5 !important; background: linear-gradient(110deg, #eef4ff, #f7faff) !important; box-shadow: inset 3px 0 0 #16468E; }
+.clinic-card > div { min-width: 0; }
+.clinic-card-identity { grid-area: identity; display: flex; align-items: center; gap: 8px; }
+.clinic-card-avatar {
+  width: 34px; height: 34px; border-radius: 9px;
+  display: grid; place-items: center; flex-shrink: 0;
+  font-size: 11px; font-weight: 800;
+}
+.clinic-card-idtext { min-width: 0; flex: 1; }
+.clinic-card-name {
+  display: block; max-width: 100%;
+  padding: 0; border: 0; background: none;
+  color: #102451; font: inherit; font-size: 13px; font-weight: 750;
+  cursor: pointer; text-align: left;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.clinic-card-name:hover { color: #2563eb; }
+.clinic-card-name:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; border-radius: 3px; }
+.clinic-card-email {
+  display: block; margin-top: 2px;
+  font-size: 10px; color: #94a3b8; text-decoration: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.clinic-card-email:hover { color: #16468E; text-decoration: underline; }
+.clinic-card-block { min-width: 0; }
+.clinic-card-info-block { grid-area: info; }
+.clinic-card-divider { padding-left: 15px; border-left: 1px solid #dfe8f7; }
+.clinic-card-label { display: block; color: #6c87b0; font-size: 8.5px; font-weight: 600; text-transform: uppercase; line-height: 1.3; letter-spacing: .03em; }
+.clinic-card-label-gap { margin-top: 5px; }
+.clinic-card-value { margin: 3px 0 0; color: #18345e; font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clinic-card-sub { margin: 2px 0 0; color: #728bb3; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clinic-card-activity { grid-area: activity; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.clinic-card-sol {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 999px;
+  background: #e9f2ff; color: #1e4688;
+  font-size: 10px; font-weight: 750; white-space: nowrap;
+}
+.clinic-card-actions { grid-area: actions; display: flex; align-items: center; gap: 5px; }
+.clinic-card-actions :deep(.el-button) { width: 30px; height: 30px; border-color: #dbe5f5; background: #fff; color: #244671; }
+.clinic-card-actions :deep(.el-button:hover) { color: #2563eb; border-color: #93b9f5; background: #f0f6ff; }
+
+@media (max-width: 900px) {
+  .clinic-card { grid-template-columns: minmax(0, 1.3fr) minmax(0, .9fr) auto; grid-template-areas: "identity activity actions" "info info info"; gap: 8px 12px; }
+  .clinic-card-activity { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+}
+@media (max-width: 560px) {
+  .clinic-card { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "identity actions" "info activity"; padding: 8px; }
+  .clinic-card-divider { padding-left: 0; border-left: 0; }
+  .clinic-card-activity { justify-content: flex-end; }
+}
 
 /* ── Modal detalle ── */
 :deep(.detalle-clinica-dialog) {
@@ -1093,14 +1117,6 @@
   transform: translateY(-8px);
 }
 
-/* ── Sortable headers ── */
-.clinic-th-sortable {
-  cursor: pointer;
-  user-select: none;
-  transition: color .15s ease;
-}
-.clinic-th-sortable:hover { color: #16468E; }
-
 /* ── Row transitions ── */
 .clinic-row-enter-active, .clinic-row-leave-active {
   transition: all .3s ease;
@@ -1187,23 +1203,25 @@
   border: 1.5px solid #cbd5e1;
   cursor: pointer;
   accent-color: #16468E;
+  flex-shrink: 0;
 }
-.clinic-table-th-check { width: 36px; text-align: center; }
-.clinic-table-td-check { text-align: center; }
-.clinic-table-row-selected {
-  background: rgba(22,70,142,.04) !important;
-}
-.dark .clinic-table-row-selected {
-  background: rgba(96,165,250,.08) !important;
-}
-.clinic-th-num { width: 34px; text-align: center; }
-.clinic-td-num { text-align: center; color: #94a3b8; font-weight: 600; font-size: 11px; }
-.clinic-th-right, .clinic-td-right { text-align: right; }
-.clinic-td-contacto { font-size: 11px; color: #475569; white-space: nowrap; }
-.clinic-sol-count {
-  font-size: 11px; font-weight: 800; color: #1e293b;
-}
-.dark .clinic-sol-count { color: #e2e8f0; }
+.dark .clinic-selectbar { border-bottom-color: rgba(255,255,255,.07); }
+.dark .clinic-selectbar-label { color: #94a3b8; }
+.dark .clinic-selectbar-count { background: rgba(96,165,250,.16); color: #93c5fd; }
+.dark .clinic-card { background: linear-gradient(115deg, #192439, #162133); border-color: #293b56; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
+.dark .clinic-card:hover { border-color: #4771ab; }
+.dark .clinic-card-selected { border-color: #3d6cb8 !important; background: linear-gradient(110deg, #17263f, #182135) !important; box-shadow: inset 3px 0 0 #4d8ef7; }
+.dark .clinic-card-name { color: #dbe7fb; }
+.dark .clinic-card-name:hover { color: #93c5fd; }
+.dark .clinic-card-email { color: #6d84a8; }
+.dark .clinic-card-email:hover { color: #93c5fd; }
+.dark .clinic-card-divider { border-left-color: #314666; }
+.dark .clinic-card-label { color: #7d95bb; }
+.dark .clinic-card-value { color: #d3e1f5; }
+.dark .clinic-card-sub { color: #8ba3c9; }
+.dark .clinic-card-sol { background: #1d3454; color: #9dc1f7; }
+.dark .clinic-card-actions :deep(.el-button) { border-color: #314666; background: #1c2d46; color: #bcd1ef; }
+.dark .clinic-card-actions :deep(.el-button:hover) { border-color: #4771ab; background: #263d5d; color: #93c5fd; }
 .clinic-act {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 11px; font-weight: 600; color: #475569; white-space: nowrap;
@@ -1418,6 +1436,7 @@
 .dark .clinic-filtros-bar { background: rgba(255,255,255,0.03); border-bottom-color: rgba(255,255,255,0.07); }
 .clinic-filtros-field { display: flex; flex-direction: column; gap: 5px; width: 190px; flex-shrink: 0; }
 .clinic-filtros-field--grow { width: auto; flex: 1; min-width: 200px; }
+.clinic-filtros-field--dir { width: 140px; }
 .clinic-filtros-label {
   font-size: 10.5px; font-weight: 700; color: #64748b;
   text-transform: uppercase; letter-spacing: 0.05em;
@@ -1534,9 +1553,6 @@ import {
   Edit as EditIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
-  ArrowUp as ArrowUpIcon,
-  ArrowDown as ArrowDownIcon,
-  ArrowUpDown as ArrowUpDownIcon,
   Shield as ShieldIcon,
   Send as SendIcon,
   MoreVertical as MoreIcon,
@@ -1787,8 +1803,22 @@ const deltaTotal = computed(() => {
 const deltaConReferencias = computed(() => `= ${clinicas.value.length ? Math.round((conReferencias.value.length / clinicas.value.length) * 100) : 0}% del total`);
 
 
-function avatarStyle() {
-  return { background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)', color: '#2563eb', border: '1px solid #bfdbfe' };
+const AVATAR_COLORES = [
+  { bg: 'linear-gradient(135deg, #dbeafe, #bfdbfe)', fg: '#1d4ed8', bd: '#bfdbfe' },
+  { bg: 'linear-gradient(135deg, #ede9fe, #ddd6fe)', fg: '#6d28d9', bd: '#ddd6fe' },
+  { bg: 'linear-gradient(135deg, #d1fae5, #a7f3d0)', fg: '#047857', bd: '#a7f3d0' },
+  { bg: 'linear-gradient(135deg, #fef3c7, #fde68a)', fg: '#b45309', bd: '#fde68a' },
+  { bg: 'linear-gradient(135deg, #fce7f3, #fbcfe8)', fg: '#be185d', bd: '#fbcfe8' },
+  { bg: 'linear-gradient(135deg, #cffafe, #a5f3fc)', fg: '#0e7490', bd: '#a5f3fc' },
+  { bg: 'linear-gradient(135deg, #ffedd5, #fed7aa)', fg: '#c2410c', bd: '#fed7aa' },
+  { bg: 'linear-gradient(135deg, #e0e7ff, #c7d2fe)', fg: '#4338ca', bd: '#c7d2fe' },
+];
+
+function avatarStyle(nombre = '') {
+  let h = 0;
+  for (let i = 0; i < nombre.length; i++) h = (h * 31 + nombre.charCodeAt(i)) >>> 0;
+  const c = AVATAR_COLORES[h % AVATAR_COLORES.length];
+  return { background: c.bg, color: c.fg, border: `1px solid ${c.bd}` };
 }
 
 const clinicasFiltradas = computed(() => {
@@ -1852,20 +1882,6 @@ function actividadClase(c: Clinica): string {
   if (dias <= 7) return 'clinic-act-dot--ok';
   if (dias <= 30) return 'clinic-act-dot--warn';
   return 'clinic-act-dot--old';
-}
-
-function toggleSort(key: 'nombre' | 'nit' | 'ciudad') {
-  if (sortKey.value === key) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortKey.value = key;
-    sortDir.value = 'asc';
-  }
-}
-
-function sortIcon(key: string) {
-  if (sortKey.value !== key) return ArrowUpDownIcon;
-  return sortDir.value === 'asc' ? ArrowUpIcon : ArrowDownIcon;
 }
 
 // Selección en el mapa — solo controla el foco/vista, no acciones masivas

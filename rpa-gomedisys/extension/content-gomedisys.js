@@ -361,6 +361,134 @@ async function intentarBuscarYSeleccionarDiagnostico(codigo) {
   clic(await esperarSelector('#add-diagnostic-btn-coRef'));
 }
 
+// La barra del usuario muestra "...(Sede: X)". Si la sesión quedó fijada
+// en otra sede (ej. entró por CAC Santa Bárbara y esta solicitud es de
+// Urgencias), el registro caería en la sede equivocada — se compara y, si
+// no coincide, se usa el botón "Cambiar sede" del panel del usuario (es el
+// mismo selector de "Asignar sede" de la entrada, pero desde dentro de la
+// sesión). El cambio recarga la página: el trabajo se retoma solo cuando
+// este script se reinyecta en la página nueva.
+//
+// sessionStorage (sobrevive a la navegación dentro de la misma pestaña)
+// lleva la cuenta de intentos — si el cambio no "pega" después de 2
+// navegaciones, se frena con un error claro en vez de quedar reintentando
+// en bucle.
+const CLAVE_INTENTOS_SEDE = 'gomedisysIntentosCambioSede';
+
+// Devuelve true cuando disparó un cambio de sede (la página va a navegar —
+// quien la llama debe parar ahí y dejar que el trabajo se retome solo).
+// `dentroDelArea` indica que ya se está en el formulario/listado de
+// referencia: ahí solo se actúa cuando la sede se puede leer y no coincide
+// — un cambio a ciegas navegaría y arriesgaría lo ya diligenciado.
+async function cambiarSedeSiHaceFalta(sedeObjetivo, regexSede, onPaso, dentroDelArea = false) {
+  const marcador = buscarPorTexto('*', /sede\s*:/i);
+  const sedeActual = marcador
+    ? ((marcador.textContent || '').match(/sede\s*:\s*([^)\n]+)/i)?.[1] || '').trim()
+    : '';
+
+  // Sede legible y correcta — nada que hacer.
+  if (sedeActual && regexSede.test(sedeActual)) {
+    sessionStorage.removeItem(CLAVE_INTENTOS_SEDE);
+    return false;
+  }
+
+  // Sin lectura de sede dentro del área se continúa: forzar un cambio sin
+  // saber si hace falta podría recargar y perder lo ya diligenciado.
+  if (!sedeActual && dentroDelArea) return false;
+
+  // El botón "Cambiar sede" vive en el panel del usuario (el ícono ≡). Lo
+  // normal es llamar esta función con el menú ya abierto, así que el botón
+  // ya debería estar en el DOM — el clic sintético dispara su handler
+  // igual aunque el panel no esté a la vista.
+  const botonCambiar = buscarPorTexto('button, a, span', /cambiar\s+sede/i);
+  if (!botonCambiar) {
+    throw new Error(sedeActual
+      ? `La sesión está en la sede "${sedeActual}" y esta solicitud es de "${sedeObjetivo}". No encontré el botón "Cambiar sede" — cámbiala a mano y reintenta.`
+      : `No puedo verificar la sede activa: la página no muestra "(Sede: …)" ni el botón "Cambiar sede". Confirma a mano que la sesión de Gomedisys esté en "${sedeObjetivo}" (panel del usuario, ícono ≡) y reintenta.`);
+  }
+
+  const intentos = parseInt(sessionStorage.getItem(CLAVE_INTENTOS_SEDE) || '0', 10);
+  if (intentos >= 2) {
+    sessionStorage.removeItem(CLAVE_INTENTOS_SEDE);
+    throw new Error(`Intenté fijar la sede "${sedeObjetivo}" y la sesión sigue ${sedeActual ? `mostrando "${sedeActual}"` : 'sin mostrar sede'} — cámbiala a mano con "Cambiar sede" del panel del usuario y reintenta.`);
+  }
+  sessionStorage.setItem(CLAVE_INTENTOS_SEDE, String(intentos + 1));
+
+  onPaso(sedeActual
+    ? `La sesión está en sede "${sedeActual}" y la solicitud es de "${sedeObjetivo}" — cambiando sede...`
+    : `Fijando la sede "${sedeObjetivo}" desde "Cambiar sede"...`);
+
+  clic(botonCambiar);
+
+  // En el modal "Cambio de Sede" se elige la opción. Se prefiere el
+  // <select> real (aunque Kendo lo deje oculto — el 'change' sobre él es
+  // lo que entera al widget y dispara la acción del servidor). Si no hay
+  // select con la opción, se va por el combo Kendo visible.
+  const tituloModal = await esperarTexto('*', /cambio de sede/i, { timeout: 8000 })
+    .catch(() => { throw new Error(`Se abrió "Cambiar sede" pero no apareció el selector. Cámbiala a mano a "${sedeObjetivo}" y reintenta.`); });
+  const modal = tituloModal.closest('.k-window, .k-dialog, .modal, [role="dialog"], .modal-content, form') || document;
+
+  const selectConOpcion = Array.from(modal.querySelectorAll('select'))
+    .find((s) => Array.from(s.options).some((o) => regexSede.test(o.textContent || '')));
+
+  if (selectConOpcion) {
+    const opcion = Array.from(selectConOpcion.options).find((o) => regexSede.test(o.textContent || ''));
+    selectConOpcion.value = opcion.value;
+    selectConOpcion.dispatchEvent(new Event('input', { bubbles: true }));
+    selectConOpcion.dispatchEvent(new Event('change', { bubbles: true }));
+  } else {
+    const combo = buscarElementoUnico('span[role="combobox"], .k-dropdown, .k-dropdownlist, .k-select', modal)
+      || buscarElementoUnico('span[role="combobox"], .k-dropdown, .k-dropdownlist, .k-select', document);
+    if (combo) {
+      clic(combo);
+      await dormir(600);
+    }
+    const opcion = await esperarTexto('li, [role="option"], option', regexSede, { timeout: 8000 })
+      .catch(() => { throw new Error(`No encontré la sede "${sedeObjetivo}" entre las opciones del cambio de sede.`); });
+    clic(opcion);
+  }
+
+  // Confirmar si el modal trae botón (algunos aplican el cambio apenas se
+  // elige la opción). Se busca primero DENTRO del modal para no darle a un
+  // "Confirmar" de otra ventana que haya quedado en el DOM.
+  const regexConfirmar = /confirmar|aceptar|aplicar|guardar|continuar|\bok\b/i;
+  const confirmar = buscarPorTexto('button, a, input[type="submit"], input[type="button"]', regexConfirmar, modal)
+    || buscarPorTexto('button, a, input[type="submit"], input[type="button"]', regexConfirmar, document);
+  if (confirmar) clic(confirmar);
+
+  // El cambio de sede RECARGA la página — y esta función NO debe resolver
+  // como si el trabajo hubiera terminado (eso marcaba la solicitud como
+  // diligenciada sin haber llenado nada). Se espera la navegación: si no
+  // arranca, se intenta cerrar el modal con la X (algunas ventanas aplican
+  // el cambio al cerrar) y, si tampoco navega, se reporta como error.
+  const esperarNavegacion = (ms) => new Promise((resolve) => {
+    const irse = () => resolve(true);
+    window.addEventListener('pagehide', irse, { once: true });
+    window.addEventListener('beforeunload', irse, { once: true });
+    setTimeout(() => resolve(false), ms);
+  });
+
+  if (!await esperarNavegacion(8000)) {
+    const cerrar = modal.querySelector('.k-window-close, .k-i-close, [aria-label="Close"], .close');
+    if (cerrar) {
+      clic(cerrar);
+      if (await esperarNavegacion(6000)) {
+        // el contexto muere con la navegación — si no, el tope de abajo corta
+        await new Promise((_, reject) => setTimeout(() => reject(new Error('El cambio de sede no terminó de recargar — reintenta.')), 30000));
+      }
+    }
+    throw new Error(`Elegí "${sedeObjetivo}" en "Cambio de Sede" pero el cambio no se aplicó (la página no recargó). Revisa ese modal y termina el cambio a mano, luego reintenta.`);
+  }
+
+  // La página está navegando — se deja la función pendiente para que este
+  // contexto muera sin marcar el trabajo como completado; la copia nueva
+  // del script lo retoma en la página ya cambiada de sede. Si la
+  // navegación se atascó, a los 30s se reporta como error.
+  await new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('La página empezó a recargar tras el cambio de sede pero no terminó — reintenta.')), 30000);
+  });
+}
+
 async function diligenciarFormulario(solicitud, onPaso = () => {}) {
   // El foco (aunque ya se pide sin scroll, ver escribirComoHumano) y los
   // clics durante el llenado pueden mover el scroll de la página igual —
@@ -385,22 +513,50 @@ async function diligenciarFormulario(solicitud, onPaso = () => {}) {
   //      no hace falta volver a pasar por el menú, solo falta "Nuevo".
   //      Sin este caso, el bot vuelve a buscar "referencia" en bucle cada
   //      vez que aterriza ahí sin haber llegado todavía al formulario.
+  // La sede viene de la solicitud (la elige quien acepta, en el modal de
+  // aceptación). Si la solicitud no trae sede — registros viejos — se
+  // asume "URGENCIAS", que era el valor fijo anterior.
+  const sedeObjetivo = (solicitud.sede || 'URGENCIAS').trim();
+  // Coincidencia por texto contenido, insensible a mayúsculas — la barra
+  // muestra "CAC SANTA BARBARA" y el selector puede mostrar otro formato.
+  const regexSedeObjetivo = new RegExp(sedeObjetivo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+
   const enAreaReferencia = /EncounterArea|CounterReferral/i.test(location.href);
   const yaEnFormulario = enAreaReferencia && !!document.querySelector('#documentNumberPatient');
   const yaEnListado = enAreaReferencia && !yaEnFormulario && !!document.querySelector('#btnNewRecord');
+
+  // Ya dentro del área (retomando un trabajo) solo se actúa si la sede se
+  // puede leer y no coincide — la verificación a ciegas no se fuerza.
+  if ((yaEnFormulario || yaEnListado)
+    && await cambiarSedeSiHaceFalta(sedeObjetivo, regexSedeObjetivo, onPaso, true)) {
+    return;
+  }
 
   if (!yaEnFormulario && !yaEnListado) {
     onPaso('Revisando si pide seleccionar sede...');
     const botonConfirmarSede = await esperarTexto('button', /confirmar/i, { timeout: 5000 }).catch(() => null);
     if (botonConfirmarSede) {
-      onPaso('Seleccionando sede "Urgencias"...');
-      const urgencias = await esperarTexto('*', /urgencias/i, { timeout: 5000 });
-      clic(urgencias);
+      onPaso(`Seleccionando sede "${sedeObjetivo}"...`);
+      const opcionSede = await esperarTexto('*', regexSedeObjetivo, { timeout: 5000 })
+        .catch(() => { throw new Error(`No encontré la sede "${sedeObjetivo}" entre las opciones que muestra Gomedisys.`); });
+      clic(opcionSede);
       clic(botonConfirmarSede);
     }
 
+    // El menú se abre ANTES de verificar la sede: el indicador "(Sede: X)"
+    // y el botón "Cambiar sede" viven dentro de ese panel y solo existen
+    // en el DOM cuando está desplegado — sin abrirlo no hay cómo saber en
+    // qué sede quedó la sesión.
     onPaso('Abriendo el menú...');
     clic(await esperarSelector('#menuID'));
+    await dormir(600);
+
+    // Si la sesión ya tenía otra sede fijada se cambia con "Cambiar sede"
+    // antes de seguir — el cambio recarga la página y este trabajo se
+    // retoma solo; por eso aquí se corta la ejecución.
+    if (await cambiarSedeSiHaceFalta(sedeObjetivo, regexSedeObjetivo, onPaso)) {
+      return;
+    }
 
     onPaso('Buscando "Registro de Referencia"...');
     const barraBusqueda = await esperarSelector('#searchInputMenu');
@@ -434,8 +590,10 @@ async function diligenciarFormulario(solicitud, onPaso = () => {}) {
   // automático.
   onPaso(`Ciudad de Origen se deja para completar a mano: "${solicitud.ciudadOrigen}"`);
 
-  onPaso('Seleccionando "Servicio que refiere"...');
-  await seleccionarKendoDropdown('idServiceReferral', solicitud.servicioRemision);
+  // "Servicio que refiere" se deja SIN llenar — es un catálogo cerrado de
+  // Gomedisys (~190 servicios) y la app no guarda ese dato, así que el
+  // operador lo elige a mano antes de guardar el registro.
+  onPaso('"Servicio que refiere" se deja para completar a mano.');
 
   onPaso('Seleccionando "Género"...');
   await seleccionarKendoDropdown('idGenere', MAPA_GENERO[solicitud.genero]);

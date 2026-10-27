@@ -27,6 +27,7 @@ export interface User {
 }
 
 const AUTH_KEY = 'interno';
+const USER_ID_KEY = 'interno_user_id';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null);
@@ -79,8 +80,21 @@ export const useAuthStore = defineStore('auth', () => {
         timeout: 8000,
       });
       user.value = data.data;
+      // Las cookies de sesión se comparten entre pestañas: si en otra pestaña
+      // se inició sesión con otra cuenta, /api/user devuelve a ese usuario y
+      // esta pestaña cambiaría de identidad sin avisar. Se detecta el cambio
+      // y se fuerza el login de nuevo en esta pestaña.
+      const storedId = sessionStorage.getItem(USER_ID_KEY);
+      if (storedId !== null && String(user.value?.id) !== storedId) {
+        user.value = null;
+        sessionStorage.removeItem(USER_ID_KEY);
+        clearTab(AUTH_KEY);
+        return;
+      }
+      sessionStorage.setItem(USER_ID_KEY, String(user.value?.id));
     } catch {
       user.value = null;
+      sessionStorage.removeItem(USER_ID_KEY);
       clearTab(AUTH_KEY);
     } finally {
       isHydrated.value = true;
@@ -91,6 +105,7 @@ export const useAuthStore = defineStore('auth', () => {
     await http.post('/api/logout');
     user.value = null;
     isHydrated.value = false;
+    sessionStorage.removeItem(USER_ID_KEY);
     clearTab(AUTH_KEY);
     window.location.href = '/login';
   }

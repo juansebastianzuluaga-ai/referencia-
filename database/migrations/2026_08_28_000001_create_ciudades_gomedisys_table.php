@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -24,7 +25,13 @@ return new class extends Migration
             $table->string('nombre', 250);
             $table->timestamps();
 
-            $table->fullText('nombre');
+            // SQLite no soporta índices fulltext (tests en memoria) —
+            // las búsquedas usan LIKE, así que basta un índice normal.
+            if (DB::getDriverName() === 'sqlite') {
+                $table->index('nombre');
+            } else {
+                $table->fullText('nombre');
+            }
         });
     }
 

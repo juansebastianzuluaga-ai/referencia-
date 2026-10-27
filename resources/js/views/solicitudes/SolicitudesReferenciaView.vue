@@ -33,39 +33,33 @@
     <div class="flex-1 flex gap-2 min-h-0 overflow-hidden">
     <div class="flex-1 min-w-0 flex flex-col gap-2 min-h-0">
 
-      <!-- ── Chips de estado + toggle de filtros ── -->
-      <div class="sol-filter-bar shrink-0">
-        <div class="sol-tabs">
-          <button
-            v-for="tab in tabs"
-            :key="tab.value"
-            class="sol-tab"
-            :class="{ 'sol-tab-active': tabActiva === tab.value }"
-            :title="estadoTooltip(tab.value)"
-            @click="cambiarTab(tab.value)"
-          >
-            <span v-if="tab.value !== 'todas'" class="sol-tab-dot" :class="'sol-tab-dot--' + tab.value"></span>
-            {{ tab.label }}
-            <span class="sol-tab-count">{{ tab.count }}</span>
-          </button>
+      <div class="sol-list-toolbar shrink-0">
+        <div class="sol-list-heading">
+          <h1>Solicitudes de referencia</h1>
+          <span aria-live="polite">{{ solicitudesFiltradas.length }} solicitudes</span>
         </div>
-        <div class="sol-header-spacer"></div>
-        <div class="sol-chips-actions">
-          <el-tooltip content="Actualizar" placement="top">
-            <button class="sol-icon-btn" @click="cargar">
-              <component :is="RefreshIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': cargando }" />
-            </button>
-          </el-tooltip>
-          <el-tooltip content="Exportar CSV" placement="top">
-            <button class="sol-icon-btn" :disabled="solicitudesFiltradas.length === 0" @click="exportarExcel">
-              <component :is="DownloadIcon" class="w-3.5 h-3.5" />
-            </button>
-          </el-tooltip>
-          <el-tooltip content="Verificar ingresos en Gomedisys" placement="top">
-            <button class="sol-icon-btn sol-icon-btn-primary" :disabled="!solicitudesEnEspera.length || verificandoTodosIngresos" @click="verificarTodosIngresos">
-              <component :is="SearchIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': verificandoTodosIngresos }" />
-            </button>
-          </el-tooltip>
+        <el-input
+          v-model="filtro.buscar"
+          class="sol-list-search"
+          placeholder="Buscar paciente o cédula"
+          aria-label="Buscar solicitudes"
+          :prefix-icon="SearchIcon"
+          clearable
+          size="small"
+        />
+        <div class="sol-list-tools" role="group" aria-label="Acciones del listado">
+          <button type="button" :disabled="cargando" @click="cargar">
+            <component :is="RefreshIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': cargando }" />
+            Actualizar
+          </button>
+          <button type="button" :disabled="!solicitudesFiltradas.length" @click="exportarExcel">
+            <component :is="DownloadIcon" class="w-3.5 h-3.5" />
+            Exportar CSV
+          </button>
+          <button type="button" :disabled="!solicitudesEnEspera.length || verificandoTodosIngresos" @click="verificarTodosIngresos">
+            <component :is="SearchIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': verificandoTodosIngresos }" />
+            {{ verificandoTodosIngresos ? 'Verificando…' : 'Verificar ingresos' }}
+          </button>
         </div>
         <div ref="filtrosWrap" class="sol-filtros-wrap">
           <button class="sol-filtros-btn" :class="{ 'sol-filtros-btn-active': filtrosAbiertos || conteoFiltros > 0 }" @click="filtrosAbiertos = !filtrosAbiertos">
@@ -96,25 +90,25 @@
                 <el-option label="Pendiente" value="pendiente_cama" />
                 <el-option label="En espera" value="en_espera" />
               </el-select>
-              <el-input
-                v-model="filtro.buscar"
-                placeholder="Buscar paciente, EPS, diagnóstico..."
-                class="sol-search"
-                clearable
-                size="small"
-              >
-                <template #prefix>
-                  <component :is="SearchIcon" class="w-3.5 h-3.5 text-gray-400" />
-                </template>
-              </el-input>
+              <el-select v-model="sortKey" aria-label="Ordenar solicitudes por" size="small">
+                <el-option label="Ordenar por fecha" value="fecha" />
+                <el-option label="Ordenar por paciente" value="paciente" />
+                <el-option label="Ordenar por aseguradora" value="eps" />
+                <el-option label="Ordenar por clínica" value="clinica" />
+                <el-option label="Ordenar por especialidad" value="especialidad" />
+              </el-select>
+              <el-select v-model="sortDir" aria-label="Dirección del orden" size="small">
+                <el-option label="Descendente" value="desc" />
+                <el-option label="Ascendente" value="asc" />
+              </el-select>
               <button v-if="hayFiltros" class="sol-limpiar" @click="limpiarFiltros">Limpiar filtros</button>
             </div>
           </Transition>
         </div>
       </div>
 
-    <!-- ── Tabla ── -->
-    <div class="flex-1 min-h-0 overflow-hidden sol-table-panel">
+    <!-- ── Listado de referencias ── -->
+    <div class="flex-1 min-h-0 overflow-hidden sol-list-panel">
       <!-- Loading -->
       <div v-if="cargando" class="sol-table-loading">
         <div v-for="i in 6" :key="i" class="sol-table-row-skeleton">
@@ -140,107 +134,81 @@
         <p class="text-xs max-w-[260px]" style="color:#64748b;">No se encontraron solicitudes en esta categoría.</p>
       </div>
 
-      <!-- Tabla real -->
+      <!-- Tarjetas compactas -->
       <div v-else class="flex flex-col h-full overflow-hidden">
-        <div class="overflow-y-auto custom-scrollbar flex-1">
-          <table class="sol-table">
-            <colgroup>
-              <col style="width: 20%">
-              <col style="width: 11%">
-              <col style="width: 14%">
-              <col style="width: 11%">
-              <col style="width: 18%">
-              <col style="width: 9%">
-              <col style="width: 10%">
-              <col style="width: 7%">
-            </colgroup>
-            <thead class="sol-table-thead">
-              <tr>
-                <th class="sol-th sol-th-paciente sol-th-sortable" @click="toggleSort('paciente')">
-                  Paciente
-                  <component :is="sortIcon('paciente')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'paciente', 'opacity-30': sortKey !== 'paciente' }" />
-                </th>
-                <th class="sol-th sol-th-sortable" @click="toggleSort('eps')">
-                  Aseguradora
-                  <component :is="sortIcon('eps')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'eps', 'opacity-30': sortKey !== 'eps' }" />
-                </th>
-                <th class="sol-th sol-th-sortable" @click="toggleSort('clinica')">
-                  Clínica emisora
-                  <component :is="sortIcon('clinica')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'clinica', 'opacity-30': sortKey !== 'clinica' }" />
-                </th>
-                <th class="sol-th sol-th-sortable" @click="toggleSort('especialidad')">
-                  Especialidad
-                  <component :is="sortIcon('especialidad')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'especialidad', 'opacity-30': sortKey !== 'especialidad' }" />
-                </th>
-                <th class="sol-th">Diagnóstico</th>
-                <th class="sol-th sol-th-sortable" @click="toggleSort('fecha')">
-                  Fecha
-                  <component :is="sortIcon('fecha')" class="w-3 h-3 inline-block ml-0.5" :class="{ 'opacity-100': sortKey === 'fecha', 'opacity-30': sortKey !== 'fecha' }" />
-                </th>
-                <th class="sol-th">Estado</th>
-                <th class="sol-th sol-th-actions">Acciones</th>
-              </tr>
-            </thead>
-            <TransitionGroup name="sol-row" tag="tbody">
-              <tr
+        <div class="sol-reference-scroll custom-scrollbar">
+            <TransitionGroup name="sol-row" tag="div" class="sol-reference-list" role="list" aria-label="Solicitudes de referencia">
+              <article
                 v-for="s in solicitudesPaginadas"
                 :id="`sol-row-${s.id}`"
                 :key="s.id"
-                class="sol-table-row"
-                :class="[{ 'sol-table-row-resaltada': resaltarId === s.id }, `sol-row-${s.estado}`]"
+                role="listitem"
+                class="sol-reference-card"
+                :class="[
+                  { 'sol-reference-highlighted': resaltarId === s.id, 'sol-reference-urgent': s.urgencia_vital },
+                  !s.urgencia_vital ? `sol-reference-card--${s.estado}` : ''
+                ]"
+                :aria-label="`${idInterno(s.id)} · ${nombreCompleto(s)}`"
               >
-                <td class="sol-td">
-                  <div class="sol-table-paciente">
-                    <div class="sol-table-avatar" :style="avatarStyle(s)">
+                  <div class="sol-reference-patient">
+                    <div class="sol-reference-avatar" :style="avatarStyle(s)">
                       {{ inicialesPaciente(s) }}
                     </div>
-                    <div class="sol-table-paciente-info">
-                      <p class="sol-table-name" :class="{ 'sol-table-name-resaltada': resaltarId === s.id }" :title="nombreCompleto(s)">{{ nombreCompleto(s) }}</p>
-                      <p class="sol-table-doc">{{ s.edad }} años · {{ s.genero }} · {{ s.tipo_documento }} {{ s.numero_documento }}</p>
+                    <div class="sol-reference-identity">
+                      <button type="button" class="sol-reference-name" :title="nombreCompleto(s)" @click="verDetalle(s)">{{ nombreCompleto(s) }}</button>
+                      <p class="sol-reference-document">{{ s.edad }} años · {{ s.genero }} · {{ s.tipo_documento }} {{ s.numero_documento }}</p>
+                      <div class="sol-reference-insurer">
+                        <span class="sol-reference-insurer-label"><component :is="ShieldIcon" /> Aseguradora</span>
+                        <span class="sol-reference-insurer-chip" :title="s.eps">{{ s.eps }}</span>
+                      </div>
                     </div>
                   </div>
-                </td>
-                <td class="sol-td">
-                  <span class="sol-eps-chip" :title="s.eps">{{ s.eps }}</span>
-                </td>
-                <td class="sol-td">
-                  <p class="sol-table-clinica-name" :title="s.clinica?.nombre ?? s.institucion_remitente">{{ s.clinica?.nombre ?? s.institucion_remitente ?? '—' }}</p>
-                  <p class="sol-table-remitente" v-if="s.quien_remitente || s.telefono_contacto">
+                  <div class="sol-reference-clinic sol-reference-divider">
+                    <span class="sol-reference-label">Clínica emisora</span>
+                    <p class="sol-reference-clinic-name" :title="s.clinica?.nombre ?? s.institucion_remitente">{{ s.clinica?.nombre ?? s.institucion_remitente ?? '—' }}</p>
+                    <p class="sol-reference-contact" v-if="s.quien_remitente || s.telefono_contacto" :title="[s.quien_remitente, s.telefono_contacto].filter(Boolean).join(' · ')">
                     {{ s.quien_remitente || '—' }}<span v-if="s.telefono_contacto"> · {{ s.telefono_contacto }}</span>
-                  </p>
-                </td>
-                <td class="sol-td" :title="s.especialidad_requerida">{{ s.especialidad_requerida }}</td>
-                <td class="sol-td">
-                  <p v-if="s.diagnosticos?.length" class="sol-dx-text" :title="descripcionSinCodigo(s.diagnosticos[0])">
+                    </p>
+                  </div>
+                  <div class="sol-reference-clinical sol-reference-divider">
+                    <span class="sol-reference-label">Especialidad</span>
+                    <p class="sol-reference-specialty" :title="s.especialidad_requerida">{{ s.especialidad_requerida }}</p>
+                    <span class="sol-reference-label sol-reference-diagnosis-label">Diagnóstico</span>
+                    <p v-if="s.diagnosticos?.length" class="sol-reference-diagnosis" :title="descripcionSinCodigo(s.diagnosticos[0])">
                     {{ descripcionSinCodigo(s.diagnosticos[0]) }}<span v-if="s.diagnosticos.length > 1" class="sol-dx-more"> +{{ s.diagnosticos.length - 1 }}</span>
-                  </p>
-                  <p v-else-if="s.diagnostico" class="sol-dx-text" :title="s.diagnostico">{{ s.diagnostico }}</p>
-                  <span v-else class="sol-dx-none">—</span>
-                </td>
-                <td class="sol-td sol-td-fecha">
-                  <p class="sol-fecha">{{ formatFecha(s.fecha) }}</p>
-                  <p class="sol-hora">{{ formatHora(s.hora) }}</p>
-                  <span class="sol-edad" :class="edadRelativa(s).clase">{{ edadRelativa(s).texto }}</span>
-                </td>
-                <td class="sol-td">
-                  <span class="sol-table-status" :title="estadoTooltip(s.estado)" :class="{
-                    'sol-status-pending': s.estado === 'pendiente',
-                    'sol-status-cama': s.estado === 'pendiente_cama',
-                    'sol-status-waiting': s.estado === 'en_espera',
-                    'sol-status-completed': s.estado === 'completado',
-                    'sol-status-rejected': s.estado === 'negado',
-                  }">
-                    <span class="sol-status-dot"></span>
-                    {{ estadoLabel(s.estado) }}
-                  </span>
-                </td>
-                <td class="sol-td">
-                  <div class="sol-table-actions">
-                    <el-button circle size="small" title="Ver detalle" @click="verDetalle(s)">
+                    </p>
+                    <p v-else class="sol-reference-diagnosis" :title="s.diagnostico">{{ s.diagnostico || '—' }}</p>
+                  </div>
+                  <div class="sol-reference-state sol-reference-divider">
+                    <span v-if="s.urgencia_vital" class="sol-reference-status sol-reference-vital">
+                      <span class="sol-status-dot"></span>Urgencia vital
+                    </span>
+                    <span v-else class="sol-reference-status" :class="`sol-reference-status--${s.estado}`" :title="estadoTooltip(s.estado)">
+                      <span class="sol-status-dot"></span>{{ estadoLabel(s.estado) }}
+                    </span>
+                    <p class="sol-reference-date">{{ formatFecha(s.fecha) }} · {{ formatHora(s.hora) }}</p>
+                    <div class="sol-reference-age">
+                      <span class="sol-edad" :class="edadRelativa(s).clase">{{ edadRelativa(s).texto }}</span>
+                      <span v-if="s.urgencia_vital" class="sol-reference-status" :class="`sol-reference-status--${s.estado}`">{{ estadoLabel(s.estado) }}</span>
+                    </div>
+                  </div>
+                  <div class="sol-table-actions sol-reference-actions">
+                    <el-button circle size="small" title="Ver detalle" aria-label="Ver detalle de la solicitud" @click="verDetalle(s)">
                       <component :is="EyeIcon" class="w-3.5 h-3.5" />
                     </el-button>
+                    <el-button
+                      v-if="tieneEvoluciones(s)"
+                      circle
+                      size="small"
+                      class="sol-evoluciones-btn"
+                      :title="`Ver evoluciones (${contarEvoluciones(s)})`"
+                      aria-label="Ver evoluciones del paciente"
+                      @click="verEvoluciones(s)"
+                    >
+                      <component :is="ActivityIcon" class="w-3.5 h-3.5" />
+                    </el-button>
                     <el-dropdown v-if="s.estado !== 'completado'" trigger="click" placement="bottom-end" :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [8, 8] } }] }" popper-class="sol-acciones-menu" @command="(cmd: string) => manejarAccionFila(cmd, s)">
-                      <el-button circle size="small" :loading="enviandoGomedisysId === s.id || consultandoIngresoId === s.id">
+                      <el-button circle size="small" title="Más acciones" aria-label="Más acciones de la solicitud" :loading="enviandoGomedisysId === s.id || consultandoIngresoId === s.id">
                         <component :is="MoreIcon" class="w-3.5 h-3.5" />
                       </el-button>
                       <template #dropdown>
@@ -255,10 +223,8 @@
                       </template>
                     </el-dropdown>
                   </div>
-                </td>
-              </tr>
+              </article>
             </TransitionGroup>
-          </table>
         </div>
         <!-- Pagination -->
         <div class="sol-pagination">
@@ -394,6 +360,9 @@
             <span class="detalle-head-badge" :class="'estado-' + solicitudSeleccionada.estado" :title="estadoTooltip(solicitudSeleccionada.estado)">
               {{ estadoLabel(solicitudSeleccionada.estado) }}
             </span>
+            <span v-if="solicitudSeleccionada.urgencia_vital" class="sol-urgencia-detail-badge">
+              URGENCIA VITAL
+            </span>
             <button class="detalle-head-pdf" @click="exportarPdf">
               <component :is="FileDownIcon" class="w-3.5 h-3.5" />
               <span>Descargar PDF</span>
@@ -431,7 +400,7 @@
                   <div v-if="solicitudSeleccionada.telefono_contacto" class="data-row"><span>Teléfono</span><strong>{{ solicitudSeleccionada.telefono_contacto }}</strong></div>
                   <div v-if="solicitudSeleccionada.correo_contacto" class="data-row"><span>Correo</span><strong>{{ solicitudSeleccionada.correo_contacto }}</strong></div>
                   <div v-if="solicitudSeleccionada.codigo_aceptacion" class="data-row"><span>Código Gomedisys</span><strong class="font-mono">{{ solicitudSeleccionada.codigo_aceptacion }}</strong></div>
-                  <div v-if="solicitudSeleccionada.hora_llegada" class="data-row"><span>Llegada esperada</span><strong>{{ formatHora(solicitudSeleccionada.hora_llegada) }} · {{ solicitudSeleccionada.lugar_llegada }}</strong></div>
+                  <div v-if="solicitudSeleccionada.hora_llegada" class="data-row"><span>Llegada esperada</span><strong>{{ formatHora(solicitudSeleccionada.hora_llegada) }} · {{ solicitudSeleccionada.lugar_llegada }}<template v-if="solicitudSeleccionada.sede"> · Sede {{ solicitudSeleccionada.sede }}</template></strong></div>
                   <p v-if="!solicitudSeleccionada.quien_remitente && !solicitudSeleccionada.telefono_contacto && !solicitudSeleccionada.correo_contacto" class="text-xs text-gray-400 italic">Sin datos adicionales de remisión</p>
                 </div>
               </div>
@@ -550,6 +519,52 @@
               Cerrar
             </button>
           </div>
+        </div>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="modalEvoluciones" width="min(720px, 94vw)" class="evoluciones-dialog" :show-close="false" align-center>
+      <template v-if="solicitudSeleccionada">
+        <div class="evoluciones-modal">
+          <header class="evoluciones-modal-head">
+            <div class="evoluciones-modal-icon"><component :is="ActivityIcon" class="w-5 h-5" /></div>
+            <div class="evoluciones-modal-heading">
+              <h2>Evolución del paciente</h2>
+              <p>{{ nombreCompleto(solicitudSeleccionada) }} · {{ solicitudSeleccionada.tipo_documento }} {{ solicitudSeleccionada.numero_documento }}</p>
+            </div>
+            <span class="evoluciones-total">{{ evolucionesPaciente.length }} {{ evolucionesPaciente.length === 1 ? 'registro' : 'registros' }}</span>
+            <button type="button" class="evoluciones-modal-close" aria-label="Cerrar evoluciones" @click="modalEvoluciones = false">
+              <component :is="XIcon" class="w-4 h-4" />
+            </button>
+          </header>
+
+          <div class="evoluciones-modal-body">
+            <div v-if="evolucionesPaciente.length" class="evoluciones-modal-list">
+              <article v-for="evolucion in evolucionesPaciente" :key="evolucion.id" class="evoluciones-modal-item">
+                <div class="evoluciones-modal-rail"><span></span></div>
+                <div class="evoluciones-modal-entry">
+                  <div class="evoluciones-modal-meta">
+                    <div>
+                      <strong>{{ solicitudSeleccionada.clinica?.nombre ?? solicitudSeleccionada.institucion_remitente ?? 'Clínica remitente' }}</strong>
+                      <time>{{ formatFecha(evolucion.created_at) }} · {{ horaDeFecha(evolucion.created_at) }}</time>
+                    </div>
+                    <span class="evoluciones-entry-tag">Evolución</span>
+                  </div>
+                  <p>{{ evolucion.descripcion || 'La clínica registró una evolución sin descripción.' }}</p>
+                </div>
+              </article>
+            </div>
+            <div v-else class="evoluciones-empty">
+              <component :is="ActivityIcon" class="w-7 h-7" />
+              <strong>Sin evoluciones registradas</strong>
+              <span>La clínica todavía no ha añadido notas de evolución para este paciente.</span>
+            </div>
+          </div>
+
+          <footer class="evoluciones-modal-footer">
+            <span><component :is="ShieldIcon" class="w-3.5 h-3.5" /> Información clínica confidencial</span>
+            <button type="button" class="evoluciones-modal-done" @click="modalEvoluciones = false">Cerrar</button>
+          </footer>
         </div>
       </template>
     </el-dialog>
@@ -704,7 +719,15 @@
                     Enviar a Gomedisys
                   </button>
                 </div>
-                <div class="grid grid-cols-3 gap-2 mb-1.5">
+                <div class="grid grid-cols-2 gap-2 mb-1.5">
+                  <div>
+                    <label class="accion-field-label">Sede <span class="accion-required">*</span></label>
+                    <el-select v-model="formAceptar.sede" placeholder="Seleccione la sede" class="w-full" popper-class="negar-motivo-popper">
+                      <el-option label="Urgencias" value="URGENCIAS" />
+                      <el-option label="Central de Especialistas" value="CENTRAL DE ESPECIALISTAS" />
+                      <el-option label="CAC Santa Bárbara" value="CAC SANTA BARBARA" />
+                    </el-select>
+                  </div>
                   <div>
                     <label class="accion-field-label">Código Gomedisys (REF) <span class="accion-required">*</span></label>
                     <el-input v-model="formAceptar.codigo_aceptacion" placeholder="Ej: REF00045821" />
@@ -891,7 +914,15 @@
                     <el-option v-for="op in opcionesCambioEstado" :key="op.value" :label="op.label" :value="op.value" />
                   </el-select>
                 </div>
-                <div v-if="formCambiar.estado === 'en_espera'" class="grid grid-cols-3 gap-2 mb-1.5">
+                <div v-if="formCambiar.estado === 'en_espera'" class="grid grid-cols-2 gap-2 mb-1.5">
+                  <div>
+                    <label class="accion-field-label">Sede <span class="accion-required">*</span></label>
+                    <el-select v-model="formCambiar.sede" placeholder="Seleccione la sede" class="w-full" popper-class="negar-motivo-popper">
+                      <el-option label="Urgencias" value="URGENCIAS" />
+                      <el-option label="Central de Especialistas" value="CENTRAL DE ESPECIALISTAS" />
+                      <el-option label="CAC Santa Bárbara" value="CAC SANTA BARBARA" />
+                    </el-select>
+                  </div>
                   <div>
                     <label class="accion-field-label">Código Gomedisys (REF) <span class="accion-required">*</span></label>
                     <el-input v-model="formCambiar.codigo_aceptacion" placeholder="Ej: REF00045821" />
@@ -1157,9 +1188,6 @@ import {
   Minimize as MinimizeIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
-  ArrowUp as ArrowUpIcon,
-  ArrowDown as ArrowDownIcon,
-  ArrowUpDown as ArrowUpDownIcon,
   Send as SendIcon,
   Copy as CopyIcon,
   Shield as ShieldIcon,
@@ -1220,6 +1248,7 @@ interface Solicitud {
   telefono_paciente?: string;
   especialidad_requerida: string;
   tipo_referencia?: string;
+  urgencia_vital?: boolean;
   servicio_ubicacion_actual: string;
   servicio_remision?: string;
   quien_remitente?: string;
@@ -1235,6 +1264,7 @@ interface Solicitud {
   hora_respuesta?: string;
   hora_llegada?: string;
   lugar_llegada?: string;
+  sede?: string;
   motivo_negacion?: string;
   grupo_negacion?: string;
   numero_ingreso?: number;
@@ -1306,6 +1336,7 @@ interface DashStats {
 const dash = ref<DashStats | null>(null);
 
 const modalDetalle = ref(false);
+const modalEvoluciones = ref(false);
 
 const modalAceptar = ref(false);
 const modalNegar = ref(false);
@@ -1317,10 +1348,10 @@ const modalFichaGomedisys = ref(false);
 const campoCopiado = ref<string | null>(null);
 const adjuntoActivo = ref<{ id: number; nombre_original: string; mime_type: string; tamano: number } | null>(null);
 
-const formAceptar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', sin_disponibilidad: false, codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', observaciones_respuesta: '' });
+const formAceptar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', sin_disponibilidad: false, sede: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', observaciones_respuesta: '' });
 const formNegar = ref({ fecha_respuesta: '', hora_respuesta: '', grupo_negacion: '', motivo_negacion: '', nombre_quien_responde: '', observaciones_respuesta: '' });
 const modalCambiar = ref(false);
-const formCambiar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', estado: '', motivo: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', numero_ingreso: '' });
+const formCambiar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', estado: '', motivo: '', sede: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', numero_ingreso: '' });
 
 // Destinos posibles del cambio manual — "Nueva solicitud" queda excluida:
 // las nuevas solo avanzan por el flujo normal (aceptar/negar). Tampoco se
@@ -1383,13 +1414,6 @@ const resumen = computed(() => ({
 }));
 
 const solicitudesEnEspera = computed(() => solicitudes.value.filter(s => s.estado === 'en_espera'));
-
-const tabs = computed<{ label: string; value: 'todas' | 'pendiente' | 'pendiente_cama' | 'en_espera'; count: number }[]>(() => [
-  { label: 'Todas', value: 'todas', count: resumen.value.total },
-  { label: 'Nuevas', value: 'pendiente', count: resumen.value.pendientes },
-  { label: 'Pendientes', value: 'pendiente_cama', count: resumen.value.pendientesCama },
-  { label: 'En espera', value: 'en_espera', count: resumen.value.enEspera },
-]);
 
 /* ── Datos del panel lateral y stat cards (endpoint de stats del dashboard) ── */
 const statsSol = computed(() => dash.value?.solicitudes ?? { total: 0, pendientes: 0, en_espera: 0, completadas: 0, negadas: 0 });
@@ -1593,6 +1617,8 @@ function animateCounters(targets: number[]) {
 }
 
 const solicitudesFiltradas = computed(() => {
+  const texto = buscarDebounced.value.trim().toLowerCase();
+  const cedulaBuscada = /^[\d.\s-]+$/.test(texto) ? texto.replace(/[.\s-]/g, '') : '';
   let result = solicitudes.value.filter(s => {
     if (tabActiva.value !== 'todas' && s.estado !== tabActiva.value) return false;
     if (filtroClinica.value !== '') {
@@ -1611,13 +1637,14 @@ const solicitudesFiltradas = computed(() => {
       const tramo = COLA_TRAMOS.find(t => t.id === edadCola.value);
       if (tramo && !tramo.test(horasDesde(s.created_at))) return false;
     }
-    const texto = buscarDebounced.value.toLowerCase();
+    const documento = String(s.numero_documento ?? '').toLowerCase();
     const coincideTexto = !texto ||
       nombreCompleto(s).toLowerCase().includes(texto) ||
       s.eps.toLowerCase().includes(texto) ||
       s.especialidad_requerida.toLowerCase().includes(texto) ||
       (s.clinica?.nombre ?? s.institucion_remitente ?? '').toLowerCase().includes(texto) ||
-      s.numero_documento.toLowerCase().includes(texto);
+      documento.includes(texto) ||
+      (cedulaBuscada !== '' && documento.replace(/[.\s-]/g, '').includes(cedulaBuscada));
     return coincideTexto;
   });
   const dir = sortDir.value === 'asc' ? 1 : -1;
@@ -1648,29 +1675,6 @@ const paginasVisibles = computed<(number | '…')[]>(() => {
   if (cur >= total - 2) return [1, '…', total - 4, total - 3, total - 2, total - 1, total];
   return [1, '…', cur - 1, cur, cur + 1, '…', total];
 });
-
-function toggleSort(key: 'paciente' | 'clinica' | 'especialidad' | 'eps' | 'fecha') {
-  if (key === 'fecha') {
-    if (sortKey.value === 'fecha') {
-      sortDir.value = sortDir.value === 'desc' ? 'asc' : 'desc';
-    } else {
-      sortKey.value = 'fecha';
-      sortDir.value = 'desc';
-    }
-    return;
-  }
-  if (sortKey.value === key) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortKey.value = key;
-    sortDir.value = 'asc';
-  }
-}
-
-function sortIcon(key: string) {
-  if (sortKey.value !== key) return ArrowUpDownIcon;
-  return sortDir.value === 'asc' ? ArrowUpIcon : ArrowDownIcon;
-}
 
 function cambiarTab(tab: 'todas' | 'pendiente' | 'pendiente_cama' | 'en_espera') {
   tabActiva.value = tab;
@@ -2034,6 +2038,19 @@ function verDetalle(s: Solicitud) {
   cargarThumbnails(s);
 }
 
+function contarEvoluciones(solicitud: Solicitud): number {
+  return (solicitud.eventos ?? []).filter(evento => evento.tipo === 'evolucion').length;
+}
+
+function tieneEvoluciones(solicitud: Solicitud): boolean {
+  return contarEvoluciones(solicitud) > 0;
+}
+
+function verEvoluciones(solicitud: Solicitud): void {
+  solicitudSeleccionada.value = solicitud;
+  modalEvoluciones.value = true;
+}
+
 function cerrarDetalle() {
   modalDetalle.value = false;
   limpiarThumbnails();
@@ -2143,6 +2160,7 @@ function abrirAceptar(s: Solicitud) {
     hora_respuesta: horaActual(),
     nombre_quien_responde: authStore.user?.full_name ?? '',
     sin_disponibilidad: false,
+    sede: s.sede || '',
     codigo_aceptacion: '',
     hora_llegada: '',
     lugar_llegada: '',
@@ -2161,6 +2179,9 @@ const fichaGomedisys = computed<FichaCampo[]>(() => {
   if (!s) return [];
   const dx = s.diagnosticos?.[0];
   return [
+    // No es un campo del formulario — es la sede que hay que seleccionar en
+    // Gomedisys ANTES de registrar (si pide "Asignar sede de trabajo").
+    { label: 'Sede de trabajo', valor: formAceptar.value.sede || s.sede || 'URGENCIAS' },
     { label: 'Tipo de documento', valor: s.tipo_documento },
     { label: 'Número de documento', valor: s.numero_documento },
     { label: 'Nombres', valor: [s.primer_nombre, s.segundo_nombre].filter(Boolean).join(' ') },
@@ -2180,12 +2201,20 @@ async function abrirGomedisys(s: Solicitud) {
   // Seguro extra — si llega un segundo clic mientras el primero sigue en
   // curso (doble clic rápido), se ignora.
   if (enviandoGomedisysId.value !== null) return;
+  // La sede decide en qué "sede de trabajo" de Gomedisys queda registrada
+  // la referencia — si no se ha elegido todavía en el modal, se frena en
+  // vez de caer al valor por defecto y registrarla en la sede equivocada.
+  const sede = formAceptar.value.sede || s.sede || '';
+  if (modalAceptar.value && !sede) {
+    notify.warning('Primero selecciona la sede (Urgencias o Torre) — ahí quedará registrada la referencia en Gomedisys.');
+    return;
+  }
   enviandoGomedisysId.value = s.id;
   solicitudSeleccionada.value = s;
   try {
-    const resultado = await autocompletarEnGomedisys(s);
+    const resultado = await autocompletarEnGomedisys({ ...s, sede });
     if (resultado.ok) {
-      notify.success('El formulario quedó diligenciado en la ventana de Gomedisys — revísalo allá antes de guardar.');
+      notify.success(`El formulario quedó diligenciado en la ventana de Gomedisys (sede ${sede || 'URGENCIAS'}) — revísalo allá antes de guardar.`);
       return;
     }
     if (resultado.error === 'login') {
@@ -2256,6 +2285,7 @@ function abrirCambiar(s: Solicitud) {
     nombre_quien_responde: authStore.user?.full_name ?? '',
     estado: '',
     motivo: '',
+    sede: s.sede || '',
     codigo_aceptacion: '',
     hora_llegada: '',
     lugar_llegada: '',
@@ -2267,7 +2297,7 @@ function abrirCambiar(s: Solicitud) {
 async function cambiarEstado() {
   const f = formCambiar.value;
   if (!f.hora_respuesta || !f.estado || !f.motivo.trim() || !f.nombre_quien_responde.trim()
-    || (f.estado === 'en_espera' && (!f.codigo_aceptacion.trim() || !f.hora_llegada || !f.lugar_llegada.trim()))
+    || (f.estado === 'en_espera' && (!f.codigo_aceptacion.trim() || !f.hora_llegada || !f.lugar_llegada.trim() || !f.sede))
     || (f.estado === 'completado' && !String(f.numero_ingreso).trim())) {
     notify.warning('Complete los campos obligatorios');
     return;
@@ -2317,7 +2347,15 @@ async function guardarNota() {
   }
 }
 
-/** Notas de seguimiento registradas, de la más reciente a la más antigua. */
+/** Evoluciones clínicas, de la más reciente a la más antigua. */
+const evolucionesPaciente = computed(() =>
+  (solicitudSeleccionada.value?.eventos ?? [])
+    .filter(e => e.tipo === 'evolucion')
+    .slice()
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+);
+
+/** Notas internas de seguimiento, de la más reciente a la más antigua. */
 const notasSeguimiento = computed(() =>
   (solicitudSeleccionada.value?.eventos ?? [])
     .filter(e => e.tipo === 'nota')
@@ -2340,7 +2378,7 @@ function abrirNegar(s: Solicitud) {
 
 async function aceptar() {
   if (!formAceptar.value.hora_respuesta || !formAceptar.value.nombre_quien_responde.trim()
-    || (!formAceptar.value.sin_disponibilidad && (!formAceptar.value.codigo_aceptacion.trim() || !formAceptar.value.hora_llegada || !formAceptar.value.lugar_llegada.trim()))) {
+    || (!formAceptar.value.sin_disponibilidad && (!formAceptar.value.sede || !formAceptar.value.codigo_aceptacion.trim() || !formAceptar.value.hora_llegada || !formAceptar.value.lugar_llegada.trim()))) {
     notify.warning('Complete los campos obligatorios');
     return;
   }
@@ -2503,11 +2541,13 @@ usePolling(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: .55rem .8rem;
-  border-top: 1px solid #e8edf4;
-  background: #fbfcfe;
+  padding: .45rem 0;
+  flex-shrink: 0;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: transparent;
 }
-.dark .sol-pagination { border-top-color: #293548; background: #141b27; }
+.dark .sol-pagination { background: transparent; }
 .sol-pagination-info {
   font-size: 11px;
   color: #64748b;
@@ -3102,6 +3142,134 @@ usePolling(() => {
   box-shadow: 0 0 0 2px rgba(22,70,142,0.08) !important;
 }
 
+/* ── Referencias en tarjetas ── */
+.sol-list-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; position: relative; z-index: 30; padding: 3px 0 5px; }
+.sol-list-heading { display: flex; align-items: baseline; gap: 13px; flex: 1; min-width: 250px; }
+.sol-list-heading h1 { margin: 0; color: #102451; font-size: 25px; font-weight: 750; letter-spacing: -.65px; line-height: 1.3; }
+.sol-list-heading > span { color: #6b84ae; font-size: 13px; white-space: nowrap; }
+.sol-list-search { width: 250px; flex: 0 1 250px; }
+.sol-list-search :deep(.el-input__wrapper) { min-height: 30px; border-radius: 7px; box-shadow: 0 0 0 1px #dbe6f5 inset; background: rgba(255,255,255,.8); }
+.sol-list-search :deep(.el-input__inner) { color: #244575; font-size: 12px; }
+.sol-list-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.sol-list-tools button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 30px; padding: 6px 9px; border: 1px solid #dbe6f5; border-radius: 7px; background: rgba(255,255,255,.8); color: #315583; font-size: 11px; white-space: nowrap; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.sol-list-tools button:hover:not(:disabled) { background: #e4efff; }
+.sol-list-tools button:disabled { opacity: .5; cursor: not-allowed; }
+.sol-list-panel { display: flex; flex-direction: column; container-type: inline-size; }
+.sol-reference-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 2px 3px 3px 1px; }
+.sol-reference-list { display: flex; flex-direction: column; gap: 8px; }
+.sol-reference-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, .8fr) minmax(0, 1.2fr) minmax(185px, .67fr) 100px;
+  grid-template-areas: "patient clinic clinical state actions";
+  align-items: center;
+  gap: 14px;
+  min-height: 86px;
+  padding: 9px 10px;
+  border: 1px solid rgba(225,235,248,.7);
+  border-radius: 9px;
+  background: linear-gradient(115deg, #fff, #fbfdff);
+  box-shadow: 0 3px 10px rgba(42,88,149,.045);
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.sol-reference-card:hover { border-color: #bfd4f5; box-shadow: 0 4px 14px rgba(42,88,149,.1); }
+.sol-reference-card > div { min-width: 0; }
+.sol-reference-urgent { border-color: #f7829a; background: linear-gradient(110deg, #ffe7ed, #fff1f4); box-shadow: inset 3px 0 0 #e11d48; }
+.sol-reference-urgent:hover { border-color: #f43f5e; box-shadow: inset 3px 0 0 #be123c, 0 4px 14px rgba(225,29,72,.12); }
+.sol-reference-card--pendiente { border-color: #f5dda6; background: linear-gradient(110deg, #fff6e3, #fffbef); box-shadow: inset 3px 0 0 #f59e0b; }
+.sol-reference-card--pendiente:hover { border-color: #eec878; box-shadow: inset 3px 0 0 #d97706, 0 4px 14px rgba(217,119,6,.1); }
+.sol-reference-card--pendiente_cama { border-color: #f7cd9e; background: linear-gradient(110deg, #fff0dd, #fff8ec); box-shadow: inset 3px 0 0 #f97316; }
+.sol-reference-card--pendiente_cama:hover { border-color: #f0ab63; box-shadow: inset 3px 0 0 #ea580c, 0 4px 14px rgba(234,88,12,.1); }
+.sol-reference-card--en_espera { border-color: #b5d3fb; background: linear-gradient(110deg, #e8f2ff, #f3f9ff); box-shadow: inset 3px 0 0 #3b82f6; }
+.sol-reference-card--en_espera:hover { border-color: #8bb8f5; box-shadow: inset 3px 0 0 #2563eb, 0 4px 14px rgba(37,99,235,.12); }
+.sol-reference-card--completado { border-color: #b8e6c8; background: linear-gradient(110deg, #edf9f0, #f7fcf8); box-shadow: inset 3px 0 0 #22c55e; }
+.sol-reference-card--negado { border-color: #f3b4bc; background: linear-gradient(110deg, #fff0f2, #fff7f8); box-shadow: inset 3px 0 0 #ef4444; }
+.sol-reference-highlighted { outline: 2px solid #60a5fa; outline-offset: -2px; }
+.sol-reference-patient { grid-area: patient; display: flex; align-items: flex-start; gap: 10px; }
+.sol-reference-avatar { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; font-size: 13px; font-weight: 750; }
+.sol-reference-identity { min-width: 0; flex: 1; }
+.sol-reference-name { display: block; max-width: 100%; padding: 0; border: 0; background: none; color: #102451; font: inherit; font-size: 14px; font-weight: 750; cursor: pointer; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sol-reference-name:hover { color: #2563eb; }
+.sol-reference-name:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; border-radius: 3px; }
+.sol-reference-document { margin: 3px 0 4px; color: #758db5; font-size: 11px; white-space: nowrap; }
+.sol-reference-insurer { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.sol-reference-insurer-label { display: inline-flex; align-items: center; gap: 4px; color: #486996; font-size: 9px; flex-shrink: 0; }
+.sol-reference-insurer-label svg { width: 12px; height: 12px; color: #1d4ed8; }
+.sol-reference-insurer-chip { padding: 3px 8px; border-radius: 999px; background: #e9f2ff; color: #1e4688; font-size: 9.5px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sol-reference-clinic { grid-area: clinic; }
+.sol-reference-clinical { grid-area: clinical; }
+.sol-reference-state { grid-area: state; }
+.sol-reference-divider { padding-left: 17px; border-left: 1px solid #dfe8f7; }
+.sol-reference-label { display: block; color: #6c87b0; font-size: 8.5px; font-weight: 600; text-transform: uppercase; line-height: 1.3; }
+.sol-reference-clinic-name { margin: 3px 0; color: #18345e; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sol-reference-contact { margin: 0; color: #728bb3; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sol-reference-specialty { margin: 3px 0 0; color: #075ce8; font-size: 13px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sol-reference-diagnosis-label { margin-top: 5px; }
+.sol-reference-diagnosis { margin: 2px 0 0; color: #34517a; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sol-reference-status { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 4px 8px; border-radius: 999px; font-size: 11px; line-height: 1.15; white-space: nowrap; }
+.sol-reference-status .sol-status-dot { background: currentColor; flex-shrink: 0; }
+.sol-reference-status--pendiente { background: #fff3cc; color: #c17b00; }
+.sol-reference-status--pendiente_cama { background: #ffecd9; color: #e45a00; }
+.sol-reference-status--en_espera { background: #e1edff; color: #0960e8; }
+.sol-reference-status--completado { background: #dcfce7; color: #15803d; }
+.sol-reference-status--negado, .sol-reference-vital { background: #ffe0e7; color: #df123d; font-weight: 650; }
+.sol-reference-date { margin: 4px 0 3px; color: #506b95; font-size: 10.5px; white-space: nowrap; }
+.sol-reference-age { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sol-reference-age .sol-edad, .sol-reference-age .sol-reference-status { margin: 0; font-size: 9.5px; font-weight: 500; padding: 3px 8px; line-height: 1.15; }
+.sol-reference-actions { grid-area: actions; gap: 5px; align-items: center; }
+.sol-reference-actions :deep(.el-button) { width: 30px; height: 30px; border-color: #dbe5f5; background: #fff; color: #244671; }
+.sol-reference-actions :deep(.el-button:hover) { color: #2563eb; border-color: #93b9f5; background: #f0f6ff; }
+
+.dark .sol-list-heading h1 { color: #e5eeff; }
+.dark .sol-list-heading > span, .dark .sol-reference-label { color: #90abd2; }
+.dark .sol-list-search :deep(.el-input__wrapper) { background: #17243a; box-shadow: 0 0 0 1px #314666 inset; }
+.dark .sol-list-search :deep(.el-input__inner) { color: #c7d9f5; }
+.dark .sol-list-tools button { border-color: #314666; background: #1c2d46; color: #bcd1ef; }
+.dark .sol-list-tools button:hover:not(:disabled) { background: #263d5d; }
+.dark .sol-reference-card { background: linear-gradient(115deg, #192439, #162133); border-color: #293b56; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
+.dark .sol-reference-card:hover { border-color: #4771ab; }
+.dark .sol-reference-urgent { border-color: #b03d5c; background: linear-gradient(110deg, #3d1f2e, #2c1d2b); box-shadow: inset 3px 0 0 #fb4d78; }
+.dark .sol-reference-card--pendiente { border-color: #6b5526; background: linear-gradient(110deg, #33290f, #28220f); box-shadow: inset 3px 0 0 #d9a028; }
+.dark .sol-reference-card--pendiente_cama { border-color: #7a4d21; background: linear-gradient(110deg, #35240f, #2a1f10); box-shadow: inset 3px 0 0 #f07d22; }
+.dark .sol-reference-card--en_espera { border-color: #2e5a9c; background: linear-gradient(110deg, #16263f, #182135); box-shadow: inset 3px 0 0 #4d8ef7; }
+.dark .sol-reference-card--completado { border-color: #2f6b44; background: linear-gradient(110deg, #14291c, #16241b); box-shadow: inset 3px 0 0 #34c468; }
+.dark .sol-reference-card--negado { border-color: #7c3a44; background: linear-gradient(110deg, #331e24, #2a1d22); box-shadow: inset 3px 0 0 #f05656; }
+.dark .sol-reference-divider { border-color: #324461; }
+.dark .sol-reference-name, .dark .sol-reference-clinic-name { color: #e2ecfc; }
+.dark .sol-reference-specialty { color: #75afff; }
+.dark .sol-reference-document, .dark .sol-reference-contact, .dark .sol-reference-date, .dark .sol-reference-insurer-label { color: #9db4d6; }
+.dark .sol-reference-diagnosis { color: #bfd0e8; }
+.dark .sol-reference-insurer-chip { background: #223d64; color: #c7dfff; }
+.dark .sol-reference-status--pendiente { background: #483817; color: #fcd566; }
+.dark .sol-reference-status--pendiente_cama { background: #492e20; color: #ffb879; }
+.dark .sol-reference-status--en_espera { background: #1f3d69; color: #9ec8ff; }
+.dark .sol-reference-status--completado { background: #184333; color: #86efac; }
+.dark .sol-reference-status--negado, .dark .sol-reference-vital { background: #592539; color: #ffa7bb; }
+.dark .sol-reference-actions :deep(.el-button) { background: #1b2b44; border-color: #3b5273; color: #bcd5f7; }
+
+@container (max-width: 850px) {
+  .sol-reference-card { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 100px; grid-template-areas: "patient clinic actions" "clinical state state"; gap: 12px; }
+  .sol-reference-clinical { border-left: 0; padding-left: 45px; }
+  .sol-reference-state { padding-top: 4px; }
+  .sol-reference-name { white-space: normal; }
+}
+@container (max-width: 520px) {
+  .sol-reference-card { grid-template-columns: minmax(0, 1fr) 100px; grid-template-areas: "patient actions" "clinic clinic" "clinical clinical" "state state"; gap: 10px; padding: 12px; }
+  .sol-reference-divider { padding: 8px 0 0; border-left: 0; border-top: 1px solid #dfe8f7; }
+  .sol-reference-clinic-name, .sol-reference-contact, .sol-reference-specialty, .sol-reference-diagnosis { white-space: normal; overflow-wrap: anywhere; }
+  .sol-reference-document { white-space: normal; }
+  .sol-reference-insurer-label { display: none; }
+  .sol-reference-state { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .sol-reference-date { width: 100%; margin: 0; order: 2; }
+}
+@media (max-width: 700px) {
+  .sol-list-heading { flex-basis: 100%; }
+  .sol-list-heading h1 { font-size: 23px; }
+  .sol-list-search { flex: 1; width: auto; }
+  .sol-list-tools { order: 1; flex-basis: 100%; }
+  .sol-list-tools button { flex: 1; }
+  .sol-pagination-info { flex-basis: 100%; }
+}
+
 /* ── Table panel ── */
 .sol-table-panel {
   background: #fff;
@@ -3166,6 +3334,16 @@ usePolling(() => {
 .sol-table-row:hover { background: #f1f6fd; box-shadow: inset 3px 0 0 var(--rf-primary); }
 .dark .sol-table-row:nth-child(even) { background: #182232; }
 .dark .sol-table-row:hover { background: #1e2b3d; }
+.sol-table-row.sol-row-urgencia-vital {
+  background: #fff1f2;
+  box-shadow: inset 4px 0 0 #dc2626;
+}
+.sol-table-row.sol-row-urgencia-vital:hover {
+  background: #ffe4e6;
+  box-shadow: inset 4px 0 0 #b91c1c;
+}
+.dark .sol-table-row.sol-row-urgencia-vital { background: rgba(127, 29, 29, .18); }
+.dark .sol-table-row.sol-row-urgencia-vital:hover { background: rgba(127, 29, 29, .3); }
 .sol-table-row:hover .sol-table-status { transform: scale(1.06); }
 .sol-table-row:last-child td { border-bottom: none; }
 .sol-th-actions { text-align: right; }
@@ -3209,6 +3387,33 @@ usePolling(() => {
   font-size: 10px; font-weight: 700; white-space: nowrap;
   transition: transform .2s ease;
 }
+.sol-status-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.sol-urgencia-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 3px 7px;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .025em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.sol-urgencia-badge-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, .12);
+}
+.dark .sol-urgencia-badge { background: rgba(127, 29, 29, .35); border-color: rgba(248, 113, 113, .4); color: #fca5a5; }
+.dark .sol-urgencia-badge-dot { background: #f87171; }
 .sol-status-dot { width: 5px; height: 5px; border-radius: 50%; }
 .sol-status-pending { background: #fef3c7; color: #d97706; }
 .sol-status-pending .sol-status-dot { background: #fbbf24; }
@@ -3225,6 +3430,24 @@ usePolling(() => {
   margin-left: 0 !important;
   transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s ease, filter .2s ease;
 }
+.sol-table-actions .sol-evoluciones-btn {
+  color: #2563eb;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+.sol-table-actions .sol-evoluciones-btn:hover {
+  color: #fff;
+  border-color: #2563eb;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 5px 13px rgba(37,99,235,.25);
+  transform: translateY(-1px);
+}
+.dark .sol-table-actions .sol-evoluciones-btn {
+  color: #93c5fd;
+  border-color: #31527c;
+  background: #172b47;
+}
+.dark .sol-table-actions .sol-evoluciones-btn:hover { color: #fff; background: #2563eb; }
 .sol-table-actions .el-button:hover {
   filter: brightness(1.08);
 }
@@ -3372,6 +3595,20 @@ usePolling(() => {
 .detalle-head-badge.estado-en_espera { background: #dbeafe; color: #1d4ed8; }
 .detalle-head-badge.estado-completado { background: #dcfce7; color: #16a34a; }
 .detalle-head-badge.estado-negado { background: #fee2e2; color: #b91c1c; }
+
+.sol-urgencia-detail-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .3rem .65rem;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: .62rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
 
 .detalle-head-pdf {
   position: relative; z-index: 1;
@@ -3967,6 +4204,95 @@ usePolling(() => {
 .nota-item-autor { font-size: .62rem; font-weight: 700; color: #92400e; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nota-item-fecha { font-size: .58rem; color: #b45309; margin-left: auto; flex-shrink: 0; }
 .nota-item-texto { font-size: .68rem; color: #78350f; margin: 0; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+
+:deep(.evoluciones-dialog) {
+  max-height: min(760px, calc(100vh - 32px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  box-shadow: 0 28px 80px rgba(11,35,73,.36);
+}
+:deep(.evoluciones-dialog .el-dialog__header) { display: none; }
+:deep(.evoluciones-dialog .el-dialog__body) { padding: 0; overflow: hidden; }
+.evoluciones-modal { display: flex; flex-direction: column; max-height: min(760px, calc(100vh - 32px)); background: #f5f8fc; }
+.evoluciones-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 15px 18px;
+  border-bottom: 1px solid #e7edf6;
+  background: radial-gradient(circle, rgba(59,130,246,.12) 1px, transparent 1.2px) 0 0 / 13px 13px, #fff;
+}
+.evoluciones-modal-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #3b82f6, #16468e);
+  box-shadow: 0 6px 15px rgba(37,99,235,.25);
+}
+.evoluciones-modal-heading { min-width: 0; flex: 1; }
+.evoluciones-modal-heading h2 { margin: 0; color: #17233b; font-size: .92rem; font-weight: 850; }
+.evoluciones-modal-heading p { margin: 3px 0 0; color: #7b8ba5; font-size: .68rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evoluciones-total { padding: 4px 9px; border: 1px solid #bfdbfe; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: .62rem; font-weight: 800; white-space: nowrap; }
+.evoluciones-modal-close {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  flex-shrink: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+}
+.evoluciones-modal-close:hover { color: #dc2626; border-color: #fecaca; background: #fff1f2; }
+.evoluciones-modal-body { flex: 1; min-height: 0; max-height: min(62vh, 560px); padding: 16px 18px; overflow-y: auto; }
+.evoluciones-modal-list { display: flex; flex-direction: column; gap: 0; }
+.evoluciones-modal-item { display: flex; gap: 12px; min-width: 0; }
+.evoluciones-modal-rail { display: flex; justify-content: center; width: 18px; flex-shrink: 0; position: relative; }
+.evoluciones-modal-item:not(:last-child) .evoluciones-modal-rail::after { content: ''; position: absolute; top: 18px; bottom: -1px; width: 2px; background: linear-gradient(#93c5fd, #dbeafe); }
+.evoluciones-modal-rail span { z-index: 1; width: 11px; height: 11px; margin-top: 4px; border: 2px solid #fff; border-radius: 50%; background: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+.evoluciones-modal-entry { flex: 1; min-width: 0; margin-bottom: 12px; padding: 11px 13px; border: 1px solid #dbeafe; border-radius: 12px; background: linear-gradient(145deg, #fff, #f8fbff); box-shadow: 0 3px 10px rgba(37,99,235,.045); }
+.evoluciones-modal-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.evoluciones-modal-meta strong { display: block; color: #1e40af; font-size: .7rem; font-weight: 850; }
+.evoluciones-modal-meta time { display: block; margin-top: 3px; color: #8292aa; font-size: .62rem; }
+.evoluciones-entry-tag { padding: 3px 7px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: .54rem; font-weight: 850; white-space: nowrap; }
+.evoluciones-modal-entry p { margin: 9px 0 0; color: #334155; font-size: .76rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.evoluciones-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 18px; color: #94a3b8; text-align: center; }
+.evoluciones-empty > svg { color: #60a5fa; }
+.evoluciones-empty strong { color: #334155; font-size: .84rem; }
+.evoluciones-empty span { max-width: 320px; font-size: .68rem; line-height: 1.5; }
+.evoluciones-modal-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px 14px; border-top: 1px solid #e7edf6; background: #fff; }
+.evoluciones-modal-footer > span { display: inline-flex; align-items: center; gap: 5px; color: #94a3b8; font-size: .62rem; }
+.evoluciones-modal-done { min-height: 32px; padding: 0 14px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #2563eb, #16468e); color: white; font-size: .68rem; font-weight: 800; cursor: pointer; }
+.dark :deep(.evoluciones-dialog) { background: #0f172a; }
+.dark .evoluciones-modal { background: #0b1220; }
+.dark .evoluciones-modal-head, .dark .evoluciones-modal-footer { border-color: #263352; background-color: #111a2b; }
+.dark .evoluciones-modal-heading h2 { color: #e2e8f0; }
+.dark .evoluciones-modal-heading p { color: #94a3b8; }
+.dark .evoluciones-modal-close { border-color: #334155; background: #172033; color: #94a3b8; }
+.dark .evoluciones-total { border-color: #31527c; background: #172b47; color: #93c5fd; }
+.dark .evoluciones-modal-entry { border-color: #263f63; background: linear-gradient(145deg, #15233a, #111a2b); }
+.dark .evoluciones-modal-meta strong { color: #bfdbfe; }
+.dark .evoluciones-modal-meta time, .dark .evoluciones-modal-footer > span { color: #94a3b8; }
+.dark .evoluciones-entry-tag { background: #1e3a5f; color: #93c5fd; }
+.dark .evoluciones-modal-entry p { color: #dbeafe; }
+.dark .evoluciones-empty strong { color: #e2e8f0; }
+@media (max-width: 600px) {
+  .evoluciones-modal-head { gap: 8px; padding: 12px; }
+  .evoluciones-modal-icon { width: 32px; height: 32px; }
+  .evoluciones-total { font-size: .54rem; padding: 4px 6px; }
+  .evoluciones-modal-body { padding: 12px; }
+  .evoluciones-modal-meta { flex-direction: column; gap: 6px; }
+  .evoluciones-modal-footer { padding: 9px 12px 12px; }
+}
+
 .notas-list-modal { margin-top: .55rem; }
 .notas-list-scroll { max-height: 160px; overflow-y: auto; padding-right: .15rem; }
 .notas-list-scroll::-webkit-scrollbar { width: 5px; }

@@ -119,8 +119,27 @@
                 </el-select-v2>
               </el-form-item>
             </div>
-            <el-form-item label="Dirección del paciente" :class="['rf-field rf-col-full rf-stagger-5', { 'is-success': camposValidos.direccion_paciente }]">
+            <el-form-item label="Dirección del paciente" :class="['rf-field rf-col-3-fix rf-stagger-5', { 'is-success': camposValidos.direccion_paciente }]">
               <el-input v-model="form.direccion_paciente" autocomplete="new-password" maxlength="25" show-word-limit />
+            </el-form-item>
+            <el-form-item
+              prop="urgencia_vital"
+              required
+              :class="['rf-field rf-col-quarter rf-urgencia-vital-field', { 'rf-urgencia-vital-field--active': form.urgencia_vital === true }]"
+              title="Marque Sí únicamente cuando la vida del paciente esté en riesgo inmediato."
+            >
+              <template #label>
+                <span class="rf-urgencia-vital-label"><span>!</span>Urgencia vital</span>
+              </template>
+              <div class="rf-gestante-btns rf-urgencia-vital-btns">
+                <button type="button" class="rf-gestante-btn" :class="{ active: form.urgencia_vital === false }" @click="form.urgencia_vital = false">No</button>
+                <button
+                  type="button"
+                  class="rf-gestante-btn"
+                  :class="{ active: form.urgencia_vital === true, 'rf-urgencia-vital-yes-active': form.urgencia_vital === true }"
+                  @click="form.urgencia_vital = true"
+                >Sí</button>
+              </div>
             </el-form-item>
             <el-form-item label="Historia clínica" prop="resumen_historia_clinica" required :class="['rf-field rf-col-full rf-stagger-6', { 'is-success': camposValidos.resumen_historia_clinica }]">
               <div class="rf-hc-field">
@@ -298,7 +317,7 @@
         <div class="confirm-main">
           <!-- Una sola cuadrícula mantiene alineadas las columnas hasta la historia clínica -->
             <!-- Paciente -->
-            <div class="confirm-card confirm-c-paciente">
+    <div class="confirm-card confirm-c-paciente">
               <div class="confirm-card-head">
                 <span class="confirm-card-icon ci-blue"><component :is="UserIcon" class="w-3.5 h-3.5" /></span>
                 <p class="confirm-card-title ct-blue">Paciente</p>
@@ -368,7 +387,11 @@
                   <p class="confirm-card-title ct-slate">Condiciones</p>
                 </div>
                 <div class="confirm-card-body">
-                  <div class="confirm-data-row"><span>Aislamiento</span><strong>{{ form.requiere_aislamiento ? ('Sí' + (form.tipo_aislamiento ? ' — ' + form.tipo_aislamiento : '')) : 'No' }}</strong></div>
+                  <div class="confirm-data-row">
+                    <span>Urgencia vital</span>
+                    <strong :class="{ 'confirm-vital-value': form.urgencia_vital }">{{ form.urgencia_vital ? 'Sí' : 'No' }}</strong>
+                  </div>
+                  <div class="confirm-data-row"><span>Aislamiento</span><strong>{{ form.requiere_aislamiento ? ('Sí' + (form.tipo_aislamiento ? ' - ' + form.tipo_aislamiento : '')) : 'No' }}</strong></div>
                   <div class="confirm-data-row"><span>Gestante</span><strong>{{ form.gestante ? 'Sí' : 'No' }}</strong></div>
                   <div v-if="form.condicion_especial" class="confirm-data-row"><span>Condición especial</span><strong>{{ form.condicion_especial }}</strong></div>
                   <div v-if="form.observaciones" class="confirm-data-row"><span>Observaciones</span><strong>{{ form.observaciones }}</strong></div>
@@ -849,6 +872,7 @@ function emptyForm() {
     servicio_ubicacion_actual: '', institucion_remitente: '',
     clinica_id: null as number | string | null,
     requiere_aislamiento: null as boolean | null, tipo_aislamiento: '', quien_remitente: '', telefono_contacto: '',
+    urgencia_vital: null as boolean | null,
     gestante: null as boolean | null, condicion_especial: '',
     resumen_historia_clinica: '', observaciones: '',
   };
@@ -921,7 +945,7 @@ const progresoFormulario = computed(() => {
   const campos = [
     'tipo_documento', 'numero_documento', 'primer_nombre', 'primer_apellido',
     'genero', 'fecha_nacimiento', 'edad', 'municipio_capita', 'eps',
-    'institucion_remitente', 'especialidad_requerida',
+    'institucion_remitente', 'especialidad_requerida', 'urgencia_vital',
     'servicio_ubicacion_actual', 'resumen_historia_clinica',
   ];
   const llenos = campos.filter(c => {
@@ -937,7 +961,7 @@ const camposValidos = computed(() => {
   const required = ['tipo_documento', 'numero_documento', 'primer_nombre', 'primer_apellido',
     'genero', 'fecha_nacimiento', 'edad', 'municipio_capita', 'eps',
     'especialidad_requerida', 'tipo_referencia', 'servicio_ubicacion_actual', 'resumen_historia_clinica',
-    'institucion_remitente', 'requiere_aislamiento', 'gestante', 'condicion_especial', 'direccion_paciente', 'telefono_paciente'];
+    'institucion_remitente', 'urgencia_vital', 'requiere_aislamiento', 'gestante', 'condicion_especial', 'direccion_paciente', 'telefono_paciente'];
   const valid: Record<string, boolean> = {};
   for (const c of required) {
     const v = form.value[c as keyof typeof form.value];
@@ -986,6 +1010,7 @@ const resumenRemisionCompleto = computed(() =>
   && camposValidos.value.especialidad_requerida
   && camposValidos.value.tipo_referencia
   && camposValidos.value.servicio_ubicacion_actual
+  && camposValidos.value.urgencia_vital
   && camposValidos.value.resumen_historia_clinica
   && diagnosticos.value.some(d => d.descripcion.trim()),
 );
@@ -1005,6 +1030,7 @@ const rules = {
   especialidad_requerida: [{ required: true, message: 'Seleccione la especialidad requerida', trigger: 'change' }],
   tipo_referencia: [{ required: true, message: 'Seleccione el tipo de referencia', trigger: 'change' }],
   servicio_ubicacion_actual: [{ required: true, message: 'Seleccione el servicio / ubicación actual', trigger: 'change' }],
+  urgencia_vital: [{ required: true, type: 'boolean', message: 'Indique si es una urgencia vital', trigger: 'change' }],
   resumen_historia_clinica: [{ required: true, message: 'La historia clínica es requerida', trigger: 'blur' }],
   quien_remitente: [{ required: true, message: 'Indique quién remite al paciente', trigger: 'blur' }],
   telefono_contacto: [{ required: true, message: 'El teléfono de contacto es obligatorio', trigger: 'blur' }],
@@ -1025,6 +1051,7 @@ const CAMPO_LABELS: Record<string, string> = {
   tipo_referencia: 'Tipo de referencia',
   institucion_remitente: 'Institución que refiere',
   servicio_ubicacion_actual: 'Servicio / Ubicación actual',
+  urgencia_vital: 'Urgencia vital',
   resumen_historia_clinica: 'Historia clínica',
   quien_remitente: 'Quien remite',
   telefono_contacto: 'Teléfono de contacto',
@@ -1531,6 +1558,7 @@ function limpiarFormulario() {
 .rf-col-fifth { grid-column: span 1; }
 .rf-col-sixth { grid-column: span 1; }
 .rf-col-4 { grid-column: span 4; }
+.rf-col-3-fix { grid-column: span 3; }
 .rf-col-5 { grid-column: span 5; }
 .rf-mt { margin-top: .7rem; }
 
@@ -1855,6 +1883,36 @@ function limpiarFormulario() {
 .dark .rf-gestante-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
 .dark .rf-gestante-btn:hover { border-color: #60a5fa; color: #93c5fd; }
 .dark .rf-gestante-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+.rf-urgencia-vital-label {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  color: #b91c1c;
+}
+.rf-urgencia-vital-label > span {
+  display: inline-grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 9px;
+  font-weight: 900;
+}
+.rf-urgencia-vital-field--active :deep(.el-form-item__label) { color: #b91c1c; }
+.rf-urgencia-vital-btns .rf-urgencia-vital-yes-active,
+.rf-urgencia-vital-btns .rf-urgencia-vital-yes-active:hover {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  border-color: #dc2626;
+  color: #fff;
+  box-shadow: 0 3px 9px rgba(220, 38, 38, .25);
+}
+.dark .rf-urgencia-vital-btns .rf-urgencia-vital-yes-active,
+.dark .rf-urgencia-vital-btns .rf-urgencia-vital-yes-active:hover {
+  background: #b91c1c;
+  border-color: #ef4444;
+}
 
 /* ── Adjuntos ── */
 /* ── Soportes: dropzone que llena el espacio restante de la tarjeta ── */
@@ -2263,6 +2321,12 @@ function limpiarFormulario() {
   word-break: break-word;
   line-height: 1.2;
   min-width: 0;
+}
+.confirm-vital-value {
+  padding: .08rem .35rem;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c !important;
 }
 
 .confirm-hc-card { display: flex; flex-direction: column; min-height: 0; }
@@ -2720,9 +2784,12 @@ function limpiarFormulario() {
   .rf-grid { grid-template-columns: repeat(2, 1fr); }
   .rf-grid-trio { grid-template-columns: repeat(2, 1fr); }
   .rf-col-3 { grid-column: span 2; }
+  .rf-col-3-fix { grid-column: 1 / -1; }
+  .rf-col-4 { grid-column: 1 / -1; }
   .rf-col-half { grid-column: span 2; }
   .rf-col-third { grid-column: span 1; }
   .rf-col-quarter { grid-column: span 1; }
+  .rf-urgencia-vital-field { grid-column: 1 / -1; }
 }
 </style>
 

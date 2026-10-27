@@ -8,12 +8,14 @@ use Illuminate\Database\Seeder;
 class DiagnosticoCie10Seeder extends Seeder
 {
     /**
-     * Catálogo CIE-10 en español (~14.200 códigos), usado por el
-     * autocompletado de "Diagnóstico" del formulario externo. Los datos
-     * vienen del dataset público verasativa/CIE-10
-     * (database/seeders/data/cie10.json, solo códigos hoja — sin rangos
-     * de capítulo tipo "A00-B99") porque este entorno no tiene el driver
-     * sqlsrv para leer la tabla `diagnostics` de Gomedisys.
+     * Catálogo CIE-10 usado por el autocompletado de "Diagnóstico" del
+     * formulario externo. Los datos vienen de la tabla de referencia real
+     * de Gomedisys (export "TablaReferencia_CIE10", convertida a
+     * database/seeders/data/cie10.json) — así solo se pueden escoger
+     * diagnósticos que Gomedisys realmente acepta al diligenciar.
+     *
+     * Se reemplaza el catálogo completo: truncate + insert, para que no
+     * queden códigos viejos que Gomedisys no reconoce.
      */
     public function run(): void
     {
@@ -21,6 +23,8 @@ class DiagnosticoCie10Seeder extends Seeder
             file_get_contents(database_path('seeders/data/cie10.json')),
             true,
         );
+
+        DiagnosticoCie10::truncate();
 
         $filas = array_map(fn (array $d) => [
             'codigo' => $d['codigo'],
@@ -30,7 +34,7 @@ class DiagnosticoCie10Seeder extends Seeder
         ], $dataset);
 
         foreach (array_chunk($filas, 1000) as $chunk) {
-            DiagnosticoCie10::upsert($chunk, ['codigo'], ['descripcion']);
+            DiagnosticoCie10::insert($chunk);
         }
     }
 }

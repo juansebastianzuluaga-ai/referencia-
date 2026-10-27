@@ -1,11 +1,7 @@
 <template>
   <header
-    class="shrink-0 relative z-50"
-    :style="{
-      background: layout.isDarkMode ? '#11151f' : 'linear-gradient(90deg, var(--rf-primary) 0%, var(--rf-primary-2) 100%)',
-      borderBottom: layout.isDarkMode ? '1px solid rgba(255,255,255,0.06)' : 'none',
-      boxShadow: layout.isDarkMode ? 'none' : '0 2px 14px rgba(13,45,107,0.28)',
-    }"
+    class="shrink-0 relative z-50 topbar-shell"
+    :class="{ 'topbar-shell-dark': layout.isDarkMode }"
   >
     <div class="flex items-center gap-3 h-14 px-4">
       <!-- Branding -->
@@ -22,7 +18,7 @@
       <div class="topbar-divider hidden lg:block"></div>
 
       <!-- Navegación desktop -->
-      <nav class="hidden lg:flex items-center gap-1 flex-1 min-w-0">
+      <nav class="hidden lg:flex items-center justify-center gap-1.5 flex-1 min-w-0 overflow-hidden">
         <router-link
           v-for="item in mainItems"
           :key="item.to"
@@ -60,53 +56,16 @@
 
       <div class="flex-1 lg:hidden"></div>
 
-      <!-- Buscador global (Ctrl+K) -->
-      <div ref="searchWrap" class="hidden xl:block relative w-[220px] shrink-0">
-        <SearchIcon class="tb-search-icon" />
-        <input
-          ref="searchInput"
-          v-model="query"
-          class="tb-search-input"
-          type="text"
-          placeholder="Buscar paciente, clínica o solicitud..."
-          @input="onSearchInput"
-          @focus="onSearchInput"
-          @keydown.esc="cerrarBusqueda"
-        />
-        <kbd class="tb-search-kbd">Ctrl K</kbd>
-
-        <div v-if="buscando && (resultados.solicitudes.length || resultados.clinicas.length || query.trim().length >= 2)" class="tb-search-panel">
-          <template v-if="resultados.solicitudes.length">
-            <p class="tb-search-panel-label">Solicitudes</p>
-            <button v-for="s in resultados.solicitudes" :key="`s-${s.id}`" class="tb-search-result" @mousedown.prevent="irSolicitud(s.id)">
-              <FileSearchIcon class="w-4 h-4 shrink-0 text-blue-500" />
-              <div class="flex-1 min-w-0 text-left">
-                <p class="tb-search-result-title">{{ s.paciente }}</p>
-                <p class="tb-search-result-sub">{{ s.documento }} · {{ s.clinica || 'Sin clínica' }}</p>
-              </div>
-              <span class="tb-search-result-badge">{{ s.estado }}</span>
-            </button>
-          </template>
-          <template v-if="resultados.clinicas.length">
-            <p class="tb-search-panel-label">Clínicas</p>
-            <button v-for="c in resultados.clinicas" :key="`c-${c.id}`" class="tb-search-result" @mousedown.prevent="irClinica(c.id)">
-              <HospitalIcon class="w-4 h-4 shrink-0 text-emerald-500" />
-              <div class="flex-1 min-w-0 text-left">
-                <p class="tb-search-result-title">{{ c.nombre }}</p>
-                <p class="tb-search-result-sub">{{ c.ciudad || c.nit }}</p>
-              </div>
-            </button>
-          </template>
-          <p v-if="!resultados.solicitudes.length && !resultados.clinicas.length && !buscandoCarga" class="tb-search-empty">Sin resultados para "{{ query }}"</p>
-        </div>
-      </div>
-
       <!-- Acciones -->
-      <div class="flex items-center gap-1 shrink-0">
-        <NotificationCenter :light="false" scope="interno" />
-        <button class="topbar-action-btn" :title="layout.isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'" @click="layout.toggleDarkMode">
-          <component :is="layout.isDarkMode ? SunIcon : MoonIcon" class="w-4 h-4" />
-        </button>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="topbar-actions-group">
+          <NotificationCenter :light="false" scope="interno" />
+          <span class="topbar-actions-sep"></span>
+          <button class="topbar-action-btn" :title="layout.isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'" @click="layout.toggleDarkMode">
+            <component :is="layout.isDarkMode ? SunIcon : MoonIcon" class="w-4 h-4" />
+          </button>
+        </div>
+        <span class="topbar-divider hidden md:block" aria-hidden="true"></span>
 
         <!-- Usuario -->
         <el-dropdown trigger="click" placement="bottom-end" @command="handleCommand">
@@ -118,7 +77,7 @@
               <span class="topbar-user-name">{{ auth.user?.full_name || 'Usuario' }}</span>
               <span class="topbar-user-role">{{ auth.user?.job_title || 'Personal' }}</span>
             </div>
-            <ChevronDownIcon class="w-3.5 h-3.5 hidden md:block topbar-user-chevron" />
+            <ChevronDownIcon class="w-4 h-4 hidden md:block topbar-user-chevron" />
           </button>
           <template #dropdown>
             <el-dropdown-menu class="w-56">
@@ -144,22 +103,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useLayoutStore } from '@/stores/layout';
 import { useAuthStore } from '@/stores/auth';
 import { usePermission } from '@/composables/usePermission';
 import NotificationCenter from './NotificationCenter.vue';
-import http from '@/plugins/axios';
 import * as icons from '@lucide/vue';
 import {
   ChevronDown as ChevronDownIcon,
-  FileSearch as FileSearchIcon,
-  Hospital as HospitalIcon,
   Key as KeyIcon,
   LogOut as LogOutIcon,
   Moon as MoonIcon,
-  Search as SearchIcon,
   Sun as SunIcon,
   User as UserIcon,
 } from '@lucide/vue';
@@ -202,73 +157,6 @@ const userIniciales = computed(() =>
   (auth.user?.full_name || 'U').trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join(''),
 );
 
-// ── Buscador global (Ctrl+K) — portado del antiguo header ──
-const query = ref('');
-const buscando = ref(false);
-const buscandoCarga = ref(false);
-const buscandoTimer = ref<ReturnType<typeof setTimeout> | null>(null);
-const searchWrap = ref<HTMLElement | null>(null);
-const searchInput = ref<HTMLInputElement | null>(null);
-const resultados = ref<{ solicitudes: any[]; clinicas: any[] }>({ solicitudes: [], clinicas: [] });
-
-function onSearchInput() {
-  buscando.value = true;
-  if (buscandoTimer.value) clearTimeout(buscandoTimer.value);
-  buscandoTimer.value = setTimeout(async () => {
-    const q = query.value.trim();
-    if (q.length < 2) {
-      resultados.value = { solicitudes: [], clinicas: [] };
-      return;
-    }
-    try {
-      buscandoCarga.value = true;
-      const { data } = await http.get('/api/search', { params: { q } });
-      resultados.value = data.data;
-    } catch {
-      resultados.value = { solicitudes: [], clinicas: [] };
-    } finally {
-      buscandoCarga.value = false;
-    }
-  }, 250);
-}
-
-function cerrarBusqueda() {
-  buscando.value = false;
-  query.value = '';
-}
-
-function irSolicitud(id: number) {
-  cerrarBusqueda();
-  router.push({ path: '/solicitudes-referencia', query: { resaltar: id } });
-}
-
-function irClinica(id: number) {
-  cerrarBusqueda();
-  router.push({ path: '/clinicas', query: { resaltar: id } });
-}
-
-function onGlobalKey(e: KeyboardEvent) {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-    e.preventDefault();
-    searchInput.value?.focus();
-  }
-}
-
-function onClickOutside(e: MouseEvent) {
-  if (searchWrap.value && !searchWrap.value.contains(e.target as Node)) {
-    buscando.value = false;
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', onGlobalKey);
-  document.addEventListener('mousedown', onClickOutside);
-});
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onGlobalKey);
-  document.removeEventListener('mousedown', onClickOutside);
-});
-
 function handleCommand(command: string): void {
   if (command === 'logout') {
     void auth.logout();
@@ -281,18 +169,29 @@ function handleCommand(command: string): void {
 </script>
 
 <style scoped>
-header {
+.topbar-shell {
   position: relative;
+  background:
+    radial-gradient(1200px 90px at 15% -30%, rgba(56,130,246,.35), transparent 60%),
+    linear-gradient(95deg, #0b2757 0%, #123a78 45%, #1a56ad 100%);
+  box-shadow: 0 3px 16px rgba(8,22,52,.35);
 }
-header::before {
+.topbar-shell-dark {
+  background:
+    radial-gradient(1200px 90px at 15% -30%, rgba(56,90,180,.22), transparent 60%),
+    linear-gradient(95deg, #0d1322 0%, #121a2e 55%, #15203a 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  box-shadow: none;
+}
+.topbar-shell::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
   pointer-events: none;
 }
-header::after {
+.topbar-shell::after {
   content: '';
   position: absolute;
   bottom: -1px; left: 0; right: 0;
@@ -316,92 +215,110 @@ header::after {
 }
 
 .topbar-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 12px;
+  padding: 7px 13px;
   border-radius: 10px;
   border: none;
   background: transparent;
   font-size: 12.5px;
   font-weight: 600;
-  color: rgba(255,255,255,0.78);
+  color: rgba(255,255,255,0.75);
   cursor: pointer;
   white-space: nowrap;
-  transition: background .15s ease, color .15s ease, transform .15s ease;
+  transition: background .18s ease, color .18s ease, transform .18s ease;
 }
-.topbar-item :deep(svg) { opacity: .75; }
+.topbar-item :deep(svg) { opacity: .7; transition: opacity .18s ease; }
 .topbar-item:hover {
-  background: rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.12);
   color: #fff;
   transform: translateY(-1px);
 }
 .topbar-item:hover :deep(svg) { opacity: 1; }
 .topbar-item-active {
-  background: #ffffff !important;
-  color: var(--rf-primary) !important;
-  box-shadow: 0 6px 16px rgba(15,23,42,0.22), inset 0 -2px 0 rgba(37,99,235,0.15);
-}
-.topbar-item-active :deep(svg) { opacity: 1; color: var(--rf-primary); }
-.dark .topbar-item-active {
-  background: linear-gradient(135deg, var(--rf-primary), var(--rf-primary-2)) !important;
+  background: rgba(255,255,255,0.14) !important;
   color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 4px 12px rgba(8,20,48,.2);
+}
+.topbar-item-active::after {
+  content: '';
+  position: absolute;
+  left: 12px; right: 12px; bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #7dd3fc, #60a5fa);
+}
+.topbar-item-active :deep(svg) { opacity: 1; color: #bae6fd; }
+.dark .topbar-item-active {
+  background: rgba(255,255,255,0.09) !important;
 }
 
+/* Acciones agrupadas en vidrio */
+.topbar-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.08);
+}
+.dark .topbar-actions-group {
+  border-color: rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.05);
+}
+.topbar-actions-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 3px;
+  background: rgba(255,255,255,0.18);
+}
 .topbar-action-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid transparent;
+  border: none;
   background: transparent;
-  color: rgba(255,255,255,0.7);
+  color: rgba(255,255,255,0.72);
   cursor: pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  transition: background .15s ease, color .15s ease, transform .15s ease;
 }
 .topbar-action-btn:hover {
-  background: rgba(255,255,255,0.12);
-  border-color: rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.16);
   color: #fff;
+  transform: translateY(-1px);
 }
 
-/* Perfil destacado: píldora blanca que resalta sobre el navy */
+/* Usuario sin píldora — solo avatar + texto sobre el navy */
 .topbar-user {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 4px 12px 4px 5px;
-  margin-left: 6px;
-  border: 1px solid rgba(255,255,255,0.9);
-  border-radius: 999px;
-  background: rgba(255,255,255,0.96);
-  box-shadow: 0 4px 14px rgba(10, 25, 60, .28);
+  padding: 5px 6px;
+  margin-left: 2px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
   cursor: pointer;
-  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  transition: background .15s ease, transform .15s ease;
 }
 .topbar-user:hover {
-  background: #ffffff;
-  border-color: #ffffff;
-  box-shadow: 0 6px 18px rgba(10, 25, 60, .38);
-  transform: translateY(-1px);
-}
-.dark .topbar-user {
   background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.22);
-  box-shadow: none;
 }
-.dark .topbar-user:hover {
-  background: rgba(255,255,255,0.18);
-  border-color: rgba(255,255,255,0.32);
+.topbar-user:active {
+  transform: scale(0.98);
 }
 .topbar-user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--rf-primary), var(--rf-primary-2, #2563eb));
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35), 0 2px 6px rgba(13,45,107,.35);
+  background: linear-gradient(135deg, #38bdf8, #2563eb 60%, #16468e);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.35), 0 3px 10px rgba(5,15,40,.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -409,7 +326,7 @@ header::after {
   flex-shrink: 0;
 }
 .dark .topbar-user-avatar {
-  background: linear-gradient(135deg, #2563eb, #16468e);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.18), 0 3px 10px rgba(0,0,0,.5);
 }
 .topbar-user-iniciales {
   font-size: 11px;
@@ -417,101 +334,13 @@ header::after {
   color: #fff;
   letter-spacing: 0.03em;
 }
-.topbar-user-chevron { color: #64748b; }
+.topbar-user-chevron { color: rgba(255,255,255,0.6); }
 .dark .topbar-user-chevron { color: rgba(255,255,255,0.55); }
 
-/* ── Buscador global en la topbar (claro sobre azul) ── */
-.tb-search-icon {
-  position: absolute;
-  left: 11px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 14px; height: 14px;
-  color: rgba(255,255,255,0.6);
-  pointer-events: none;
-}
-.tb-search-input {
-  width: 100%;
-  height: 32px;
-  padding: 0 52px 0 32px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.10);
-  color: #fff;
-  font-size: 11.5px;
-  font-weight: 500;
-  outline: none;
-  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
-}
-.tb-search-input::placeholder { color: rgba(255,255,255,0.5); }
-.tb-search-input:focus {
-  background: rgba(255,255,255,0.16);
-  border-color: rgba(255,255,255,0.4);
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.1);
-}
-.tb-search-kbd {
-  position: absolute;
-  right: 9px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 8.5px;
-  font-weight: 700;
-  font-family: inherit;
-  color: rgba(255,255,255,0.7);
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 5px;
-  padding: 1.5px 5px;
-  pointer-events: none;
-}
-.tb-search-panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  width: 320px;
-  max-height: 320px;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  box-shadow: 0 16px 40px rgba(15,23,42,0.18);
-  padding: 6px;
-  z-index: 100;
-}
-.dark .tb-search-panel { background: #1e2536; border-color: rgba(255,255,255,0.1); }
-.tb-search-panel-label {
-  font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em;
-  color: #94a3b8; padding: 6px 8px 3px; margin: 0;
-}
-.tb-search-result {
-  display: flex; align-items: center; gap: 9px;
-  width: 100%; padding: 7px 8px;
-  border: none; background: transparent; border-radius: 8px;
-  cursor: pointer; transition: background .12s ease;
-}
-.tb-search-result:hover { background: #f1f5f9; }
-.dark .tb-search-result:hover { background: rgba(255,255,255,0.06); }
-.tb-search-result-title {
-  font-size: 11.5px; font-weight: 700; color: #1e293b; margin: 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.dark .tb-search-result-title { color: #e2e8f0; }
-.tb-search-result-sub {
-  font-size: 9.5px; color: #94a3b8; margin: 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.tb-search-result-badge {
-  font-size: 8.5px; font-weight: 700; text-transform: capitalize;
-  background: #eff6ff; color: #1d4ed8;
-  border-radius: 999px; padding: 2px 7px; flex-shrink: 0;
-}
-.tb-search-empty {
-  font-size: 11px; color: #94a3b8; text-align: center; padding: 14px 8px; margin: 0;
-}
 .topbar-user-name {
   font-size: 11.5px;
   font-weight: 800;
-  color: var(--rf-primary, #16468e);
+  color: #fff;
   max-width: 140px;
   white-space: nowrap;
   overflow: hidden;
@@ -521,7 +350,7 @@ header::after {
 .topbar-user-role {
   font-size: 9.5px;
   font-weight: 500;
-  color: #64748b;
+  color: rgba(255,255,255,0.6);
 }
 .dark .topbar-user-role { color: rgba(255,255,255,0.55); }
 </style>

@@ -24,6 +24,10 @@ interface SolicitudParaGomedisys {
   telefono_paciente?: string;
   servicio_remision?: string;
   resumen_historia_clinica: string;
+  // Sede de trabajo de Gomedisys donde se registra la referencia
+  // ('URGENCIAS', 'CENTRAL DE ESPECIALISTAS' o 'CAC SANTA BARBARA') — se
+  // elige al aceptar la solicitud.
+  sede?: string;
 }
 
 const SERVIDOR_LOCAL = 'http://localhost:8787';
@@ -47,6 +51,7 @@ function mapearSolicitudParaGomedisys(s: SolicitudParaGomedisys) {
     ciudadOrigen: s.municipio_capita,
     direccionPaciente: s.direccion_paciente || '',
     telefonoPaciente: s.telefono_paciente || '',
+    sede: s.sede || '',
   };
 }
 

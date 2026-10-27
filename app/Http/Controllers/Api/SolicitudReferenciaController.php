@@ -75,6 +75,7 @@ class SolicitudReferenciaController extends Controller
             'codigo_aceptacion' => ['nullable', Rule::requiredIf(fn () => ! $sinDisponibilidad), 'string', 'max:20', Rule::unique('solicitudes_referencia', 'codigo_aceptacion')->ignore($solicitud->id)],
             'hora_llegada' => ['nullable', Rule::requiredIf(fn () => ! $sinDisponibilidad), 'date_format:H:i'],
             'lugar_llegada' => ['nullable', Rule::requiredIf(fn () => ! $sinDisponibilidad), 'string', 'max:150'],
+            'sede' => ['nullable', Rule::requiredIf(fn () => ! $sinDisponibilidad), Rule::in(['URGENCIAS', 'CENTRAL DE ESPECIALISTAS', 'CAC SANTA BARBARA'])],
             'observaciones_respuesta' => ['nullable', 'string'],
         ]);
 
@@ -127,6 +128,7 @@ class SolicitudReferenciaController extends Controller
             'nombre_quien_responde' => $validated['nombre_quien_responde'],
             'hora_llegada' => $validated['hora_llegada'],
             'lugar_llegada' => $validated['lugar_llegada'],
+            'sede' => $validated['sede'] ?? null,
             'observaciones_respuesta' => $validated['observaciones_respuesta'] ?? null,
         ]);
 
@@ -239,6 +241,7 @@ class SolicitudReferenciaController extends Controller
             'codigo_aceptacion' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'en_espera'), 'string', 'max:20', Rule::unique('solicitudes_referencia', 'codigo_aceptacion')->ignore($solicitud->id)],
             'hora_llegada' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'en_espera'), 'date_format:H:i'],
             'lugar_llegada' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'en_espera'), 'string', 'max:150'],
+            'sede' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'en_espera' && ! $solicitud->sede), Rule::in(['URGENCIAS', 'CENTRAL DE ESPECIALISTAS', 'CAC SANTA BARBARA'])],
             'numero_ingreso' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'completado'), 'integer'],
         ]);
 
@@ -252,6 +255,7 @@ class SolicitudReferenciaController extends Controller
             'codigo_aceptacion' => $validated['estado'] === 'en_espera' ? $validated['codigo_aceptacion'] : $solicitud->codigo_aceptacion,
             'hora_llegada' => $validated['estado'] === 'en_espera' ? $validated['hora_llegada'] : $solicitud->hora_llegada,
             'lugar_llegada' => $validated['estado'] === 'en_espera' ? $validated['lugar_llegada'] : $solicitud->lugar_llegada,
+            'sede' => $validated['estado'] === 'en_espera' ? ($validated['sede'] ?? $solicitud->sede) : $solicitud->sede,
             'numero_ingreso' => $validated['estado'] === 'completado' ? $validated['numero_ingreso'] : $solicitud->numero_ingreso,
             'motivo_negacion' => $validated['estado'] === 'negado' ? $validated['motivo'] : $solicitud->motivo_negacion,
             'grupo_negacion' => $validated['estado'] === 'negado' && ! $solicitud->grupo_negacion ? 'no_red' : $solicitud->grupo_negacion,
