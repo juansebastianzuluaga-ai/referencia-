@@ -374,7 +374,7 @@
     </div>
 
     <!-- ── Modal: Detalle ── -->
-    <el-dialog v-model="modalDetalle" width="900px" class="detalle-dialog" :show-close="false" align-center @close="limpiarThumbnails">
+    <el-dialog v-model="modalDetalle" width="1140px" class="detalle-dialog" :show-close="false" align-center @close="limpiarThumbnails">
       <template v-if="solicitudSeleccionada">
         <div class="detalle-content">
           <button type="button" class="detalle-close-btn" @click="cerrarDetalle">
@@ -2398,14 +2398,42 @@ usePolling(() => {
 
 <style scoped>
 .ph-solicitudes {
-  background: linear-gradient(160deg, #eef4fc 0%, #e3edf8 40%, #f0f5fa 100%);
+  background:
+    radial-gradient(ellipse at 4% 0%, rgba(88, 142, 211, .12), transparent 34%),
+    linear-gradient(160deg, #f4f7fb 0%, #edf2f8 52%, #f6f8fb 100%);
+}
+.dark .ph-solicitudes {
+  background:
+    radial-gradient(ellipse at 4% 0%, rgba(59, 130, 246, .12), transparent 34%),
+    linear-gradient(160deg, #111827 0%, #151d2b 52%, #111827 100%);
 }
 
 /* ── Stat cards ── */
 .sol-stats-bar {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: .75rem;
+  gap: .65rem;
+}
+.sol-stats-bar :deep(.stat-card-pastel) {
+  min-height: 70px;
+  border-radius: 14px !important;
+  box-shadow: 0 3px 12px rgba(24, 54, 94, .07);
+}
+.sol-stats-bar :deep(.stat-card-pastel:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(24, 54, 94, .12);
+}
+.sol-stats-bar :deep(.stat-pastel-icon) {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+.sol-stats-bar :deep(.stat-pastel-value) { font-size: 22px; }
+.sol-stats-bar :deep(.stat-pastel-label) { font-size: 9px; }
+.sol-stats-bar :deep(.stat-pastel-sparkline) {
+  right: 10px;
+  bottom: 8px;
+  opacity: .65;
 }
 @media (max-width: 900px) {
   .sol-stats-bar { grid-template-columns: repeat(2, 1fr); }
@@ -2475,10 +2503,11 @@ usePolling(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: .5rem .8rem;
-  border-top: 1px solid #f1f5f9;
-  background: #fafbfc;
+  padding: .55rem .8rem;
+  border-top: 1px solid #e8edf4;
+  background: #fbfcfe;
 }
+.dark .sol-pagination { border-top-color: #293548; background: #141b27; }
 .sol-pagination-info {
   font-size: 11px;
   color: #64748b;
@@ -2495,7 +2524,7 @@ usePolling(() => {
   justify-content: center;
   width: 28px; height: 28px;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #fff;
   color: #64748b;
   cursor: pointer;
@@ -2949,20 +2978,21 @@ usePolling(() => {
 /* ── Filter bar ── */
 .sol-filter-bar {
   display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
-  padding: .55rem .9rem;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #f0f6ff 0%, #e6efff 50%, #f0f9ff 100%);
-  border: 1px solid #b8c8e0;
-  box-shadow: 0 3px 16px rgba(13, 45, 107, 0.07), inset 0 1px 0 rgba(255,255,255,0.6);
+  padding: .45rem .65rem;
+  border-radius: 13px;
+  background: rgba(255,255,255,.94);
+  border: 1px solid #dce5f0;
+  box-shadow: 0 3px 12px rgba(24, 54, 94, .06);
   position: relative;
   /* Stacking context: el panel de filtros queda siempre sobre el thead sticky */
   z-index: 30;
-  transition: box-shadow .3s ease, transform .3s ease;
+  transition: box-shadow .2s ease, border-color .2s ease;
 }
 .sol-filter-bar:hover {
-  box-shadow: 0 5px 24px rgba(13, 45, 107, 0.11), inset 0 1px 0 rgba(255,255,255,0.6);
-  transform: translateY(-1px);
+  border-color: #cbd8e8;
+  box-shadow: 0 5px 16px rgba(24, 54, 94, .09);
 }
+.dark .sol-filter-bar { background: #171f2d; border-color: #2d3a4e; }
 .sol-filter-divider {
   width: 1px; height: 24px;
   background: linear-gradient(180deg, transparent, #b8c8e0, transparent);
@@ -2971,16 +3001,17 @@ usePolling(() => {
 
 /* ── Tabs ── */
 .sol-tabs {
-  display: flex; gap: 4px;
+  display: flex; gap: 2px;
   padding: 3px;
-  background: rgba(255,255,255,0.7);
-  border: 1px solid #d4deea;
-  border-radius: 10px;
+  background: #f4f7fb;
+  border: 1px solid #e4eaf2;
+  border-radius: 9px;
 }
+.dark .sol-tabs { background: #111827; border-color: #2d3a4e; }
 .sol-tab {
   display: flex; align-items: center; gap: 6px;
-  padding: 5px 12px;
-  border-radius: 8px;
+  padding: 6px 11px;
+  border-radius: 7px;
   font-size: 12px; font-weight: 600; color: #64748b;
   background: transparent;
   border: none; cursor: pointer;
@@ -2988,9 +3019,9 @@ usePolling(() => {
 }
 .sol-tab:hover { color: #1e2d55; background: rgba(13,45,107,.06); transform: translateY(-1px); }
 .sol-tab-active {
-  background: linear-gradient(135deg, #0D2D6B, #16468E);
+  background: #174582;
   color: #fff;
-  box-shadow: 0 2px 10px rgba(13,45,107,.28);
+  box-shadow: 0 2px 7px rgba(13,45,107,.2);
 }
 .sol-tab-count {
   padding: 1px 6px; border-radius: 999px;
@@ -3028,7 +3059,8 @@ usePolling(() => {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 230px;
+  width: 280px;
+  max-width: calc(100vw - 32px);
   display: flex; flex-direction: column; gap: 8px;
   padding: 10px;
   background: #fff;
@@ -3073,12 +3105,13 @@ usePolling(() => {
 /* ── Table panel ── */
 .sol-table-panel {
   background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(22,70,142,.08);
-  padding: 4px;
+  border: 1px solid #dce5f0;
+  border-radius: 14px;
+  box-shadow: 0 5px 18px rgba(24,54,94,.07);
+  padding: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .dark .sol-table-panel { background: #161b28; border-color: rgba(255,255,255,0.07); }
 
@@ -3097,14 +3130,13 @@ usePolling(() => {
 /* ── Table ── */
 .sol-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
 .sol-th {
-  padding: 8px 10px;
+  padding: 10px 9px;
   text-align: left;
-  font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .05em;
-  color: rgba(255,255,255,.85);
-  background: #16468E;
-  border-bottom: 1px solid #123a78;
-  text-shadow: 0 1px 2px rgba(0,0,0,.25);
+  font-size: 10px; font-weight: 750;
+  text-transform: uppercase; letter-spacing: .055em;
+  color: rgba(255,255,255,.92);
+  background: #173f75;
+  border-bottom: 1px solid #12345f;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3112,15 +3144,17 @@ usePolling(() => {
 .sol-th:first-child { border-radius: 8px 0 0 8px; }
 .sol-th:last-child { border-radius: 0 8px 8px 0; }
 .sol-table-thead th { position: sticky; top: 0; z-index: 10; }
+.dark .sol-table-thead .sol-th { background: #1b2c43; border-bottom-color: #2a3b54; }
 .sol-td {
-  padding: 9px 10px;
-  font-size: 12px; color: #334155;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 10px 9px;
+  font-size: 12.5px; color: #334155;
+  border-bottom: 1px solid #edf1f6;
   vertical-align: middle;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.dark .sol-td { color: #cbd5e1; border-bottom-color: #293548; }
 .sol-table-row { transition: background .15s ease, box-shadow .15s ease; }
 /* Acento lateral por estado — ayuda a leer la cola de un vistazo */
 .sol-row-pendiente { box-shadow: inset 3px 0 0 #fbbf24; }
@@ -3128,7 +3162,10 @@ usePolling(() => {
 .sol-row-en_espera { box-shadow: inset 3px 0 0 #3b82f6; }
 .sol-row-completado { box-shadow: inset 3px 0 0 #22c55e; }
 .sol-row-negado { box-shadow: inset 3px 0 0 #ef4444; }
-.sol-table-row:hover { background: #f8fafc; box-shadow: inset 3px 0 0 var(--rf-primary); }
+.sol-table-row:nth-child(even) { background: #fbfcfe; }
+.sol-table-row:hover { background: #f1f6fd; box-shadow: inset 3px 0 0 var(--rf-primary); }
+.dark .sol-table-row:nth-child(even) { background: #182232; }
+.dark .sol-table-row:hover { background: #1e2b3d; }
 .sol-table-row:hover .sol-table-status { transform: scale(1.06); }
 .sol-table-row:last-child td { border-bottom: none; }
 .sol-th-actions { text-align: right; }
@@ -3136,18 +3173,20 @@ usePolling(() => {
 .sol-table-paciente { display: flex; align-items: center; gap: 10px; }
 .sol-table-paciente-info { min-width: 0; }
 .sol-table-avatar {
-  width: 32px; height: 32px; border-radius: 8px;
+  width: 34px; height: 34px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; font-size: 11px; font-weight: 800;
 }
 .sol-table-name {
-  font-size: 13px; font-weight: 700; color: #1e2d55;
+  font-size: 13px; font-weight: 750; color: #172b49;
   margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.dark .sol-table-name { color: #e2e8f0; }
 .sol-table-clinica-name {
-  font-size: 12px; font-weight: 700; color: #1e40af; margin: 0;
+  font-size: 12.5px; font-weight: 700; color: #1e4b83; margin: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.dark .sol-table-clinica-name { color: #93c5fd; }
 .sol-table-remitente {
   font-size: 10px; color: #94a3b8; margin: 2px 0 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -3238,6 +3277,10 @@ usePolling(() => {
 
 /* ── Modal Detalle ── */
 :deep(.detalle-dialog) {
+  width: min(1140px, 95vw) !important;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
   border-radius: 22px;
   overflow: hidden;
   box-shadow: 0 32px 80px rgba(11, 35, 73, .4), 0 0 0 1px rgba(255,255,255,.08);
@@ -3245,7 +3288,10 @@ usePolling(() => {
 :deep(.detalle-dialog .el-dialog__header) { display: none; }
 :deep(.detalle-dialog .el-dialog__body) {
   padding: 0;
-  max-height: calc(100vh - 3rem);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -3257,7 +3303,8 @@ usePolling(() => {
   background: #F8FAFC;
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 3rem);
+  flex: 1;
+  min-height: 0;
 }
 
 .detalle-close-btn {
@@ -3350,6 +3397,7 @@ usePolling(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* Cards */
@@ -3429,7 +3477,7 @@ usePolling(() => {
   border: 1px solid #e8eef5;
 }
 @media (max-width: 700px) {
-  :deep(.detalle-dialog .el-dialog__body) { overflow-y: auto; }
+  .detalle-body { overflow-y: auto; }
   .detalle-layout { grid-template-columns: 1fr; grid-template-rows: none; }
   .detalle-hc-box { min-height: 110px; max-height: 220px; }
   .detalle-layout-side { overflow-y: visible; }

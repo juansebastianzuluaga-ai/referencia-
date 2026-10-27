@@ -279,7 +279,7 @@
     </div>
 
     <!-- ── Modal: Detalle ── -->
-    <el-dialog v-model="modalDetalle" width="900px" class="detalle-dialog" :show-close="false" align-center @close="limpiarThumbnails">
+    <el-dialog v-model="modalDetalle" width="1140px" class="detalle-dialog" :show-close="false" align-center @close="limpiarThumbnails">
       <template v-if="solicitudSeleccionada">
         <div class="detalle-content">
           <button type="button" class="detalle-close-btn" @click="cerrarDetalle">
@@ -2107,6 +2107,10 @@ usePolling(() => {
 
 /* ── Modal Detalle ── */
 :deep(.detalle-dialog) {
+  width: min(1140px, 95vw) !important;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
   border-radius: 22px;
   overflow: hidden;
   box-shadow: 0 32px 80px rgba(11, 35, 73, .4), 0 0 0 1px rgba(255,255,255,.08);
@@ -2114,14 +2118,24 @@ usePolling(() => {
 :deep(.detalle-dialog .el-dialog__header) { display: none; }
 :deep(.detalle-dialog .el-dialog__body) {
   padding: 0;
-  max-height: calc(100vh - 3rem);
-  overflow-y: auto;
-  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 :deep(.el-overlay) { background-color: rgba(8, 27, 58, .56); backdrop-filter: blur(4px); }
 
-.detalle-content { padding: 0; position: relative; background: #F8FAFC; }
+.detalle-content {
+  padding: 0;
+  position: relative;
+  background: #F8FAFC;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 
 .detalle-close-btn {
   position: absolute;
@@ -2209,7 +2223,14 @@ usePolling(() => {
 
 .detalle-body {
   padding: .7rem 1.1rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
 }
+.detalle-body::-webkit-scrollbar { width: 5px; }
+.detalle-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
 /* Cards */
 .detalle-card {

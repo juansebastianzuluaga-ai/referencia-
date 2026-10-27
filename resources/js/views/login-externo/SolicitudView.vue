@@ -272,7 +272,7 @@
     <!-- Dialog de confirmación -->
     <el-dialog
       v-model="showConfirmResumen"
-      width="720px"
+      width="980px"
       class="confirm-dialog"
       :close-on-click-modal="false"
       :show-close="false"
@@ -284,118 +284,125 @@
           <component :is="XIcon" class="w-4 h-4" />
         </button>
 
-        <div class="confirm-hero">
-          <div class="confirm-hero-dots"></div>
-          <div class="confirm-icon-wrap">
-            <component :is="CheckCircleIcon" class="w-6 h-6" />
+        <div class="confirm-head">
+          <div class="confirm-head-icon">
+            <component :is="ClipboardListIcon" class="w-5 h-5" />
           </div>
-          <div class="confirm-hero-text">
-            <p class="confirm-eyebrow">Solicitud de referencia</p>
-            <h3 class="confirm-title">¿Confirmar envío?</h3>
-            <p class="confirm-subtitle">Revisa el resumen de la solicitud antes de enviarla.</p>
+          <div class="confirm-head-info">
+            <p class="confirm-head-title">Confirmar envío de solicitud</p>
+            <p class="confirm-head-sub">Revisa el resumen de la solicitud antes de enviarla.</p>
           </div>
+          <span class="confirm-head-badge">Paso final</span>
         </div>
 
         <div class="confirm-main">
-          <!-- Tarjeta paciente -->
-          <div class="confirm-patient-card">
-            <div class="confirm-patient-glow"></div>
-            <div class="confirm-patient-avatar">{{ inicialesPaciente }}</div>
-            <div class="confirm-patient-info">
-              <strong>{{ nombreCompleto }}</strong>
-              <div class="confirm-patient-chips">
-                <span class="confirm-patient-chip">{{ form.edad ?? '—' }} años</span>
-                <span class="confirm-patient-chip">{{ form.genero === 'M' ? 'Masculino' : form.genero === 'F' ? 'Femenino' : '—' }}</span>
-                <span class="confirm-patient-chip confirm-patient-chip-doc">{{ form.tipo_documento }} {{ form.numero_documento }}</span>
+          <!-- Una sola cuadrícula mantiene alineadas las columnas hasta la historia clínica -->
+            <!-- Paciente -->
+            <div class="confirm-card confirm-c-paciente">
+              <div class="confirm-card-head">
+                <span class="confirm-card-icon ci-blue"><component :is="UserIcon" class="w-3.5 h-3.5" /></span>
+                <p class="confirm-card-title ct-blue">Paciente</p>
               </div>
-            </div>
-            <div class="confirm-patient-tag">Paciente</div>
-          </div>
-
-          <!-- Detalles de la solicitud -->
-          <div class="confirm-detail-card">
-            <p class="confirm-detail-title"><span class="confirm-detail-bar"></span>Detalles de la solicitud</p>
-
-            <div class="confirm-mini-stats">
-              <div class="confirm-mini-stat ms-blue">
-                <div class="confirm-mini-stat-icon"><component :is="ShieldIcon" class="w-3.5 h-3.5" /></div>
-                <div><span>EPS</span><strong>{{ form.eps || '—' }}</strong></div>
-              </div>
-              <div class="confirm-mini-stat ms-green">
-                <div class="confirm-mini-stat-icon"><component :is="StethoscopeIcon" class="w-3.5 h-3.5" /></div>
-                <div><span>Especialidad</span><strong>{{ form.especialidad_requerida || '—' }}</strong></div>
-              </div>
-              <div class="confirm-mini-stat ms-indigo">
-                <div class="confirm-mini-stat-icon"><component :is="RepeatIcon" class="w-3.5 h-3.5" /></div>
-                <div><span>Tipo de referencia</span><strong>{{ form.tipo_referencia || '—' }}</strong></div>
-              </div>
-              <div class="confirm-mini-stat ms-sky">
-                <div class="confirm-mini-stat-icon"><component :is="MapPinIcon" class="w-3.5 h-3.5" /></div>
-                <div><span>Servicio actual</span><strong>{{ form.servicio_ubicacion_actual || '—' }}</strong></div>
-              </div>
-              <div class="confirm-mini-stat ms-violet">
-                <div class="confirm-mini-stat-icon"><component :is="FileTextIcon" class="w-3.5 h-3.5" /></div>
-                <div><span>Diagnóstico principal</span><strong>{{ diagnosticoPrincipalTexto }}</strong></div>
+              <div class="confirm-card-body">
+                <div class="confirm-data-row"><span>Nombre</span><strong>{{ nombreCompleto }}</strong></div>
+                <div class="confirm-data-row"><span>Documento</span><strong>{{ form.tipo_documento }} {{ form.numero_documento }}</strong></div>
+                <div class="confirm-data-row"><span>Edad / Género</span><strong>{{ form.edad ?? '—' }} años · {{ form.genero === 'M' ? 'Masc.' : form.genero === 'F' ? 'Fem.' : '—' }}</strong></div>
+                <div class="confirm-data-row"><span>EPS</span><strong>{{ form.eps || '—' }}</strong></div>
+                <div class="confirm-data-row"><span>Municipio</span><strong>{{ form.municipio_capita || '—' }}</strong></div>
+                <div v-if="form.direccion_paciente" class="confirm-data-row"><span>Dirección</span><strong>{{ form.direccion_paciente }}</strong></div>
+                <div v-if="form.telefono_paciente" class="confirm-data-row"><span>Teléfono</span><strong>{{ form.telefono_paciente }}</strong></div>
               </div>
             </div>
 
-            <div class="confirm-detail-row-2">
-              <div class="confirm-detail-block">
-                <p class="confirm-detail-label"><component :is="CalendarIcon" class="w-3.5 h-3.5" /> Fecha de solicitud</p>
-                <strong>{{ fechaSolicitudTexto }}</strong>
+            <!-- Remisión -->
+            <div class="confirm-card confirm-c-remision">
+              <div class="confirm-card-head">
+                <span class="confirm-card-icon ci-amber"><component :is="BuildingIcon" class="w-3.5 h-3.5" /></span>
+                <p class="confirm-card-title ct-amber">Remisión</p>
               </div>
-              <div class="confirm-detail-block">
-                <p class="confirm-detail-label"><component :is="BuildingIcon" class="w-3.5 h-3.5" /> Institución remitente</p>
-                <strong>{{ form.institucion_remitente || '—' }}</strong>
-              </div>
-            </div>
-
-            <div class="confirm-detail-block">
-              <p class="confirm-detail-label"><component :is="FileTextIcon" class="w-3.5 h-3.5" /> Historia clínica</p>
-              <div class="confirm-hc-box">{{ form.resumen_historia_clinica || '—' }}</div>
-            </div>
-          </div>
-
-          <!-- Quien remite + adjuntos -->
-          <div class="confirm-bottom">
-            <div class="confirm-remite-card">
-              <div class="confirm-remite-item">
-                <div class="confirm-remite-icon"><component :is="UserCheckIcon" class="w-4 h-4" /></div>
-                <div><span>Quien remite</span><strong>{{ form.quien_remitente || '—' }}</strong></div>
-              </div>
-              <div class="confirm-remite-item">
-                <div class="confirm-remite-icon"><component :is="PhoneIcon" class="w-4 h-4" /></div>
-                <div><span>Teléfono</span><strong>{{ form.telefono_contacto || '—' }}</strong></div>
+              <div class="confirm-card-body">
+                <div class="confirm-data-row"><span>Fecha solicitud</span><strong>{{ fechaSolicitudTexto }}</strong></div>
+                <div class="confirm-data-row"><span>Institución</span><strong>{{ form.institucion_remitente || '—' }}</strong></div>
+                <div class="confirm-data-row"><span>Quien remite</span><strong>{{ form.quien_remitente || '—' }}</strong></div>
+                <div class="confirm-data-row"><span>Teléfono</span><strong>{{ form.telefono_contacto || '—' }}</strong></div>
+                <div class="confirm-data-row"><span>Especialidad</span><strong>{{ form.especialidad_requerida || '—' }}</strong></div>
+                <div class="confirm-data-row"><span>Tipo de referencia</span><strong>{{ form.tipo_referencia || '—' }}</strong></div>
+                <div class="confirm-data-row"><span>Servicio actual</span><strong>{{ form.servicio_ubicacion_actual || '—' }}</strong></div>
               </div>
             </div>
 
-            <div class="confirm-adjuntos-card">
-              <p class="confirm-side-title">
-                <component :is="PaperclipIcon" class="w-3.5 h-3.5" />
-                Adjuntos ({{ adjuntos.length }})
-              </p>
-              <div v-if="adjuntos.length" class="confirm-adjuntos-row">
-                <div v-for="(archivo, i) in adjuntos" :key="archivo.name + i" class="confirm-adjunto-chip">
-                  <img v-if="esImagen(archivo)" :src="previewUrl(archivo)" class="confirm-adjunto-thumb-sm" :alt="archivo.name" @click="abrirLightbox(archivo)" />
-                  <div v-else class="confirm-adjunto-badge-sm" :class="getFileTypeClass(archivo)">{{ getFileTypeLabel(archivo) }}</div>
-                  <span class="confirm-adjunto-name-sm" :title="archivo.name">{{ archivo.name }}</span>
+            <!-- Diagnósticos -->
+            <div class="confirm-card confirm-c-dx">
+              <div class="confirm-card-head">
+                <span class="confirm-card-icon ci-violet"><component :is="ClipboardListIcon" class="w-3.5 h-3.5" /></span>
+                <p class="confirm-card-title ct-violet">Diagnósticos</p>
+              </div>
+              <div class="confirm-card-body">
+                <div v-for="(dx, i) in diagnosticosValidos" :key="i" class="confirm-dx-item">
+                  <strong v-if="dx.codigo_cie10" class="confirm-dx-code">{{ dx.codigo_cie10 }}</strong>
+                  <span class="confirm-dx-desc">
+                    <em v-if="i === 0" class="confirm-dx-principal">Principal</em>
+                    {{ dxTexto(dx) }}
+                  </span>
+                </div>
+                <p v-if="!diagnosticosValidos.length" class="confirm-empty">—</p>
+              </div>
+            </div>
+
+            <!-- Historia clínica -->
+            <div class="confirm-card confirm-hc-card confirm-c-hc">
+              <div class="confirm-card-head">
+                <span class="confirm-card-icon ci-blue"><component :is="FileTextIcon" class="w-3.5 h-3.5" /></span>
+                <p class="confirm-card-title ct-blue">Historia clínica</p>
+              </div>
+              <div class="confirm-card-body confirm-hc-body">
+                <div class="confirm-hc-box">{{ form.resumen_historia_clinica || '—' }}</div>
+              </div>
+            </div>
+
+            <!-- Condiciones + Adjuntos -->
+            <div class="confirm-side-col confirm-c-side">
+              <div class="confirm-card">
+                <div class="confirm-card-head">
+                  <span class="confirm-card-icon ci-slate"><component :is="StethoscopeIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="confirm-card-title ct-slate">Condiciones</p>
+                </div>
+                <div class="confirm-card-body">
+                  <div class="confirm-data-row"><span>Aislamiento</span><strong>{{ form.requiere_aislamiento ? ('Sí' + (form.tipo_aislamiento ? ' — ' + form.tipo_aislamiento : '')) : 'No' }}</strong></div>
+                  <div class="confirm-data-row"><span>Gestante</span><strong>{{ form.gestante ? 'Sí' : 'No' }}</strong></div>
+                  <div v-if="form.condicion_especial" class="confirm-data-row"><span>Condición especial</span><strong>{{ form.condicion_especial }}</strong></div>
+                  <div v-if="form.observaciones" class="confirm-data-row"><span>Observaciones</span><strong>{{ form.observaciones }}</strong></div>
                 </div>
               </div>
-              <p v-else class="confirm-side-empty">Sin archivos adjuntos</p>
+              <div class="confirm-card">
+                <div class="confirm-card-head">
+                  <span class="confirm-card-icon ci-rose"><component :is="PaperclipIcon" class="w-3.5 h-3.5" /></span>
+                  <p class="confirm-card-title ct-rose">Adjuntos ({{ adjuntos.length }})</p>
+                </div>
+                <div class="confirm-card-body">
+                  <div v-if="adjuntos.length" class="confirm-adjuntos-row">
+                    <div v-for="(archivo, i) in adjuntos" :key="archivo.name + i" class="confirm-adjunto-chip">
+                      <img v-if="esImagen(archivo)" :src="previewUrl(archivo)" class="confirm-adjunto-thumb-sm" :alt="archivo.name" @click="abrirLightbox(archivo)" />
+                      <div v-else class="confirm-adjunto-badge-sm" :class="getFileTypeClass(archivo)">{{ getFileTypeLabel(archivo) }}</div>
+                      <span class="confirm-adjunto-name-sm" :title="archivo.name">{{ archivo.name }}</span>
+                    </div>
+                  </div>
+                  <p v-else class="confirm-empty">Sin archivos adjuntos</p>
+                </div>
+              </div>
             </div>
-          </div>
         </div>
       </div>
 
       <template #footer>
         <div class="confirm-footer">
-          <el-button class="rf-btn-back" @click="showConfirmResumen = false">
-            <component :is="XIcon" class="w-3.5 h-3.5 mr-1" /> Cancelar
-          </el-button>
           <p class="confirm-footer-note">
             <component :is="ShieldIcon" class="w-3.5 h-3.5" />
             Tu información está protegida y será tratada confidencialmente.
           </p>
+          <el-button class="rf-btn-back" @click="showConfirmResumen = false">
+            <component :is="XIcon" class="w-3.5 h-3.5 mr-1" /> Cancelar
+          </el-button>
           <el-button type="primary" class="rf-btn-submit confirm-submit-btn" :loading="guardando" @click="guardar">
             <component :is="SendIcon" class="w-3.5 h-3.5 mr-1" /> Confirmar y enviar
           </el-button>
@@ -910,10 +917,6 @@ const nombreCompleto = computed(() =>
     .join(' ') || '—'
 );
 
-const inicialesPaciente = computed(() =>
-  ((form.value.primer_nombre?.[0] ?? '') + (form.value.primer_apellido?.[0] ?? '')).toUpperCase() || '?'
-);
-
 const progresoFormulario = computed(() => {
   const campos = [
     'tipo_documento', 'numero_documento', 'primer_nombre', 'primer_apellido',
@@ -955,6 +958,16 @@ const diagnosticoPrincipalTexto = computed(() => {
   const primero = validos[0].descripcion;
   return validos.length > 1 ? `${primero} (y ${validos.length - 1} más)` : primero;
 });
+
+const diagnosticosValidos = computed(() =>
+  diagnosticos.value.filter(d => d.descripcion.trim() || d.codigo_cie10.trim())
+);
+
+function dxTexto(dx: DiagnosticoItem): string {
+  const desc = dx.descripcion.trim();
+  const cod = dx.codigo_cie10.trim();
+  return cod && desc.startsWith(cod) ? desc.slice(cod.length).replace(/^\s*[—–-]\s*/, '') : desc || cod || '—';
+}
 
 const fechaSolicitudTexto = computed(() => {
   if (!fechaSolicitud.value) return '—';
@@ -1401,6 +1414,13 @@ function limpiarFormulario() {
   color: #475569; font-size: .7rem; font-weight: 600;
   padding-bottom: .12rem; line-height: 1.2;
   min-height: calc(1.2em + .15rem);
+  position: relative;
+  display: block;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 22px;
 }
 :deep(.rf-form-col .el-form-item__error) { display: none; }
 :deep(.rf-form-col .el-input__wrapper),
@@ -1815,9 +1835,9 @@ function limpiarFormulario() {
 .rf-gestante-btns { display: flex; gap: 6px; width: 100%; }
 .rf-gestante-btn {
   flex: 1;
-  height: 30px;
+  height: 31px;
   border: 1px solid #d4deea;
-  border-radius: 8px;
+  border-radius: 9px;
   background: #fff;
   color: #64748B;
   font-size: 14px;
@@ -1984,20 +2004,36 @@ function limpiarFormulario() {
 }
 
 /* ── Dialog confirmación ── */
+:deep(.confirm-dialog:not(.clinica-dialog)) {
+  width: min(580px, 94vw) !important;
+  height: min(400px, calc(100dvh - 24px)) !important;
+  max-height: calc(100dvh - 24px) !important;
+  margin: 0 auto !important;
+  box-sizing: border-box;
+}
 :deep(.confirm-dialog) {
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 24px 64px rgba(13, 45, 107, .25);
-  max-height: 92vh;
+  max-height: calc(100vh - 3rem);
   display: flex;
   flex-direction: column;
   --el-dialog-padding-primary: 0;
   padding: 0;
 }
 :deep(.confirm-dialog .el-dialog__header) { display: none; }
-:deep(.confirm-dialog .el-dialog__body) { padding: 0; overflow: hidden; flex-shrink: 1; }
-:deep(.confirm-dialog .el-dialog__footer) { padding: 0; }
-.confirm-body { padding: 0; position: relative; background: #F8FAFC; overflow: hidden; }
+:deep(.confirm-dialog .el-dialog__body) { padding: 0; overflow: hidden; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+:deep(.confirm-dialog .el-dialog__footer) { padding: 0; flex-shrink: 0; }
+.confirm-body {
+  padding: 0;
+  position: relative;
+  background: #F8FAFC;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 
 .confirm-close-btn {
   position: absolute;
@@ -2005,7 +2041,7 @@ function limpiarFormulario() {
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 28px; height: 28px;
+  width: 30px; height: 30px;
   border-radius: 50%;
   border: 1px solid #E2E8F0;
   background: #fff;
@@ -2015,60 +2051,60 @@ function limpiarFormulario() {
 }
 .confirm-close-btn:hover { color: #DC2626; border-color: #FCA5A5; background: #FEF2F2; }
 
-.confirm-hero {
+/* Header claro */
+.confirm-head {
   position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
-  gap: .8rem;
-  padding: 1.15rem 2.9rem 1.15rem 1.2rem;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 88% -40%, rgba(96, 165, 250, .45), transparent 45%),
-    radial-gradient(circle at 20% 160%, rgba(56, 189, 248, .3), transparent 55%),
-    linear-gradient(118deg, #0c2c63 0%, #16468e 55%, #1e5bbf 100%);
+  gap: .4rem;
+  padding: .38rem 3.7rem .38rem .65rem;
+  background: #fff;
+  border-bottom: 1px solid #EEF2F9;
+  flex-shrink: 0;
 }
-.confirm-hero-dots {
+.confirm-head::before {
+  content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, .14) 1px, transparent 1px);
-  background-size: 14px 14px;
-  mask-image: linear-gradient(115deg, transparent 30%, #000 100%);
-  -webkit-mask-image: linear-gradient(115deg, transparent 30%, #000 100%);
+  background-image: radial-gradient(rgba(79,70,229,.06) 1.4px, transparent 1.4px);
+  background-size: 15px 15px;
+  -webkit-mask-image: linear-gradient(115deg, rgba(0,0,0,.9), transparent 70%);
+  mask-image: linear-gradient(115deg, rgba(0,0,0,.9), transparent 70%);
   pointer-events: none;
 }
-.confirm-icon-wrap {
+.confirm-head-icon {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: 46px; height: 46px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: linear-gradient(145deg, rgba(255,255,255,.28), rgba(255,255,255,.12));
-  border: 1px solid rgba(255, 255, 255, .38);
-  box-shadow: 0 0 0 6px rgba(255, 255, 255, .1), 0 4px 14px rgba(0, 0, 0, .18);
+  width: 29px; height: 29px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  display: grid; place-items: center;
   color: #fff;
-  animation: confirmPop .45s cubic-bezier(.34, 1.56, .64, 1) both;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, .3);
 }
-.confirm-hero-text { position: relative; min-width: 0; }
-.confirm-eyebrow {
-  margin: 0 0 .1rem;
-  font-size: .58rem;
-  font-weight: 800;
-  color: rgba(165, 200, 255, .95);
-  text-transform: uppercase;
-  letter-spacing: .14em;
+.confirm-head-info { position: relative; flex: 1; min-width: 0; }
+.confirm-head-title { margin: 0; color: #0F172A; font-size: .82rem; font-weight: 800; }
+.confirm-head-sub { margin: .1rem 0 0; color: #64748b; font-size: .58rem; }
+.confirm-head-badge {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .22rem .5rem;
+  border-radius: 999px;
+  background: #EEF2FF;
+  color: #4F46E5;
+  font-size: .52rem;
+  font-weight: 700;
 }
-.confirm-title { margin: 0; font-size: 1.08rem; font-weight: 800; color: #fff; letter-spacing: -.015em; }
-.confirm-subtitle { margin: .15rem 0 0; font-size: .72rem; color: rgba(255, 255, 255, .72); }
+.confirm-head-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 
 /* ── Animaciones de entrada del resumen ── */
 @keyframes confirmFadeUp {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
-}
-@keyframes confirmPop {
-  from { opacity: 0; transform: scale(.6); }
-  to { opacity: 1; transform: scale(1); }
 }
 .confirm-main > * { animation: confirmFadeUp .38s ease-out both; }
 .confirm-main > *:nth-child(1) { animation-delay: .05s; }
@@ -2140,240 +2176,150 @@ function limpiarFormulario() {
 }
 
 .confirm-main {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: .3rem;
+  padding: .32rem .48rem .35rem;
+  min-width: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Keep every section on the same three-column grid as the clinical history. */
+.confirm-c-paciente { grid-column: 1; grid-row: 1; }
+.confirm-c-remision { grid-column: 2; grid-row: 1; }
+.confirm-c-dx { grid-column: 3; grid-row: 1; }
+.confirm-c-hc { grid-column: 1 / 3; grid-row: 2; }
+.confirm-c-side { grid-column: 3; grid-row: 2; }
+
+.confirm-c-dx .confirm-card-body {
+  max-height: 150px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.confirm-c-dx .confirm-card-body::-webkit-scrollbar { width: 5px; }
+.confirm-c-dx .confirm-card-body::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+
+.confirm-side-col {
   display: flex;
   flex-direction: column;
-  gap: .5rem;
-  padding: .8rem 1rem .9rem;
+  gap: .3rem;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.confirm-side-col::-webkit-scrollbar { width: 5px; }
+.confirm-side-col::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+.confirm-card {
+  background: #fff;
+  border: 1px solid #d4deea;
+  border-radius: 11px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(22,70,142,.07);
+  min-width: 0;
+}
+.confirm-card-head {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .2rem .38rem .06rem;
+}
+.confirm-card-icon {
+  width: 1.15rem; height: 1.15rem;
+  border-radius: 6px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.ci-blue   { background: #dbeafe; color: #2563eb; }
+.ci-amber  { background: #fef3c7; color: #d97706; }
+.ci-violet { background: #ede9fe; color: #7c3aed; }
+.ci-slate  { background: #f1f5f9; color: #475569; }
+.ci-rose   { background: #fee2e2; color: #dc2626; }
+.confirm-card-title { margin: 0; font-size: .62rem; font-weight: 800; }
+.ct-blue   { color: #1e40af; }
+.ct-amber  { color: #b45309; }
+.ct-violet { color: #6d28d9; }
+.ct-slate  { color: #334155; }
+.ct-rose   { color: #b91c1c; }
+.confirm-card-body { padding: .04rem .4rem .25rem; }
+.confirm-data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .25rem;
+  padding: .035rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.confirm-data-row:last-child { border-bottom: 0; }
+.confirm-data-row span { font-size: .52rem; font-weight: 600; color: #94A3B8; flex-shrink: 0; }
+.confirm-data-row strong {
+  font-size: .56rem;
+  font-weight: 700;
+  color: #1E293B;
+  text-align: right;
+  word-break: break-word;
+  line-height: 1.2;
   min-width: 0;
 }
 
-/* Tarjeta paciente */
-.confirm-patient-card {
-  position: relative;
+.confirm-hc-card { display: flex; flex-direction: column; min-height: 0; }
+.confirm-hc-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.confirm-empty { margin: 0; font-size: .62rem; color: #94A3B8; font-style: italic; }
+
+.confirm-dx-item {
   display: flex;
-  align-items: center;
-  gap: .7rem;
-  padding: .7rem .85rem;
-  border-radius: 14px;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 95% -60%, rgba(167, 139, 250, .5), transparent 55%),
-    linear-gradient(120deg, #312E81 0%, #4338CA 55%, #6D28D9 100%);
-  box-shadow: 0 8px 22px rgba(67, 56, 202, .28);
-  min-width: 0;
+  align-items: flex-start;
+  gap: 5px;
+  padding: .18rem .3rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
 }
-.confirm-patient-glow {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, .16) 1px, transparent 1px);
-  background-size: 12px 12px;
-  mask-image: linear-gradient(105deg, #000 0%, transparent 45%);
-  -webkit-mask-image: linear-gradient(105deg, #000 0%, transparent 45%);
-  pointer-events: none;
-}
-.confirm-patient-avatar {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 42px; height: 42px;
+.confirm-dx-item + .confirm-dx-item { margin-top: .3rem; }
+.confirm-dx-code {
   flex-shrink: 0;
-  border-radius: 50%;
-  background: linear-gradient(145deg, rgba(255,255,255,.32), rgba(255,255,255,.12));
-  border: 1.5px solid rgba(255, 255, 255, .45);
-  color: #fff;
-  font-size: .85rem;
-  font-weight: 800;
-  letter-spacing: .03em;
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, .1);
-}
-.confirm-patient-info { position: relative; display: flex; flex-direction: column; gap: .28rem; min-width: 0; flex: 1; }
-.confirm-patient-info strong { font-size: .82rem; font-weight: 800; color: #fff; letter-spacing: .01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.confirm-patient-chips { display: flex; flex-wrap: wrap; gap: .3rem; min-width: 0; }
-.confirm-patient-chip {
-  padding: .14rem .5rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .16);
-  border: 1px solid rgba(255, 255, 255, .22);
+  padding: .1rem .42rem;
+  border-radius: 6px;
+  background: #ede9fe;
+  color: #6d28d9;
   font-size: .58rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, .92);
-  white-space: nowrap;
+  font-weight: 800;
+  font-family: ui-monospace, monospace;
 }
-.confirm-patient-chip-doc { background: rgba(255, 255, 255, .24); font-weight: 800; }
-.confirm-patient-tag {
-  position: relative;
-  flex-shrink: 0;
-  align-self: flex-start;
-  padding: .16rem .55rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .18);
-  border: 1px solid rgba(255, 255, 255, .28);
+.confirm-dx-desc { font-size: .56rem; font-weight: 600; color: #334e70; line-height: 1.3; min-width: 0; }
+.confirm-dx-principal {
+  font-style: normal;
   font-size: .52rem;
   font-weight: 800;
-  color: #fff;
   text-transform: uppercase;
-  letter-spacing: .1em;
-}
-
-/* Tarjeta detalles */
-.confirm-detail-card {
-  background: #fff;
-  border: 1px solid #E8EDF5;
-  border-radius: 14px;
-  padding: .65rem .8rem .7rem;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, .05);
-  min-width: 0;
-}
-.confirm-detail-title {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  margin: 0 0 .4rem;
-  font-size: .72rem;
-  font-weight: 800;
-  color: #0F172A;
-}
-.confirm-detail-bar {
-  width: 3px; height: 12px;
-  border-radius: 2px;
-  background: linear-gradient(180deg, #4F46E5, #7C3AED);
-  flex-shrink: 0;
-}
-.confirm-mini-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: .4rem;
-  margin-bottom: .4rem;
-}
-.confirm-mini-stat {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  min-width: 0;
-  padding: .42rem .5rem;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  transition: transform .15s ease;
-}
-.confirm-mini-stat:hover { transform: translateY(-1px); }
-.confirm-mini-stat-icon {
-  display: grid;
-  place-items: center;
-  width: 26px; height: 26px;
-  flex-shrink: 0;
-  border-radius: 8px;
-}
-.ms-blue   { background: #EFF6FF; border-color: #DBEAFE; }
-.ms-blue   .confirm-mini-stat-icon { background: #DBEAFE; color: #2563EB; }
-.ms-green  { background: #F0FDF4; border-color: #BBF7D0; }
-.ms-green  .confirm-mini-stat-icon { background: #DCFCE7; color: #16A34A; }
-.ms-indigo { background: #EEF2FF; border-color: #C7D2FE; }
-.ms-indigo .confirm-mini-stat-icon { background: #E0E7FF; color: #4F46E5; }
-.ms-sky    { background: #F0F9FF; border-color: #BAE6FD; }
-.ms-sky    .confirm-mini-stat-icon { background: #E0F2FE; color: #0284C7; }
-.ms-violet { background: #F5F3FF; border-color: #DDD6FE; }
-.ms-violet .confirm-mini-stat-icon { background: #EDE9FE; color: #7C3AED; }
-.confirm-mini-stat > div { min-width: 0; display: flex; flex-direction: column; }
-.confirm-mini-stat span { font-size: .52rem; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: .02em; }
-.confirm-mini-stat strong { font-size: .64rem; font-weight: 700; color: #1E293B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.confirm-detail-divider { height: 1px; background: #F1F5F9; margin: .45rem 0; }
-.confirm-detail-block { margin-bottom: .35rem; min-width: 0; }
-.confirm-detail-block:last-child { margin-bottom: 0; }
-.confirm-detail-label {
-  display: flex; align-items: center; gap: .25rem;
-  margin: 0 0 .15rem;
-  font-size: .56rem; font-weight: 700; color: #94A3B8;
-  text-transform: uppercase; letter-spacing: .02em;
-}
-.confirm-detail-value, .confirm-detail-block strong { font-size: .68rem; font-weight: 700; color: #1E293B; word-break: break-word; }
-.confirm-detail-row-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: .4rem .6rem;
-  margin-bottom: .45rem;
-  min-width: 0;
-}
-.confirm-clamp {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  letter-spacing: .04em;
+  color: #7c3aed;
+  margin-right: .2rem;
 }
 .confirm-hc-box {
-  max-height: 2.9rem;
+  flex: 1;
+  min-height: 60px;
   overflow-y: auto;
-  padding: .45rem .6rem .45rem .7rem;
+  scrollbar-width: thin;
+  padding: .25rem .4rem .25rem .45rem;
   border-radius: 0 8px 8px 0;
   background: #F8FAFC;
   border: 1px solid #EEF2F7;
   border-left: 3px solid #4F46E5;
-  font-size: .66rem;
+  font-size: .57rem;
   font-weight: 600;
   color: #1E293B;
-  line-height: 1.5;
+  line-height: 1.35;
   word-break: break-word;
-  scrollbar-width: thin;
+  white-space: pre-line;
 }
 .confirm-hc-box::-webkit-scrollbar { width: 5px; }
 .confirm-hc-box::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
 .confirm-hc-box::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
-/* Quien remite + adjuntos */
-.confirm-bottom {
-  display: grid;
-  grid-template-columns: 1fr 220px;
-  gap: .5rem;
-  min-width: 0;
-}
-.confirm-remite-card {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: .35rem .5rem;
-  align-content: start;
-  padding: .55rem .7rem;
-  border-radius: 14px;
-  background: linear-gradient(120deg, #FFFBEB, #FEF3C7);
-  border: 1px solid #FDE68A;
-  box-shadow: 0 3px 10px rgba(217, 119, 6, .08);
-  min-width: 0;
-}
-.confirm-remite-item {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  min-width: 0;
-}
-.confirm-remite-icon {
-  display: grid; place-items: center;
-  width: 26px; height: 26px;
-  border-radius: 50%;
-  background: #FEF3C7; color: #D97706;
-  flex-shrink: 0;
-}
-.confirm-remite-item > div { min-width: 0; }
-.confirm-remite-card span { display: block; font-size: .52rem; font-weight: 700; color: #B45309; text-transform: uppercase; letter-spacing: .02em; }
-.confirm-remite-card strong { font-size: .66rem; font-weight: 800; color: #92400E; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-
-/* Adjuntos */
-.confirm-adjuntos-card {
-  border-radius: 14px;
-  padding: .55rem .7rem;
-  min-width: 0;
-  background: #fff;
-  border: 1px solid #E8EDF5;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, .05);
-}
-.confirm-side-title {
-  display: flex;
-  align-items: center;
-  gap: .3rem;
-  margin: 0 0 .4rem;
-  font-size: .64rem;
-  font-weight: 800;
-  color: #0F172A;
-}
-.confirm-side-empty { margin: 0; font-size: .6rem; color: #94A3B8; font-weight: 500; }
 .confirm-adjuntos-row {
   display: flex;
   flex-wrap: wrap;
@@ -2417,8 +2363,8 @@ function limpiarFormulario() {
 .confirm-footer {
   display: flex;
   align-items: center;
-  gap: .6rem;
-  padding: .55rem 1rem;
+  gap: .35rem;
+  padding: .3rem .55rem;
   background: #fff;
   border-top: 1px solid #F1F5F9;
   flex-shrink: 0;
@@ -2427,28 +2373,41 @@ function limpiarFormulario() {
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: .3rem;
   margin: 0;
-  font-size: .62rem;
+  font-size: .5rem;
   font-weight: 500;
   color: #94A3B8;
-  text-align: center;
 }
 .confirm-submit-btn {
-  background: linear-gradient(135deg, #4F46E5, #7C3AED) !important;
-  box-shadow: 0 4px 14px rgba(124, 58, 237, .3) !important;
+  background: linear-gradient(135deg, #16468e, #2563eb) !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(22, 70, 142, .35) !important;
+}
+.confirm-footer :deep(.el-button) {
+  height: 28px !important;
+  padding: 0 10px !important;
+  font-size: .62rem;
 }
 .confirm-submit-btn:hover {
-  background: linear-gradient(135deg, #5B52F0, #8B47E8) !important;
-  box-shadow: 0 6px 20px rgba(124, 58, 237, .4) !important;
+  background: linear-gradient(135deg, #1a52a8, #3b82f6) !important;
+  box-shadow: 0 6px 20px rgba(22, 70, 142, .45) !important;
 }
 
-@media (max-width: 760px) {
-  .confirm-bottom { grid-template-columns: 1fr; }
-  .confirm-mini-stats { grid-template-columns: 1fr 1fr; }
-  .confirm-remite-card { grid-template-columns: 1fr; }
-  .confirm-detail-row-2 { grid-template-columns: 1fr; }
+@media (max-width: 640px) {
+  .confirm-main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+    overflow-y: auto;
+  }
+  .confirm-c-paciente,
+  .confirm-c-remision,
+  .confirm-c-dx,
+  .confirm-c-hc,
+  .confirm-c-side { grid-column: auto; grid-row: auto; }
+  .confirm-hc-box { min-height: 110px; max-height: 220px; flex: none; }
+  .confirm-side-col { overflow-y: visible; }
 }
 
 /* ── Lightbox: vista ampliada de imagen ── */
@@ -2670,18 +2629,26 @@ function limpiarFormulario() {
 }
 
 /* ── Validación visual: check verde en campos válidos ── */
+@keyframes rf-check-pop {
+  from { transform: scale(.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
 :deep(.rf-form-col .el-form-item.rf-field.is-success .el-form-item__label::after) {
   content: '✓';
+  position: absolute;
+  right: 1px;
+  top: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px; height: 16px;
-  margin-left: 6px;
+  width: 15px; height: 15px;
   border-radius: 50%;
   background: #22c55e;
   color: #fff;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
+  box-shadow: 0 0 0 2px #fff;
+  animation: rf-check-pop .2s cubic-bezier(.34, 1.56, .64, 1) both;
 }
 :deep(.rf-form-col .el-form-item.rf-field.is-success .el-form-item__label) {
   color: #16468E;
