@@ -43,18 +43,18 @@
 
       <!-- Tendencia -->
       <div class="panel-card-ui p-3.5 flex flex-col lg:col-span-6 min-h-0">
-        <div class="panel-head panel-head--navy">
+        <div class="panel-head">
           <div class="panel-head-icon">
             <component :is="BarChart3Icon" class="w-3.5 h-3.5" />
           </div>
           <p class="panel-head-title">Tendencia de solicitudes</p>
-          <PanelHelp inverso texto="Cuántas solicitudes llegan a lo largo del tiempo. Cambia entre día, semana, mes o año; la línea tenue compara con el período anterior." />
+          <PanelHelp texto="Cuántas solicitudes llegan a lo largo del tiempo. Cambia entre día, semana, mes o año; la línea tenue compara con el período anterior." />
           <div class="chart-legend">
-            <span class="chart-legend-pill">
+            <span class="chart-legend-pill chart-legend-pill--actual">
               <span class="chart-legend-dot" style="background:#8fb5f5"></span>Actual
             </span>
           </div>
-          <PeriodoSeg v-model="granularidad" v-model:fecha="fechaTendencia" sin-todo inverso />
+          <PeriodoSeg v-model="granularidad" v-model:fecha="fechaTendencia" sin-todo />
         </div>
         <div class="flex-1 min-h-0">
           <apexchart :key="'tend-' + granularidad + (isDark ? 'd' : 'l')" type="line" height="100%" :options="diaChartOptions" :series="diaChartSeries" />
@@ -1323,29 +1323,6 @@ usePolling(() => {
    el visible es el flotante .sla-tip teleportado a <body>. */
 :deep(.apexcharts-tooltip) { display: none !important; }
 
-/* ── Cabecera navy del gráfico de tendencia (como los headers de módulo) ── */
-.panel-head--navy {
-  background: #16468e;
-  border: 1px solid #123a78;
-  border-radius: 10px;
-  padding: 6px 9px;
-  margin-bottom: 9px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 3px 8px rgba(13,45,107,.22);
-}
-.panel-head--navy .panel-head-title { color: #fff; font-size: 12px; }
-.panel-head--navy .panel-head-icon {
-  width: 22px; height: 22px;
-  background: rgba(255,255,255,.14);
-  border: 1px solid rgba(255,255,255,.25);
-  box-shadow: none;
-}
-.panel-head--navy .chart-legend-pill {
-  color: rgba(255,255,255,.82);
-  background: rgba(255,255,255,.1);
-  border: 1px solid rgba(255,255,255,.16);
-  padding: 2px 8px;
-  font-size: 9px;
-}
 
 .estado-donut-empty {
   position: absolute; inset: 0;

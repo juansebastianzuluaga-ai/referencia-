@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Clinica;
 
 use App\Http\Controllers\Controller;
+use App\Mail\NuevaEvolucionPaciente;
 use App\Mail\NuevaSolicitudReferenciaInterna;
 use App\Models\CiudadGomedisys;
 use App\Models\Clinica;
@@ -16,6 +17,7 @@ use App\Models\User;
 use App\Services\NominatimGeocodingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -401,6 +403,28 @@ class SolicitudReferenciaController extends Controller
             'titulo' => 'Evolución del paciente',
             'descripcion' => $evolucion->nota,
         ]);
+
+        // Aviso por correo al equipo interno — mismos destinatarios que la
+        // notificación de nueva solicitud. Si el correo falla no se bloquea
+        // el registro de la nota (ya quedó guardada arriba).
+        try {
+            $destinatarios = User::permission('clinicas.view')
+                ->where('is_active', true)
+                ->whereNotNull('email')
+                ->pluck('email')
+                ->all();
+
+            if ($destinatarios === []) {
+                $destinatarios = [config('mail.referencia_interna', env('MAIL_REFERENCIA_INTERNA', 'referencia@cacsantabarbara.co'))];
+            }
+
+            Mail::to($destinatarios)->send(new NuevaEvolucionPaciente($solicitud->load('clinica'), $evolucion));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo enviar el correo de evolución', [
+                'solicitud_id' => $solicitud->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return response()->json(['data' => $evolucion, 'message' => 'Evolución registrada'], 201);
     }

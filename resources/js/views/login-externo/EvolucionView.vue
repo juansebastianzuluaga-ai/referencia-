@@ -84,15 +84,15 @@
           <div class="evo-card-body px-4 py-3 space-y-3">
             <div class="evo-quick-facts">
               <div class="evo-quick-fact">
-                <span>Paciente</span>
+                <span class="evo-quick-fact-icon"><component :is="UserIcon" class="w-3.5 h-3.5" /></span>
                 <strong>{{ sol.genero === 'F' ? 'Femenino' : sol.genero === 'M' ? 'Masculino' : '—' }}<template v-if="sol.edad"> · {{ sol.edad }} años</template></strong>
               </div>
               <div class="evo-quick-fact">
-                <span>Remitido</span>
+                <span class="evo-quick-fact-icon"><component :is="CalendarIcon" class="w-3.5 h-3.5" /></span>
                 <strong>{{ formatFecha(sol.fecha || sol.created_at) }}<template v-if="sol.hora"> · {{ formatHora(sol.hora) }}</template></strong>
               </div>
               <div class="evo-quick-fact">
-                <span>Servicio actual</span>
+                <span class="evo-quick-fact-icon"><component :is="BuildingIcon" class="w-3.5 h-3.5" /></span>
                 <strong>{{ sol.servicio_ubicacion_actual || '—' }}</strong>
               </div>
             </div>
@@ -100,44 +100,49 @@
             <!-- Nueva nota -->
             <div>
               <div class="flex items-center justify-between mb-1.5">
-                <label class="evo-nota-label">Evolución de hoy — {{ hoyLabel }}</label>
+                <label class="evo-nota-label">
+                  <span class="evo-nota-label-icon"><component :is="ClipboardIcon" class="w-3 h-3" /></span>
+                  Evolución de hoy — {{ hoyLabel }}
+                </label>
                 <span v-if="tieneNotaHoy(sol)" class="evo-nota-hoy">
                   <component :is="CheckCircleIcon" class="w-3 h-3" /> Ya registrada hoy
                 </span>
               </div>
-              <div class="flex gap-2 items-start">
-                <textarea
-                  v-model="drafts[sol.id]"
-                  rows="2"
-                  maxlength="2000"
-                  class="evo-textarea"
-                  placeholder="Describa la evolución del paciente: estado clínico, signos, procedimientos, observaciones…"
-                ></textarea>
-                <button
-                  class="evo-save-btn"
-                  :disabled="!drafts[sol.id]?.trim() || guardando.has(sol.id)"
-                  @click="guardarNota(sol)"
-                >
-                  <component :is="guardando.has(sol.id) ? LoaderIcon : SendIcon" class="w-4 h-4" :class="{ 'animate-spin': guardando.has(sol.id) }" />
-                  <span class="hidden sm:inline">{{ guardando.has(sol.id) ? 'Guardando…' : 'Registrar' }}</span>
-                </button>
-              </div>
+              <textarea
+                v-model="drafts[sol.id]"
+                rows="2"
+                maxlength="2000"
+                class="evo-textarea"
+                placeholder="Describa la evolución del paciente: estado clínico, signos, procedimientos, observaciones…"
+              ></textarea>
             </div>
 
-            <!-- Historial de notas -->
-            <div v-if="sol.evoluciones?.length" class="evo-timeline">
-              <div v-for="nota in sol.evoluciones" :key="nota.id" class="evo-nota">
-                <div class="evo-nota-dot"></div>
-                <div class="evo-nota-body">
-                  <div class="evo-nota-fecha">
-                    <component :is="CalendarIcon" class="w-3 h-3" />
-                    {{ formatFecha(nota.created_at) }} · {{ formatHoraNota(nota.created_at) }}
+            <!-- Historial de notas + registrar -->
+            <div class="evo-history-row">
+              <div class="evo-history-box">
+                <template v-if="sol.evoluciones?.length">
+                  <div v-for="nota in sol.evoluciones" :key="nota.id" class="evo-nota">
+                    <div class="evo-nota-dot"></div>
+                    <div class="evo-nota-body">
+                      <div class="evo-nota-fecha">
+                        <component :is="CalendarIcon" class="w-3 h-3" />
+                        {{ formatFecha(nota.created_at) }} · {{ formatHoraNota(nota.created_at) }}
+                      </div>
+                      <p class="evo-nota-texto">{{ nota.nota }}</p>
+                    </div>
                   </div>
-                  <p class="evo-nota-texto">{{ nota.nota }}</p>
-                </div>
+                </template>
+                <p v-else class="evo-sin-notas">Sin evoluciones registradas todavía — anote la primera arriba.</p>
               </div>
+              <button
+                class="evo-save-btn"
+                :disabled="!drafts[sol.id]?.trim() || guardando.has(sol.id)"
+                @click="guardarNota(sol)"
+              >
+                <component :is="guardando.has(sol.id) ? LoaderIcon : SendIcon" class="w-4 h-4" :class="{ 'animate-spin': guardando.has(sol.id) }" />
+                <span class="hidden sm:inline">{{ guardando.has(sol.id) ? 'Guardando…' : 'Registrar' }}</span>
+              </button>
             </div>
-            <p v-else class="evo-sin-notas">Sin evoluciones registradas todavía — anote la primera arriba.</p>
           </div>
         </div>
       </div>
@@ -545,17 +550,31 @@ onMounted(async () => {
 .evo-quick-facts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 1px solid #edf1f7;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #f9fbfe;
+  gap: 8px;
 }
-.dark .evo-quick-facts { background: rgba(15,23,42,.45); border-color: #263352; }
-.evo-quick-fact { display: flex; flex-direction: column; gap: 3px; padding: 9px 12px; min-width: 0; }
-.evo-quick-fact + .evo-quick-fact { border-left: 1px solid #edf1f7; }
-.dark .evo-quick-fact + .evo-quick-fact { border-color: #263352; }
-.evo-quick-fact span { color: #94a3b8; font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-.evo-quick-fact strong { color: #334155; font-size: 11px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evo-quick-fact {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px;
+  min-width: 0;
+  border-radius: 11px;
+  background: #edf3fd;
+  border: 1px solid #e0ebfa;
+}
+.dark .evo-quick-fact { background: rgba(29,44,78,.55); border-color: #263352; }
+.evo-quick-fact-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  color: #fff;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, .3);
+}
+.evo-quick-fact strong { color: #1e3a6e; font-size: 11.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dark .evo-quick-fact strong { color: #cbd5e1; }
 
 .evo-detail-btn {
@@ -648,12 +667,25 @@ onMounted(async () => {
 .dark .evo-dias-chip { background: #1e293b; color: #94a3b8; }
 
 .evo-nota-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #1e3a6e;
   text-transform: capitalize;
 }
-.dark .evo-nota-label { color: #94a3b8; }
+.dark .evo-nota-label { color: #cbd5e1; }
+.evo-nota-label-icon {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.dark .evo-nota-label-icon { background: #1e3a5f; color: #93c5fd; }
 
 .evo-nota-hoy {
   display: inline-flex;
@@ -666,7 +698,7 @@ onMounted(async () => {
 .dark .evo-nota-hoy { color: #4ade80; }
 
 .evo-textarea {
-  flex: 1;
+  width: 100%;
   resize: vertical;
   min-height: 52px;
   padding: 9px 12px;
@@ -692,50 +724,60 @@ onMounted(async () => {
 .dark .evo-textarea::placeholder { color: #475569; }
 .dark .evo-textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
 
+.evo-history-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+.evo-history-box {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #e0ebfa;
+  background: #edf3fd;
+  max-height: 170px;
+  overflow-y: auto;
+}
+.dark .evo-history-box { background: rgba(29,44,78,.55); border-color: #263352; }
+
 .evo-save-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 14px;
-  height: 52px;
-  border-radius: 10px;
+  justify-content: center;
+  gap: 7px;
+  align-self: center;
+  padding: 12px 20px;
+  border-radius: 12px;
   border: none;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 12.5px;
+  font-weight: 800;
   color: #fff;
-  background: linear-gradient(135deg, var(--rf-primary, #0d2d6b), #2563eb);
+  background: linear-gradient(135deg, #1d4ed8, #2563eb 55%, #3b82f6);
   cursor: pointer;
+  flex-shrink: 0;
   transition: opacity .15s ease, transform .15s ease, box-shadow .15s ease;
-  box-shadow: 0 4px 12px rgba(13, 45, 107, 0.25);
+  box-shadow: 0 6px 16px rgba(29, 78, 216, 0.35);
 }
-.evo-save-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(13, 45, 107, 0.32); }
+.evo-save-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(29, 78, 216, 0.42); }
 .evo-save-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
-
-.evo-timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  border-top: 1px dashed #e2e8f0;
-  padding-top: 10px;
-}
-.dark .evo-timeline { border-color: #1f2b45; }
 
 .evo-nota {
   display: flex;
   gap: 10px;
   position: relative;
-  padding: 4px 0 12px 0;
+  padding: 5px 0 11px 0;
 }
 .evo-nota:not(:last-child)::before {
   content: '';
   position: absolute;
   left: 5px;
-  top: 16px;
+  top: 17px;
   bottom: -2px;
   width: 1.5px;
-  background: #e2e8f0;
+  background: #c9dbf6;
 }
-.dark .evo-nota:not(:last-child)::before { background: #263352; }
+.dark .evo-nota:not(:last-child)::before { background: #334a70; }
 
 .evo-nota-dot {
   width: 11px;
@@ -767,13 +809,12 @@ onMounted(async () => {
 .dark .evo-nota-texto { color: #cbd5e1; }
 
 .evo-sin-notas {
+  margin: 0;
   font-size: 11.5px;
-  color: #a5b3c9;
+  color: #7d90ae;
   font-style: italic;
-  border-top: 1px dashed #e2e8f0;
-  padding-top: 10px;
 }
-.dark .evo-sin-notas { color: #475569; border-color: #1f2b45; }
+.dark .evo-sin-notas { color: #64748b; }
 
 /* Vacío / login */
 .evo-login-prompt {
@@ -950,8 +991,9 @@ onMounted(async () => {
 
 @media (max-width: 640px) {
   .evo-quick-facts { grid-template-columns: 1fr; }
-  .evo-quick-fact + .evo-quick-fact { border-left: 0; border-top: 1px solid #edf1f7; }
-  .dark .evo-quick-fact + .evo-quick-fact { border-color: #263352; }
+  .evo-history-row { flex-direction: column; }
+  .evo-history-box { max-height: none; }
+  .evo-save-btn { align-self: stretch; }
   .evo-card-head { align-items: flex-start; }
   .evo-card-head > div:nth-child(3) { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
   .evo-detail-dialog :deep(.el-dialog__header) { padding: 15px; }
