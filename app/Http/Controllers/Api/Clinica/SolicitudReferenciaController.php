@@ -17,9 +17,12 @@ use App\Models\User;
 use App\Services\NominatimGeocodingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Throwable;
 
 class SolicitudReferenciaController extends Controller
 {
@@ -253,56 +256,99 @@ class SolicitudReferenciaController extends Controller
         $diagnosticos = $validated['diagnosticos'] ?? [];
         unset($validated['adjuntos'], $validated['diagnosticos']);
 
-        $solicitud = SolicitudReferencia::create($validated);
+        $rutasAdjuntos = [];
+        $falloEnvioCorreo = false;
 
-        foreach ($diagnosticos as $dx) {
-            $solicitud->diagnosticos()->create([
-                'codigo_cie10' => $dx['codigo_cie10'] ?? '',
-                'descripcion' => $dx['descripcion'],
+        try {
+            $solicitud = DB::transaction(function () use ($validated, $adjuntos, $diagnosticos, $clinica, &$rutasAdjuntos, &$falloEnvioCorreo): SolicitudReferencia {
+                $solicitud = SolicitudReferencia::create($validated);
+
+                foreach ($diagnosticos as $dx) {
+                    $solicitud->diagnosticos()->create([
+                        'codigo_cie10' => $dx['codigo_cie10'] ?? '',
+                        'descripcion' => $dx['descripcion'],
+                    ]);
+                }
+
+                foreach ($adjuntos as $adjunto) {
+                    $ruta = $adjunto->store("solicitudes-referencia/{$solicitud->id}", 'local');
+                    $rutasAdjuntos[] = $ruta;
+
+                    $solicitud->adjuntos()->create([
+                        'nombre_original' => $adjunto->getClientOriginalName(),
+                        'ruta' => $ruta,
+                        'mime_type' => $adjunto->getMimeType(),
+                        'tamano' => $adjunto->getSize(),
+                    ]);
+                }
+
+                SolicitudReferenciaEvento::create([
+                    'solicitud_referencia_id' => $solicitud->id,
+                    'tipo' => 'creada',
+                    'titulo' => 'Solicitud enviada',
+                    'descripcion' => 'La institución envió la solicitud para revisión.',
+                ]);
+
+                // Al estar en la transacción, las notificaciones internas
+                // también se revierten si no se logra enviar el correo.
+                $institucion = $clinica?->nombre ?? $validated['institucion_remitente'] ?? 'Entidad externa';
+                $paciente = trim("{$validated['primer_nombre']} {$validated['primer_apellido']}");
+                $this->notificarUsuarios(
+                    titulo: 'Nueva solicitud de referencia',
+                    mensaje: "La institución \"{$institucion}\" solicita referencia para el paciente {$paciente} — {$validated['especialidad_requerida']}.",
+                    tipo: 'warning',
+                    link: "/solicitudes-referencia?resaltar={$solicitud->id}",
+                );
+
+                $destinatarios = User::permission('clinicas.view')
+                    ->where('is_active', true)
+                    ->whereNotNull('email')
+                    ->pluck('email')
+                    ->all();
+
+                if ($destinatarios === []) {
+                    $destinatarios = [config('mail.referencia_interna', env('MAIL_REFERENCIA_INTERNA', 'referencia@cacsantabarbara.co'))];
+                }
+
+                $solicitud->load(['adjuntos', 'eventos', 'diagnosticos']);
+
+                try {
+                    // Envío síncrono intencional: la solicitud solo se confirma
+                    // si el servidor de correo acepta el mensaje.
+                    Mail::to($destinatarios)->send(new NuevaSolicitudReferenciaInterna($clinica, $solicitud));
+                } catch (Throwable $exception) {
+                    $falloEnvioCorreo = true;
+
+                    throw $exception;
+                }
+
+                return $solicitud;
+            });
+        } catch (Throwable $exception) {
+            if ($rutasAdjuntos !== []) {
+                try {
+                    Storage::disk('local')->delete($rutasAdjuntos);
+                } catch (Throwable $cleanupException) {
+                    Log::warning('No se pudieron eliminar adjuntos de una solicitud revertida', [
+                        'error' => $cleanupException->getMessage(),
+                    ]);
+                }
+            }
+
+            if (! $falloEnvioCorreo) {
+                throw $exception;
+            }
+
+            Log::error('No se pudo enviar el correo de una nueva solicitud; se revirtió el registro', [
+                'error' => $exception->getMessage(),
             ]);
+
+            return response()->json([
+                'message' => 'No se pudo enviar el correo de notificación. La solicitud no se registró; intente enviarla nuevamente.',
+            ], 503);
         }
 
-        foreach ($adjuntos as $adjunto) {
-            $ruta = $adjunto->store("solicitudes-referencia/{$solicitud->id}", 'local');
-
-            $solicitud->adjuntos()->create([
-                'nombre_original' => $adjunto->getClientOriginalName(),
-                'ruta' => $ruta,
-                'mime_type' => $adjunto->getMimeType(),
-                'tamano' => $adjunto->getSize(),
-            ]);
-        }
-
-        SolicitudReferenciaEvento::create([
-            'solicitud_referencia_id' => $solicitud->id,
-            'tipo' => 'creada',
-            'titulo' => 'Solicitud enviada',
-            'descripcion' => 'La institución envió la solicitud para revisión.',
-        ]);
-
-        // Notificar en campana a usuarios con permisos de referencia
-        $institucion = $clinica?->nombre ?? $validated['institucion_remitente'] ?? 'Entidad externa';
-        $paciente = trim("{$validated['primer_nombre']} {$validated['primer_apellido']}");
-        $this->notificarUsuarios(
-            titulo: 'Nueva solicitud de referencia',
-            mensaje: "La institución \"{$institucion}\" solicita referencia para el paciente {$paciente} — {$validated['especialidad_requerida']}.",
-            tipo: 'warning',
-            link: "/solicitudes-referencia?resaltar={$solicitud->id}",
-        );
-
-        $destinatarios = User::permission('clinicas.view')
-            ->where('is_active', true)
-            ->whereNotNull('email')
-            ->pluck('email')
-            ->all();
-
-        if ($destinatarios === []) {
-            $destinatarios = [config('mail.referencia_interna', env('MAIL_REFERENCIA_INTERNA', 'referencia@cacsantabarbara.co'))];
-        }
-
-        Mail::to($destinatarios)->send(new NuevaSolicitudReferenciaInterna($clinica, $solicitud));
-
-        return response()->json(['data' => $solicitud->load(['adjuntos', 'eventos', 'diagnosticos']), 'message' => 'Solicitud enviada correctamente'], 201);
+        return response()->json(['data' => $solicitud, 'message' => 'Solicitud enviada correctamente'], 201);
     }
 
     private function notificarUsuarios(string $titulo, string $mensaje, string $tipo = 'info', ?string $link = null): void
@@ -419,7 +465,7 @@ class SolicitudReferenciaController extends Controller
             }
 
             Mail::to($destinatarios)->send(new NuevaEvolucionPaciente($solicitud->load('clinica'), $evolucion));
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('No se pudo enviar el correo de evolución', [
                 'solicitud_id' => $solicitud->id,
                 'error' => $e->getMessage(),

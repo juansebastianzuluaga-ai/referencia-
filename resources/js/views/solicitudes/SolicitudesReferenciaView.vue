@@ -222,7 +222,8 @@
                           <el-dropdown-item v-if="s.estado === 'pendiente'" command="negar" :icon="XIcon" class="sol-accion-danger" divided>Negar</el-dropdown-item>
                           <el-dropdown-item v-if="s.estado === 'pendiente_cama'" command="aceptar" :icon="CheckIcon" class="sol-accion-success">Asignar cupo y enviar código</el-dropdown-item>
                           <el-dropdown-item v-if="s.estado === 'en_espera'" command="ingreso" :icon="SearchIcon" class="sol-accion-teal">Consultar ingreso</el-dropdown-item>
-                          <el-dropdown-item v-if="s.estado === 'pendiente_cama' || s.estado === 'en_espera'" command="nota" :icon="StickyNoteIcon" class="sol-accion-amber" divided>Agregar nota</el-dropdown-item>
+                          <el-dropdown-item v-if="s.estado === 'pendiente_cama'" command="evolucion" :icon="SendIcon" class="sol-accion-teal" divided>Solicitar evolución por correo</el-dropdown-item>
+                          <el-dropdown-item v-if="s.estado === 'pendiente_cama' || s.estado === 'en_espera'" command="nota" :icon="StickyNoteIcon" class="sol-accion-amber">Agregar nota</el-dropdown-item>
                           <el-dropdown-item v-if="s.estado !== 'pendiente'" command="cambiar" :icon="RotateCcwIcon" class="sol-accion-violet">Cambiar estado</el-dropdown-item>
                         </el-dropdown-menu>
                       </template>
@@ -2128,8 +2129,30 @@ function manejarAccionFila(comando: string, s: Solicitud) {
     negar: abrirNegar,
     cambiar: abrirCambiar,
     nota: abrirNota,
+    evolucion: solicitarEvolucion,
   };
   acciones[comando]?.(s);
+}
+
+/** Le pide por correo a la clínica la evolución actual del paciente (el correo lleva un enlace directo al módulo de Evolución). */
+async function solicitarEvolucion(s: Solicitud) {
+  try {
+    await ElMessageBox.confirm(
+      `Se enviará un correo a ${s.clinica?.nombre ?? s.institucion_remitente ?? 'la clínica'} pidiendo la evolución de ${nombreCompleto(s)}.`,
+      'Solicitar evolución',
+      { confirmButtonText: 'Enviar correo', cancelButtonText: 'Cancelar', type: 'info' },
+    );
+  } catch {
+    return;
+  }
+  try {
+    const { data } = await http.post(`/api/solicitudes-referencia/${s.id}/solicitar-evolucion`);
+    notify.success(data.message || 'Solicitud de evolución enviada');
+    const idx = solicitudes.value.findIndex(x => x.id === s.id);
+    if (idx !== -1) solicitudes.value[idx] = { ...solicitudes.value[idx], ...data.data };
+  } catch (e: any) {
+    notify.error(e.response?.data?.message || 'No se pudo enviar la solicitud de evolución');
+  }
 }
 
 async function consultarIngreso(s: Solicitud) {
@@ -3374,13 +3397,25 @@ usePolling(() => {
   .sol-reference-name { white-space: normal; }
 }
 @container (max-width: 520px) {
-  .sol-reference-card { grid-template-columns: minmax(0, 1fr) 100px; grid-template-areas: "patient actions" "clinic clinic" "clinical clinical" "state state"; gap: 10px; padding: 12px; }
-  .sol-reference-divider { padding: 8px 0 0; border-left: 0; border-top: 1px solid #dfe8f7; }
+  .sol-reference-card { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "patient actions" "clinic clinic" "clinical clinical" "state state"; align-items: start; gap: 8px; padding: 14px; border-radius: 14px; box-shadow: 0 6px 16px rgba(42,88,149,.09); }
+  .sol-reference-patient { align-items: flex-start; }
+  .sol-reference-name { font-size: 15px; font-weight: 800; letter-spacing: -.01em; white-space: normal; }
+  .sol-reference-avatar { width: 40px; height: 40px; font-size: 13px; }
+  .sol-reference-actions { align-self: start; gap: 6px; }
+  .sol-reference-actions :deep(.el-button) { width: 32px; height: 32px; }
+  .sol-reference-divider { padding: 8px 10px; border: 1px solid rgba(255,255,255,.85); border-left: 3px solid #93b9f5; border-radius: 10px; background: rgba(255,255,255,.62); }
+  .sol-reference-clinical.sol-reference-divider { border-left-color: #7c8cf0; }
+  .sol-reference-label { font-size: 9px; font-weight: 700; letter-spacing: .05em; }
   .sol-reference-clinic-name, .sol-reference-contact, .sol-reference-specialty, .sol-reference-diagnosis { white-space: normal; overflow-wrap: anywhere; }
+  .sol-reference-clinic-name { font-size: 13.5px; }
+  .sol-reference-specialty { font-size: 13px; font-weight: 750; }
   .sol-reference-document { white-space: normal; }
   .sol-reference-insurer-label { display: none; }
-  .sol-reference-state { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-  .sol-reference-date { width: 100%; margin: 0; order: 2; }
+  .sol-reference-state.sol-reference-divider { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; padding: 8px 0 0; border: 0; border-top: 1px dashed rgba(100,130,180,.35); border-radius: 0; background: transparent; }
+  .sol-reference-date { width: 100%; margin: 0; order: 2; font-size: 11px; }
+  .dark .sol-reference-divider { border-color: rgba(255,255,255,.08); border-left-color: #4d8ef7; background: rgba(255,255,255,.045); }
+  .dark .sol-reference-clinical.sol-reference-divider { border-left-color: #8b9bff; }
+  .dark .sol-reference-state.sol-reference-divider { border-color: transparent; border-top: 1px dashed rgba(255,255,255,.16); background: transparent; }
 }
 @media (max-width: 700px) {
   .sol-list-heading { flex-basis: 100%; }

@@ -1244,6 +1244,8 @@ async function guardar() {
     const errors = e.response?.data?.data?.errors || e.response?.data?.errors;
     if (errors) {
       notify.error(Object.values(errors).flat().join('\n'));
+    } else if (e.response?.status === 503) {
+      notify.error(e.response?.data?.message || 'No se pudo enviar el correo y la solicitud no quedó registrada. Intente nuevamente.');
     } else if (e.response?.status === 413) {
       notify.error('Los archivos adjuntos superan el tamaño máximo permitido por el servidor. Reduzca el tamaño o la cantidad e intente de nuevo.');
     } else if (e.response?.status >= 500) {

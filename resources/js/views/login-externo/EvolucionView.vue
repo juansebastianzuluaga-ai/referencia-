@@ -5,8 +5,8 @@
 
     <main class="evo-workspace" :class="{ 'evo-workspace-results': hasSearched }">
       <form
+        v-if="!hasSearched"
         class="evo-lookup-card"
-        :class="{ 'evo-lookup-card-compact': hasSearched }"
         @submit.prevent="buscarPaciente"
       >
         <div class="evo-lookup-icon"><component :is="ClipboardIcon" /></div>
@@ -45,246 +45,172 @@
         <div class="evo-empty-icon"><component :is="busqueda ? SearchIcon : ActivityIcon" class="w-7 h-7" /></div>
         <p class="evo-empty-title">{{ tituloVacio }}</p>
         <p class="evo-empty-sub">{{ subtituloVacio }}</p>
+        <button class="evo-detail-footer-btn evo-empty-retry" type="button" @click="nuevaBusqueda">
+          <component :is="SearchIcon" class="w-3.5 h-3.5" /> Buscar de nuevo
+        </button>
       </div>
 
       <!-- ── Pacientes ── -->
       <div v-else-if="hasSearched && !cargando" class="evo-results-list">
-        <div v-for="sol in solicitudesFiltradas" :id="`evo-card-${sol.id}`" :key="sol.id" class="evo-card rounded-2xl overflow-hidden anim-slide-up">
-          <!-- Cabecera del paciente -->
-          <div class="evo-card-head px-4 py-3 flex items-center gap-3 flex-wrap">
-            <div class="evo-avatar">{{ inicialesPaciente(sol) }}</div>
-            <div class="flex-1 min-w-[160px]">
-              <div class="flex items-center gap-2 flex-wrap">
-                <p class="font-bold text-[13px]" :style="{ color: isDark ? '#e2e8f0' : '#1e2d55' }">
-                  {{ nombrePaciente(sol) }}
-                </p>
-                <span class="evo-id-chip">{{ formatId(sol.id) }}</span>
-                <span v-if="sol.urgencia_vital" class="evo-urgencia-chip">URGENCIA VITAL</span>
-              </div>
-              <p class="text-[11px] mt-0.5" :style="{ color: isDark ? '#94a3b8' : '#8a9ab5' }">
-                {{ sol.tipo_documento }} {{ sol.numero_documento }} · {{ sol.especialidad_requerida }} · {{ sol.eps }}
-              </p>
+        <article v-for="sol in solicitudesFiltradas" :id="`evo-card-${sol.id}`" :key="sol.id" class="evo-card evo-pt-card anim-slide-up">
+          <!-- Paciente + estado -->
+          <header class="evo-pt-head">
+            <div class="evo-avatar evo-avatar-lg">{{ inicialesPaciente(sol) }}</div>
+            <div class="evo-pt-id">
+              <h2>{{ nombrePaciente(sol) }}</h2>
+              <p>{{ sol.tipo_documento }} {{ sol.numero_documento }} · {{ sol.eps || '—' }}</p>
             </div>
-            <div class="flex items-center gap-2 shrink-0 ml-auto">
+            <div class="evo-pt-chips">
+              <span class="evo-id-chip">{{ formatId(sol.id) }}</span>
               <span class="evo-estado-chip" :class="'estado-' + sol.estado">{{ estadoLabel(sol.estado) }}</span>
+              <span v-if="sol.urgencia_vital" class="evo-urgencia-chip">URGENCIA VITAL</span>
               <span class="evo-dias-chip" :title="'Remitido el ' + formatFecha(sol.created_at)">
                 <component :is="ClockIcon" class="w-3 h-3" />
                 {{ diasEsperando(sol) }}
               </span>
-              <button class="evo-detail-btn" type="button" @click="verDetalle(sol)">
-                <component :is="EyeIcon" class="w-3.5 h-3.5" />
-                <span>Ver ficha</span>
-              </button>
+            </div>
+          </header>
+
+          <div class="evo-pt-scroll">
+            <div class="evo-detail-top">
+              <!-- Información del paciente -->
+              <section class="evo-panel evo-panel-blue">
+                <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="UserIcon" class="w-4 h-4" /></span> Información del paciente</div>
+                <div class="evo-info-rows">
+                  <div class="evo-info-row"><span>Documento</span><strong>{{ sol.tipo_documento }} {{ sol.numero_documento }}</strong></div>
+                  <div class="evo-info-row"><span>Edad / Género</span><strong>{{ sol.edad ? `${sol.edad} años` : '—' }} · {{ sol.genero === 'F' ? 'Femenino' : sol.genero === 'M' ? 'Masculino' : '—' }}</strong></div>
+                  <div class="evo-info-row"><span>EPS</span><strong>{{ sol.eps || '—' }}</strong></div>
+                  <div class="evo-info-row"><span>Municipio</span><strong>{{ sol.municipio_capita || '—' }}</strong></div>
+                  <div class="evo-info-row"><span>Especialidad</span><strong>{{ sol.especialidad_requerida || '—' }}</strong></div>
+                  <div class="evo-info-row"><span>Servicio actual</span><strong>{{ sol.servicio_ubicacion_actual || '—' }}</strong></div>
+                </div>
+              </section>
+
+              <!-- Información de la solicitud -->
+              <section class="evo-panel evo-panel-amber">
+                <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="BuildingIcon" class="w-4 h-4" /></span> Información de la solicitud</div>
+                <div class="evo-info-rows">
+                  <div class="evo-info-row"><span>Fecha y hora</span><strong>{{ formatFecha(sol.fecha || sol.created_at) }} · {{ sol.hora ? formatHora(sol.hora) : '—' }}</strong></div>
+                  <div class="evo-info-row"><span>Institución</span><strong>{{ sol.clinica?.nombre || sol.institucion_remitente || '—' }}</strong></div>
+                  <div class="evo-info-row"><span>Remite</span><strong>{{ sol.quien_remitente || '—' }}</strong></div>
+                  <div class="evo-info-row"><span>Teléfono</span><strong>{{ sol.telefono_contacto || sol.telefono_paciente || '—' }}</strong></div>
+                  <div class="evo-info-row"><span>Correo</span><strong>{{ sol.correo_contacto || '—' }}</strong></div>
+                  <div class="evo-info-row"><span>Tipo referencia</span><strong>{{ sol.tipo_referencia || '—' }}</strong></div>
+                  <div class="evo-info-row"><span>Llegada esperada</span><strong>{{ sol.hora_llegada ? `${formatHora(sol.hora_llegada)}${sol.lugar_llegada ? ' · ' + sol.lugar_llegada : ''}` : '—' }}</strong></div>
+                </div>
+              </section>
+
+              <!-- Diagnósticos + datos adicionales -->
+              <div class="evo-detail-side">
+                <section class="evo-panel evo-panel-violet">
+                  <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="StethoscopeIcon" class="w-4 h-4" /></span> Diagnósticos</div>
+                  <div v-if="sol.diagnosticos?.length" class="evo-diagnosis-list">
+                    <div v-for="(dx, index) in sol.diagnosticos" :key="dx.id || index" class="evo-diagnosis">
+                      <span class="evo-diagnosis-code">{{ dx.codigo_cie10 || '—' }}</span>
+                      <span class="evo-diagnosis-description">{{ dx.descripcion }}</span>
+                      <span v-if="index === 0" class="evo-principal-chip">Principal</span>
+                    </div>
+                  </div>
+                  <p v-else class="evo-detail-paragraph">{{ sol.diagnostico || 'Sin diagnóstico registrado' }}</p>
+                </section>
+              </div>
+            </div>
+
+            <div class="evo-detail-bottom">
+              <!-- Evolución de hoy + historial -->
+              <section class="evo-panel evo-panel-clinical">
+                <div class="evo-panel-title">
+                  <span class="evo-panel-icon"><component :is="ClipboardIcon" class="w-4 h-4" /></span>
+                  Evolución de hoy — {{ hoyLabel }}
+                  <span v-if="tieneNotaHoy(sol)" class="evo-nota-hoy"><component :is="CheckCircleIcon" class="w-3 h-3" /> Ya registrada hoy</span>
+                </div>
+                <textarea
+                  :id="`evo-nota-${sol.id}`"
+                  v-model="drafts[sol.id]"
+                  rows="2"
+                  maxlength="2000"
+                  class="evo-textarea evo-textarea-clinical"
+                  placeholder="Describa la evolución del paciente: estado clínico, signos, procedimientos, observaciones…"
+                ></textarea>
+
+                <div class="evo-history-box evo-history-box-compact">
+                  <div class="evo-history-title"><component :is="ClockIcon" class="w-3.5 h-3.5" /> Historial de evolución</div>
+                  <template v-if="sol.evoluciones?.length">
+                    <div v-for="nota in sol.evoluciones" :key="nota.id" class="evo-nota">
+                      <div class="evo-nota-dot"></div>
+                      <div class="evo-nota-body">
+                        <div class="evo-nota-fecha">
+                          <component :is="CalendarIcon" class="w-3 h-3" />
+                          {{ formatFecha(nota.created_at) }} · {{ formatHoraNota(nota.created_at) }}
+                        </div>
+                        <p class="evo-nota-texto">{{ nota.nota }}</p>
+                      </div>
+                    </div>
+                  </template>
+                  <p v-else class="evo-sin-notas">Sin evoluciones registradas todavía — anote la primera arriba.</p>
+                </div>
+              </section>
+
+              <div class="evo-detail-side">
+                <!-- Datos adicionales -->
+                <section class="evo-panel evo-panel-slate">
+                  <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="ActivityIcon" class="w-4 h-4" /></span> Datos adicionales</div>
+                  <div class="evo-extra-grid">
+                    <div class="evo-extra-card evo-extra-warn"><span>Condición especial</span><strong>{{ sol.condicion_especial || 'Ninguna' }}</strong></div>
+                    <div class="evo-extra-card evo-extra-danger"><span>Aislamiento</span><strong>{{ sol.requiere_aislamiento ? (sol.tipo_aislamiento || 'Requerido') : 'No requiere' }}</strong></div>
+                    <div class="evo-extra-card evo-extra-info"><span>Número de soportes</span><strong>{{ sol.adjuntos?.length || 0 }} soporte(s)</strong></div>
+                    <div class="evo-extra-card evo-extra-info"><span>Estado actual</span><strong>{{ estadoLabel(sol.estado) }}<template v-if="sol.hora_respuesta"> · {{ formatHora(sol.hora_respuesta) }}</template></strong></div>
+                  </div>
+                </section>
+
+                <!-- Soportes y archivos -->
+                <section class="evo-panel evo-panel-red">
+                  <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="PaperclipIcon" class="w-4 h-4" /></span> Soportes y archivos <span class="evo-count">{{ sol.adjuntos?.length || 0 }}</span></div>
+                  <div v-if="sol.adjuntos?.length" class="evo-attachments">
+                    <div v-for="adjunto in sol.adjuntos" :key="adjunto.id" class="evo-attachment">
+                      <span class="evo-attachment-type">{{ extensionArchivo(adjunto.nombre_original) }}</span>
+                      <span class="evo-attachment-name">{{ adjunto.nombre_original }}</span>
+                      <small>{{ formatTamano(adjunto.tamano) }}</small>
+                    </div>
+                  </div>
+                  <p v-else class="evo-no-attachments">Esta solicitud no tiene soportes adjuntos.</p>
+                </section>
+              </div>
             </div>
           </div>
 
-          <div class="evo-card-body px-4 py-3 space-y-3">
-            <div class="evo-quick-facts">
-              <div class="evo-quick-fact">
-                <span class="evo-quick-fact-icon"><component :is="UserIcon" class="w-3.5 h-3.5" /></span>
-                <strong>{{ sol.genero === 'F' ? 'Femenino' : sol.genero === 'M' ? 'Masculino' : '—' }}<template v-if="sol.edad"> · {{ sol.edad }} años</template></strong>
-              </div>
-              <div class="evo-quick-fact">
-                <span class="evo-quick-fact-icon"><component :is="CalendarIcon" class="w-3.5 h-3.5" /></span>
-                <strong>{{ formatFecha(sol.fecha || sol.created_at) }}<template v-if="sol.hora"> · {{ formatHora(sol.hora) }}</template></strong>
-              </div>
-              <div class="evo-quick-fact">
-                <span class="evo-quick-fact-icon"><component :is="BuildingIcon" class="w-3.5 h-3.5" /></span>
-                <strong>{{ sol.servicio_ubicacion_actual || '—' }}</strong>
-              </div>
-            </div>
-
-            <!-- Nueva nota -->
-            <div>
-              <div class="flex items-center justify-between mb-1.5">
-                <label class="evo-nota-label">
-                  <span class="evo-nota-label-icon"><component :is="ClipboardIcon" class="w-3 h-3" /></span>
-                  Evolución de hoy — {{ hoyLabel }}
-                </label>
-                <span v-if="tieneNotaHoy(sol)" class="evo-nota-hoy">
-                  <component :is="CheckCircleIcon" class="w-3 h-3" /> Ya registrada hoy
-                </span>
-              </div>
-              <textarea
-                :id="`evo-nota-${sol.id}`"
-                v-model="drafts[sol.id]"
-                rows="2"
-                maxlength="2000"
-                class="evo-textarea"
-                placeholder="Describa la evolución del paciente: estado clínico, signos, procedimientos, observaciones…"
-              ></textarea>
-            </div>
-
-            <!-- Historial de notas + registrar -->
-            <div class="evo-history-row">
-              <div class="evo-history-box">
-                <template v-if="sol.evoluciones?.length">
-                  <div v-for="nota in sol.evoluciones" :key="nota.id" class="evo-nota">
-                    <div class="evo-nota-dot"></div>
-                    <div class="evo-nota-body">
-                      <div class="evo-nota-fecha">
-                        <component :is="CalendarIcon" class="w-3 h-3" />
-                        {{ formatFecha(nota.created_at) }} · {{ formatHoraNota(nota.created_at) }}
-                      </div>
-                      <p class="evo-nota-texto">{{ nota.nota }}</p>
-                    </div>
-                  </div>
-                </template>
-                <p v-else class="evo-sin-notas">Sin evoluciones registradas todavía — anote la primera arriba.</p>
-              </div>
+          <footer class="evo-pt-footer">
+            <span><component :is="ShieldIcon" class="w-3.5 h-3.5" /> Información clínica confidencial</span>
+            <div class="evo-pt-actions">
+              <button class="evo-detail-footer-btn evo-detail-footer-btn-light" type="button" @click="nuevaBusqueda">
+                <component :is="SearchIcon" class="w-3.5 h-3.5" /> Nueva búsqueda
+              </button>
               <button
-                class="evo-save-btn"
+                class="evo-detail-footer-btn"
+                type="button"
                 :disabled="!drafts[sol.id]?.trim() || guardando.has(sol.id)"
                 @click="guardarNota(sol)"
               >
-                <component :is="guardando.has(sol.id) ? LoaderIcon : SendIcon" class="w-4 h-4" :class="{ 'animate-spin': guardando.has(sol.id) }" />
-                <span class="hidden sm:inline">{{ guardando.has(sol.id) ? 'Guardando…' : 'Registrar' }}</span>
+                <component :is="guardando.has(sol.id) ? LoaderIcon : SendIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': guardando.has(sol.id) }" />
+                {{ guardando.has(sol.id) ? 'Guardando…' : 'Registrar evolución' }}
               </button>
             </div>
-          </div>
-        </div>
+          </footer>
+        </article>
       </div>
     </main>
-
-    <el-dialog
-      v-model="detalleVisible"
-      width="min(1000px, calc(100vw - 28px))"
-      class="evo-detail-dialog"
-      :show-close="false"
-      align-center
-      append-to-body
-    >
-      <template #header>
-        <div v-if="solicitudDetalle" class="evo-modal-header">
-          <div class="evo-modal-brand">
-            <img :src="logoColor" alt="" class="evo-modal-logo" />
-            <div class="evo-modal-brand-copy">
-              <strong>Santa Bárbara</strong>
-              <span>Portal de clínicas</span>
-            </div>
-          </div>
-          <div class="evo-modal-title-group">
-            <div class="evo-modal-title-icon"><component :is="ClipboardIcon" class="w-5 h-5" /></div>
-            <div>
-              <h2 class="evo-modal-title">Detalle de evolución</h2>
-              <p class="evo-modal-subtitle">{{ formatId(solicitudDetalle.id) }} · {{ formatFecha(solicitudDetalle.created_at) }} · {{ formatHoraNota(solicitudDetalle.created_at) }}</p>
-            </div>
-          </div>
-          <div class="evo-modal-actions">
-            <span class="evo-modal-status" :class="'status-' + solicitudDetalle.estado">{{ estadoLabel(solicitudDetalle.estado) }}</span>
-            <span v-if="solicitudDetalle.urgencia_vital" class="evo-urgencia-chip">URGENCIA VITAL</span>
-            <button class="evo-detail-close" type="button" aria-label="Cerrar detalle" @click="detalleVisible = false">
-              <component :is="XIcon" class="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </template>
-
-      <div v-if="solicitudDetalle" class="evo-modal-body">
-        <div class="evo-detail-top">
-          <section class="evo-panel evo-panel-blue">
-            <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="UserIcon" class="w-4 h-4" /></span> Paciente</div>
-            <div class="evo-info-rows">
-              <div class="evo-info-row"><span>Nombre completo</span><strong>{{ nombrePaciente(solicitudDetalle) }}</strong></div>
-              <div class="evo-info-row"><span>Documento</span><strong>{{ solicitudDetalle.tipo_documento }} {{ solicitudDetalle.numero_documento }}</strong></div>
-              <div class="evo-info-row"><span>Edad / Género</span><strong>{{ solicitudDetalle.edad ? `${solicitudDetalle.edad} años` : '—' }} · {{ solicitudDetalle.genero === 'F' ? 'Femenino' : solicitudDetalle.genero === 'M' ? 'Masculino' : '—' }}</strong></div>
-              <div class="evo-info-row"><span>EPS</span><strong>{{ solicitudDetalle.eps || '—' }}</strong></div>
-            </div>
-          </section>
-
-          <section class="evo-panel evo-panel-amber">
-            <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="BuildingIcon" class="w-4 h-4" /></span> Remisión</div>
-            <div class="evo-info-rows">
-              <div class="evo-info-row"><span>Fecha solicitud</span><strong>{{ formatFecha(solicitudDetalle.fecha || solicitudDetalle.created_at) }} · {{ solicitudDetalle.hora ? formatHora(solicitudDetalle.hora) : '—' }}</strong></div>
-              <div class="evo-info-row"><span>Institución</span><strong>{{ solicitudDetalle.clinica?.nombre || solicitudDetalle.institucion_remitente || '—' }}</strong></div>
-              <div class="evo-info-row"><span>Remite</span><strong>{{ solicitudDetalle.quien_remitente || '—' }}</strong></div>
-              <div class="evo-info-row"><span>Teléfono contacto</span><strong>{{ solicitudDetalle.telefono_contacto || solicitudDetalle.telefono_paciente || '—' }}</strong></div>
-              <div class="evo-info-row"><span>Correo</span><strong>{{ solicitudDetalle.correo_contacto || '—' }}</strong></div>
-              <div class="evo-info-row"><span>Tipo referencia</span><strong>{{ solicitudDetalle.tipo_referencia || '—' }}</strong></div>
-              <div v-if="solicitudDetalle.hora_llegada" class="evo-info-row"><span>Llegada esperada</span><strong>{{ formatHora(solicitudDetalle.hora_llegada) }} · {{ solicitudDetalle.lugar_llegada || '—' }}</strong></div>
-            </div>
-          </section>
-
-          <section class="evo-panel evo-panel-violet">
-            <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="StethoscopeIcon" class="w-4 h-4" /></span> Diagnósticos</div>
-            <div v-if="solicitudDetalle.diagnosticos?.length" class="evo-diagnosis-list">
-              <div v-for="(dx, index) in solicitudDetalle.diagnosticos" :key="dx.id || index" class="evo-diagnosis">
-                <span class="evo-diagnosis-code">{{ dx.codigo_cie10 || '—' }}</span>
-                <span class="evo-diagnosis-description">{{ dx.descripcion }}</span>
-                <span v-if="index === 0" class="evo-principal-chip">Principal</span>
-              </div>
-            </div>
-            <p v-else class="evo-detail-paragraph">{{ solicitudDetalle.diagnostico || 'Sin diagnóstico registrado' }}</p>
-          </section>
-        </div>
-
-        <div class="evo-detail-bottom">
-          <section class="evo-panel evo-panel-clinical">
-            <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="ClipboardIcon" class="w-4 h-4" /></span> Evolución clínica</div>
-            <p class="evo-clinical-note">{{ evolucionActual?.nota || solicitudDetalle.resumen_historia_clinica || 'La clínica aún no registra una evolución para este paciente.' }}</p>
-            <div v-if="solicitudDetalle.condicion_especial || solicitudDetalle.requiere_aislamiento" class="evo-clinical-alerts">
-              <div v-if="solicitudDetalle.condicion_especial"><strong>Condición especial:</strong> {{ solicitudDetalle.condicion_especial }}</div>
-              <div v-if="solicitudDetalle.requiere_aislamiento"><strong>Aislamiento:</strong> {{ solicitudDetalle.tipo_aislamiento || 'Requerido' }}</div>
-            </div>
-          </section>
-
-          <div class="evo-detail-side">
-            <section class="evo-panel evo-panel-slate">
-              <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="ClockIcon" class="w-4 h-4" /></span> Seguimiento</div>
-              <div class="evo-tracking-row">
-                <span class="evo-tracking-dot done"><component :is="CheckCircleIcon" class="w-3 h-3" /></span>
-                <div><strong>Solicitud enviada</strong><small>{{ formatFecha(solicitudDetalle.created_at) }} · {{ formatHoraNota(solicitudDetalle.created_at) }}</small></div>
-              </div>
-              <div class="evo-tracking-row">
-                <span class="evo-tracking-dot current"><component :is="ActivityIcon" class="w-3 h-3" /></span>
-                <div><strong>{{ estadoLabel(solicitudDetalle.estado) }}</strong><small>{{ solicitudDetalle.hora_respuesta ? `Respuesta: ${formatHora(solicitudDetalle.hora_respuesta)}` : 'Estado actual de la referencia' }}</small></div>
-              </div>
-              <div v-if="solicitudDetalle.hora_llegada || solicitudDetalle.lugar_llegada" class="evo-arrival-chip">
-                Llegada {{ solicitudDetalle.hora_llegada ? formatHora(solicitudDetalle.hora_llegada) : '' }} {{ solicitudDetalle.lugar_llegada ? `· ${solicitudDetalle.lugar_llegada}` : '' }} {{ solicitudDetalle.sede ? `· ${solicitudDetalle.sede}` : '' }}
-              </div>
-            </section>
-
-            <section class="evo-panel evo-panel-red">
-              <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="PaperclipIcon" class="w-4 h-4" /></span> Soportes <span class="evo-count">{{ solicitudDetalle.adjuntos?.length || 0 }}</span></div>
-              <div v-if="solicitudDetalle.adjuntos?.length" class="evo-attachments">
-                <div v-for="adjunto in solicitudDetalle.adjuntos" :key="adjunto.id" class="evo-attachment">
-                  <span class="evo-attachment-type">{{ extensionArchivo(adjunto.nombre_original) }}</span>
-                  <span class="evo-attachment-name">{{ adjunto.nombre_original }}</span>
-                  <small>{{ formatTamano(adjunto.tamano) }}</small>
-                </div>
-              </div>
-              <p v-else class="evo-no-attachments">Esta solicitud no tiene soportes adjuntos.</p>
-            </section>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="evo-modal-footer">
-          <span><component :is="ShieldIcon" class="w-3.5 h-3.5" /> Información clínica confidencial</span>
-          <div class="evo-modal-footer-actions">
-            <button class="evo-detail-footer-btn evo-detail-footer-btn-light" type="button" @click="volverAFicha">
-              <component :is="EyeIcon" class="w-3.5 h-3.5" /> Ver ficha
-            </button>
-            <button class="evo-detail-footer-btn" type="button" @click="irARegistrarEvolucion">
-              <component :is="SendIcon" class="w-3.5 h-3.5" /> Registrar evolución
-            </button>
-          </div>
-        </div>
-      </template>
-    </el-dialog>
 
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive, nextTick } from 'vue';
-import { Search as SearchIcon, Clock as ClockIcon, Activity as ActivityIcon, CheckCircle as CheckCircleIcon, Send as SendIcon, Loader2 as LoaderIcon, Calendar as CalendarIcon, Eye as EyeIcon, X as XIcon, User as UserIcon, Building2 as BuildingIcon, Stethoscope as StethoscopeIcon, ClipboardList as ClipboardIcon, Paperclip as PaperclipIcon, ShieldCheck as ShieldIcon } from '@lucide/vue';
-import { ElDialog, ElInput } from 'element-plus';
+import { ref, computed, onMounted, reactive } from 'vue';
+import { Search as SearchIcon, Clock as ClockIcon, Activity as ActivityIcon, CheckCircle as CheckCircleIcon, Send as SendIcon, Loader2 as LoaderIcon, Calendar as CalendarIcon, User as UserIcon, Building2 as BuildingIcon, Stethoscope as StethoscopeIcon, ClipboardList as ClipboardIcon, Paperclip as PaperclipIcon, ShieldCheck as ShieldIcon } from '@lucide/vue';
+import { useRoute } from 'vue-router';
+import { ElInput } from 'element-plus';
 import http from '@/plugins/axios';
 import notify from '@/plugins/toast';
 import { useClinicaAuthStore } from '@/stores/clinicaAuth';
-import { useClinicaLayoutStore } from '@/stores/clinicaLayout';
 
 interface Evolucion {
   id: number;
@@ -335,23 +261,16 @@ interface Solicitud {
 }
 
 const clinicaAuth = useClinicaAuthStore();
-const layout = useClinicaLayoutStore();
-const isDark = computed(() => layout.isDarkMode);
 const logoColor = '/images/logo-avatar.png';
 
 const solicitudes = ref<Solicitud[]>([]);
+const route = useRoute();
 const cargando = ref(false);
 const busqueda = ref('');
 const busquedaAplicada = ref('');
 const hasSearched = ref(false);
 const drafts = reactive<Record<number, string>>({});
 const guardando = reactive(new Set<number>());
-const detalleVisible = ref(false);
-const solicitudDetalle = ref<Solicitud | null>(null);
-const evolucionActual = computed(() =>
-  [...(solicitudDetalle.value?.evoluciones ?? [])]
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null
-);
 
 const hoyLabel = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -418,31 +337,6 @@ function formatHora(hora: string): string {
   return `${hour12}:${String(minutes).padStart(2, '0')} ${ampm}`;
 }
 
-function verDetalle(solicitud: Solicitud): void {
-  solicitudDetalle.value = solicitud;
-  detalleVisible.value = true;
-}
-
-async function volverAFicha(): Promise<void> {
-  const id = solicitudDetalle.value?.id;
-  detalleVisible.value = false;
-  await nextTick();
-  if (id) {
-    document.getElementById(`evo-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-}
-
-async function irARegistrarEvolucion(): Promise<void> {
-  const id = solicitudDetalle.value?.id;
-  detalleVisible.value = false;
-  await nextTick();
-  const textarea = id
-    ? document.getElementById(`evo-nota-${id}`) as HTMLTextAreaElement | null
-    : null;
-  textarea?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  textarea?.focus({ preventScroll: true });
-}
-
 function extensionArchivo(nombre: string): string {
   return nombre.split('.').pop()?.slice(0, 4).toUpperCase() || 'FILE';
 }
@@ -485,6 +379,13 @@ async function buscarPaciente() {
   await cargar();
 }
 
+function nuevaBusqueda(): void {
+  busqueda.value = '';
+  busquedaAplicada.value = '';
+  solicitudes.value = [];
+  hasSearched.value = false;
+}
+
 async function guardarNota(sol: Solicitud) {
   const nota = drafts[sol.id]?.trim();
   if (!nota) return;
@@ -504,6 +405,13 @@ async function guardarNota(sol: Solicitud) {
 onMounted(async () => {
   if (!clinicaAuth.isHydrated) {
     await clinicaAuth.fetchClinica();
+  }
+
+  // Enlace del correo de "Solicitar evolución": /clinica/evolucion?id=865
+  const idEnlace = Number(route.query.id);
+  if (Number.isInteger(idEnlace) && idEnlace > 0) {
+    busqueda.value = formatId(idEnlace);
+    await buscarPaciente();
   }
 });
 </script>
@@ -530,9 +438,9 @@ onMounted(async () => {
   padding: 0 0 76px;
 }
 .evo-workspace-results {
-  align-items: stretch;
-  justify-content: flex-start;
-  padding-bottom: 0;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 24px;
 }
 .evo-lookup-card {
   position: relative;
@@ -640,13 +548,18 @@ onMounted(async () => {
 .evo-lookup-submit:disabled { cursor: not-allowed; opacity: .6; }
 .evo-lookup-card-compact {
   display: grid;
-  width: 100%;
-  grid-template-columns: 38px minmax(150px, .8fr) minmax(220px, 1.2fr) 112px;
+  width: min(560px, 100%);
+  grid-template-columns: 38px minmax(0, 1fr) 112px;
+  grid-template-areas: "icon title title" "input input btn";
   align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 8px 10px;
+  padding: 12px 16px;
   text-align: left;
 }
+.evo-lookup-card-compact .evo-lookup-icon { grid-area: icon; }
+.evo-lookup-card-compact .evo-lookup-title { grid-area: title; }
+.evo-lookup-card-compact :deep(.el-input) { grid-area: input; }
+.evo-lookup-card-compact .evo-lookup-submit { grid-area: btn; }
 .evo-lookup-card-compact::before { display: none; }
 .evo-lookup-card-compact .evo-lookup-icon { width: 36px; height: 36px; margin: 0; border-radius: 11px; }
 .evo-lookup-card-compact .evo-lookup-icon :deep(svg) { width: 21px; height: 21px; }
@@ -654,14 +567,136 @@ onMounted(async () => {
 .evo-lookup-card-compact .evo-lookup-subtitle { display: none; }
 .evo-lookup-card-compact :deep(.el-input__wrapper) { min-height: 36px; }
 .evo-lookup-card-compact .evo-lookup-submit { min-height: 36px; margin: 0; }
-.evo-results-list { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.evo-results-list { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+
+/* ── Tarjeta pequeña y centrada del paciente (mismo estilo de vidrio del buscador) ── */
+.evo-card.evo-pt-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: min(900px, 100%);
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 22px 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .95);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .82);
+  box-shadow: 0 14px 30px rgba(35, 74, 139, .15), 0 3px 8px rgba(35, 74, 139, .06);
+  backdrop-filter: blur(14px);
+}
+.evo-card.evo-pt-card::before {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: -16px;
+  width: 105px;
+  height: 62px;
+  border-radius: 0 0 0 100%;
+  background: linear-gradient(135deg, rgba(125, 211, 252, .12), rgba(56, 162, 239, .5));
+  content: '';
+  transform: rotate(-5deg);
+}
+.evo-card.evo-pt-card:hover { transform: none; box-shadow: 0 18px 38px rgba(35, 74, 139, .18), 0 3px 8px rgba(35, 74, 139, .06); }
+.dark .evo-card.evo-pt-card { border-color: rgba(125, 153, 197, .25); background: rgba(17, 29, 49, .88); box-shadow: 0 16px 38px rgba(0, 0, 0, .28); }
+.evo-pt-head { display: flex; align-items: center; gap: 14px; padding-right: 36px; }
+.evo-avatar-lg { width: 52px; height: 52px; border-radius: 14px; font-size: 16px; }
+.evo-pt-id { min-width: 0; flex: 1; }
+.evo-pt-id h2 { margin: 0; overflow: hidden; color: #0d285a; font-size: 17px; font-weight: 850; letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
+.evo-pt-id p { margin: 3px 0 0; overflow: hidden; color: #7a8dac; font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+.dark .evo-pt-id h2 { color: #e6f0ff; }
+.dark .evo-pt-id p { color: #a0b2cc; }
+.evo-pt-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 7px; }
+.evo-pt-scroll {
+  display: flex;
+  max-height: calc(100vh - 200px);
+  min-height: 180px;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 3px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.evo-pt-card .evo-detail-side .evo-panel { padding: 10px 12px; }
+.evo-extra-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.evo-extra-card { min-width: 0; padding: 7px 9px; border: 1px solid transparent; border-radius: 10px; }
+.evo-extra-card span { display: block; font-size: 9px; font-weight: 700; }
+.evo-extra-card strong { display: block; margin-top: 3px; overflow: hidden; font-size: 10.5px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.evo-extra-warn { border-color: #fde3b0; background: #fff7e6; color: #b45309; }
+.evo-extra-danger { border-color: #fecdd3; background: #fff1f2; color: #be123c; }
+.evo-extra-info { border-color: #dbeafe; background: #eff6ff; color: #1d4ed8; }
+.dark .evo-extra-warn { border-color: #62451c; background: #2c2416; color: #fdc979; }
+.dark .evo-extra-danger { border-color: #6b2434; background: #2b1620; color: #fda4af; }
+.dark .evo-extra-info { border-color: #31527c; background: #172b47; color: #93c5fd; }
+.evo-textarea-clinical { width: 100%; min-height: 64px; margin-bottom: 10px; border-color: #a9ccff; font-size: 12px; }
+.evo-history-box-compact { display: block; max-height: 130px; padding: 9px 12px; overflow-y: auto; }
+.evo-history-title { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; color: #0754b5; font-size: 11px; font-weight: 850; }
+.dark .evo-history-title { color: #7dbbff; }
+.evo-pt-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid #e3ebf7; }
+.dark .evo-pt-footer { border-color: #263352; }
+.evo-pt-footer > span { display: inline-flex; align-items: center; gap: 6px; color: #657795; font-size: 10px; }
+.evo-pt-actions { display: flex; align-items: center; gap: 10px; }
+.evo-empty-retry { margin-top: 14px; }
+.evo-detail-footer-btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; transform: none; filter: none; }
+/* Versión compacta: toda la ficha cabe en una sola vista */
+.evo-page.evo-page-results { padding: 8px; }
+.evo-workspace-results { padding-bottom: 0; }
+.evo-card.evo-pt-card { padding: 12px 16px 10px; gap: 8px; }
+.evo-pt-card .evo-pt-head { gap: 10px; }
+.evo-pt-card .evo-avatar-lg { width: 40px; height: 40px; border-radius: 12px; font-size: 14px; }
+.evo-pt-card .evo-pt-id h2 { font-size: 15px; }
+.evo-pt-card .evo-pt-id p { margin-top: 1px; font-size: 10.5px; }
+.evo-pt-card .evo-pt-chips { flex-shrink: 0; margin: 0 40px 0 auto; }
+.evo-pt-card .evo-pt-scroll { gap: 8px; min-height: 0; max-height: calc(100vh - 150px); }
+.evo-pt-card .evo-detail-top,
+.evo-pt-card .evo-detail-bottom,
+.evo-pt-card .evo-detail-side { gap: 8px; }
+.evo-pt-card .evo-panel,
+.evo-pt-card .evo-detail-side .evo-panel { padding: 8px 10px; border-radius: 12px; }
+.evo-pt-card .evo-panel-title { gap: 6px; margin-bottom: 5px; font-size: 11.5px; }
+.evo-pt-card .evo-panel-icon { width: 22px; height: 22px; border-radius: 7px; }
+.evo-pt-card .evo-info-rows { gap: 3px; }
+.evo-pt-card .evo-info-row span { font-size: 9.5px; }
+.evo-pt-card .evo-info-row strong { font-size: 10px; line-height: 1.2; }
+.evo-pt-card .evo-diagnosis { padding: 5px 6px; font-size: 9.5px; }
+.evo-pt-card .evo-extra-grid { gap: 5px; }
+.evo-pt-card .evo-extra-card { padding: 4px 7px; }
+.evo-pt-card .evo-extra-card strong { margin-top: 1px; }
+.evo-pt-card .evo-textarea-clinical { min-height: 44px; margin-bottom: 6px; padding: 7px 10px; }
+.evo-pt-card .evo-history-box-compact { max-height: 76px; padding: 6px 10px; }
+.evo-pt-card .evo-history-title { margin-bottom: 3px; }
+.evo-pt-card .evo-nota { padding: 2px 0 6px; }
+.evo-pt-card .evo-nota-texto { font-size: 11.5px; line-height: 1.4; }
+.evo-pt-card .evo-detail-top .evo-detail-side .evo-panel-violet { flex: 1; }
+.evo-pt-card .evo-detail-bottom .evo-detail-side .evo-panel-red { flex: 1; }
+.evo-pt-card .evo-panel-clinical { display: flex; flex-direction: column; }
+.evo-pt-card .evo-history-box-compact { flex: 1 1 auto; min-height: 76px; max-height: 190px; }
+.evo-pt-card .evo-pt-footer { padding-top: 8px; }
+.evo-pt-card .evo-detail-footer-btn { min-height: 34px; }
+@media (max-width: 900px) {
+  .evo-pt-card .evo-detail-top > .evo-detail-side { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .evo-pt-card .evo-pt-head { flex-wrap: wrap; }
+  .evo-pt-card .evo-pt-chips { flex-basis: 100%; margin: 4px 0 0; }
+  .evo-pt-card .evo-pt-scroll { max-height: none; overflow: visible; }
+  .evo-pt-card .evo-history-box-compact { max-height: 140px; }
+}
+@media (max-width: 640px) {
+  .evo-card.evo-pt-card { padding: 14px 14px 12px; border-radius: 18px; }
+  .evo-pt-head { gap: 10px; padding-right: 0; }
+  .evo-avatar-lg { width: 44px; height: 44px; font-size: 14px; }
+  .evo-pt-id h2 { font-size: 15px; }
+  .evo-pt-scroll { max-height: none; min-height: 0; overflow: visible; padding-right: 0; }
+  .evo-extra-grid { grid-template-columns: 1fr; }
+  .evo-pt-footer { flex-direction: column; align-items: stretch; }
+  .evo-pt-actions { flex-direction: column-reverse; align-items: stretch; }
+  .evo-pt-footer .evo-detail-footer-btn { width: 100%; }
+}
 .evo-workspace-results .evo-login-prompt { align-self: center; width: min(480px, 100%); }
 @media (max-width: 680px) {
   .evo-workspace { padding-bottom: 40px; }
-  .evo-lookup-card-compact { grid-template-columns: 36px minmax(0, 1fr); }
-  .evo-lookup-card-compact .evo-lookup-title { grid-column: 2; }
-  .evo-lookup-card-compact :deep(.el-input) { grid-column: 1 / -1; }
-  .evo-lookup-card-compact .evo-lookup-submit { grid-column: 1 / -1; }
+  .evo-lookup-card-compact { grid-template-columns: 36px minmax(0, 1fr); grid-template-areas: "icon title" "input input" "btn btn"; }
 }
 @media (prefers-reduced-motion: reduce) {
   .evo-page { animation: none !important; }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SolicitudEvolucionClinica;
 use App\Models\Notification;
 use App\Models\SolicitudReferencia;
 use App\Models\SolicitudReferenciaAdjunto;
@@ -165,6 +166,55 @@ class SolicitudReferenciaController extends Controller
         );
 
         return response()->json(['data' => $solicitud, 'message' => 'Solicitud aceptada: el paciente quedó en espera de llegada']);
+    }
+
+    /**
+     * El personal de referencia le pide a la clínica, por correo, la
+     * evolución actual del paciente. El correo lleva un enlace directo al
+     * módulo público de Evolución con la referencia ya cargada. Solo aplica
+     * a solicitudes Pendientes (en espera de cupo).
+     */
+    public function solicitarEvolucion(Request $request, SolicitudReferencia $solicitud): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
+
+        if ($solicitud->estado !== 'pendiente_cama') {
+            return response()->json(['message' => 'Solo se puede pedir evolución de solicitudes en estado Pendiente (en espera de cupo).'], 422);
+        }
+
+        $solicitud->load('clinica');
+        $correo = $solicitud->correoNotificacion();
+
+        if (! $correo) {
+            return response()->json(['message' => 'La clínica de esta solicitud no tiene un correo registrado.'], 422);
+        }
+
+        try {
+            Mail::to($correo)->send(new SolicitudEvolucionClinica($solicitud));
+        } catch (Throwable $e) {
+            Log::error('No se pudo enviar la solicitud de evolución', [
+                'solicitud_id' => $solicitud->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'No se pudo enviar el correo a la clínica. Intente de nuevo en unos minutos.'], 503);
+        }
+
+        SolicitudReferenciaEvento::create([
+            'solicitud_referencia_id' => $solicitud->id,
+            'tipo' => 'evolucion_solicitada',
+            'titulo' => 'Evolución solicitada',
+            'descripcion' => "El equipo de referencia pidió por correo la evolución del paciente a {$correo}.",
+        ]);
+
+        $this->notificarClinica(
+            $solicitud,
+            'Evolución solicitada',
+            "Referencia le pide registrar la evolución de {$solicitud->primer_nombre} {$solicitud->primer_apellido}.",
+            'warning',
+        );
+
+        return response()->json(['data' => $solicitud->load('eventos'), 'message' => "Solicitud de evolución enviada a {$correo}"]);
     }
 
     public function negar(Request $request, SolicitudReferencia $solicitud): JsonResponse

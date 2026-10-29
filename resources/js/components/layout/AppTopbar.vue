@@ -4,6 +4,17 @@
     :class="{ 'topbar-shell-dark': layout.isDarkMode }"
   >
     <div class="flex items-center gap-3 h-14 px-4">
+      <!-- Menú hamburguesa (solo móvil / tablet) -->
+      <button
+        type="button"
+        class="topbar-action-btn topbar-burger lg:hidden"
+        :aria-expanded="menuMovil"
+        aria-label="Abrir menú de navegación"
+        @click="menuMovil = !menuMovil"
+      >
+        <component :is="menuMovil ? XIcon : MenuIcon" class="w-5 h-5" />
+      </button>
+
       <!-- Branding -->
       <router-link to="/dashboard" class="flex items-center gap-2.5 shrink-0 no-underline">
         <div class="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden bg-white" style="box-shadow: 0 0 0 2px rgba(255,255,255,0.35);">
@@ -99,11 +110,43 @@
 
       </div>
     </div>
+
+    <!-- Panel del menú móvil -->
+    <Transition name="burger-panel">
+      <nav v-if="menuMovil" class="burger-panel lg:hidden" aria-label="Navegación principal">
+        <router-link
+          v-for="item in mainItems"
+          v-show="!item.permission || can(item.permission)"
+          :key="item.to"
+          :to="item.to"
+          class="burger-item no-underline"
+          active-class="burger-item-active"
+        >
+          <span class="burger-item-icon"><component :is="iconOf(item.icon)" class="w-4 h-4" /></span>
+          <span>{{ item.text }}</span>
+        </router-link>
+
+        <template v-if="adminItems.some(i => !i.permission || can(i.permission))">
+          <p class="burger-section">Administración</p>
+          <router-link
+            v-for="item in adminItems"
+            v-show="!item.permission || can(item.permission)"
+            :key="item.to"
+            :to="item.to"
+            class="burger-item no-underline"
+            active-class="burger-item-active"
+          >
+            <span class="burger-item-icon"><component :is="iconOf(item.icon)" class="w-4 h-4" /></span>
+            <span>{{ item.text }}</span>
+          </router-link>
+        </template>
+      </nav>
+    </Transition>
   </header>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useLayoutStore } from '@/stores/layout';
 import { useAuthStore } from '@/stores/auth';
@@ -114,7 +157,9 @@ import {
   ChevronDown as ChevronDownIcon,
   Key as KeyIcon,
   LogOut as LogOutIcon,
+  Menu as MenuIcon,
   Moon as MoonIcon,
+  X as XIcon,
   Sun as SunIcon,
   User as UserIcon,
 } from '@lucide/vue';
@@ -147,6 +192,9 @@ const { can } = usePermission();
 
 const logoAvatar = '/images/logo-avatar.png';
 
+const menuMovil = ref(false);
+watch(() => route.fullPath, () => { menuMovil.value = false; });
+
 const isAdminRoute = computed(() => adminItems.some(i => route.path.startsWith(i.to)));
 
 function iconOf(name: string) {
@@ -176,6 +224,58 @@ function handleCommand(command: string): void {
     linear-gradient(95deg, #0b2757 0%, #123a78 45%, #1a56ad 100%);
   box-shadow: 0 3px 16px rgba(8,22,52,.35);
 }
+.topbar-burger { flex-shrink: 0; margin-left: -4px; }
+.burger-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 14px;
+  border-top: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, #0f316a, #123a78);
+  box-shadow: 0 18px 30px rgba(6,18,44,.4);
+}
+.topbar-shell-dark .burger-panel { background: linear-gradient(180deg, #111a2e, #0d1322); }
+.burger-item {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: rgba(255,255,255,.86);
+  font-size: 13px;
+  font-weight: 700;
+}
+.burger-item-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(255,255,255,.12);
+}
+.burger-item-active {
+  border-color: rgba(255,255,255,.28);
+  background: rgba(255,255,255,.16);
+  color: #fff;
+}
+.burger-item-active .burger-item-icon { background: linear-gradient(135deg, #38bdf8, #2563eb); }
+.burger-section {
+  margin: 8px 4px 2px;
+  color: rgba(255,255,255,.5);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.burger-panel-enter-active, .burger-panel-leave-active { transition: opacity .18s ease, transform .18s ease; }
+.burger-panel-enter-from, .burger-panel-leave-to { opacity: 0; transform: translateY(-8px); }
 .topbar-shell-dark {
   background:
     radial-gradient(1200px 90px at 15% -30%, rgba(56,90,180,.22), transparent 60%),

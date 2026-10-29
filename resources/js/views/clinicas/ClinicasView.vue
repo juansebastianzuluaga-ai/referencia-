@@ -887,9 +887,33 @@
   .clinic-card-activity { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
 }
 @media (max-width: 560px) {
-  .clinic-card { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "identity actions" "info activity"; padding: 8px; }
+  .clinic-card { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "identity actions" "info info" "activity activity"; align-items: start; gap: 8px; padding: 12px; border-radius: 14px; box-shadow: 0 6px 16px rgba(42,88,149,.09); }
+  .clinic-card-name { font-size: 14.5px; font-weight: 800; }
+  .clinic-card-avatar { width: 38px; height: 38px; }
+  .clinic-card-actions { align-self: start; gap: 6px; }
+  .clinic-card-actions :deep(.el-button) { width: 32px; height: 32px; }
   .clinic-card-divider { padding-left: 0; border-left: 0; }
-  .clinic-card-activity { justify-content: flex-end; }
+  .clinic-card-info-block { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; padding: 8px 10px; border-left: 3px solid #93b9f5; border-radius: 10px; background: rgba(238,244,255,.7); }
+  .clinic-card-info-block .clinic-card-label-gap { margin-top: 0; }
+  .clinic-card-activity { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; padding-top: 8px; border-top: 1px dashed rgba(100,130,180,.35); }
+  .dark .clinic-card-info-block { border-left-color: #4d8ef7; background: rgba(255,255,255,.045); }
+  .dark .clinic-card-activity { border-top-color: rgba(255,255,255,.16); }
+}
+
+/* ── Vista móvil de la página: todo apilado y con scroll de página ── */
+@media (max-width: 700px) {
+  .clinic-page.clinic-page { overflow-y: auto; overflow-x: hidden; padding: 10px; }
+  .clinic-stats-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+  .clinic-stats-bar :deep(.stat-card-pastel) { min-width: 0; min-height: 76px; }
+  .clinic-page > .flex-1 { flex: none; min-height: 560px; overflow: visible; }
+  .clinic-table-panel { min-height: 560px; }
+  .clinic-list-head { flex-wrap: wrap; gap: 8px; padding: 10px; }
+  .clinic-list-title { flex: 1; font-size: 13px; }
+  .clinic-filtros-wrap { order: 2; }
+  .clinic-head-actions { order: 3; flex-basis: 100%; margin-left: 0; flex-wrap: wrap; }
+  .clinic-head-actions .clinic-head-btn { flex: 1 1 calc(50% - 5px); justify-content: center; height: 32px; }
+  .clinic-head-actions .clinic-head-btn-icon { flex: 0 0 36px; }
+  .clinic-head-actions .clinic-head-btn-primary { flex-basis: 100%; }
 }
 
 /* ── Modal detalle ── */
