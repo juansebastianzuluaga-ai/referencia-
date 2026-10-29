@@ -17,4 +17,17 @@
 
 POBLACION DE OBJETO Y NO RED TIENE QUE ESTAR EN TODOS LOS ESTADOS UNA LISTA DEPLEGABLE DE TODAS LAS EPS, Y AGREGAR QUE SE REGISTRE UNA EPS SI NO ESTA EN LA LISTA 
 
+
 EN CONFIRMAR INGRESO LISTA DEPLEGABLE POR SI NO LLEGA A LLEGAR EL PACIENTE, MOTIVO DE NO INGRESO 
+
+ponerle icono d evolucion la cantidad de registros que tengan
+urgencia vital sea blink animado 
+
+indicadores:
+cantidad de pacientes comentados (referenciados)
+cantidad de aceptados, negados pendientes, en ESPERA
+motivo de negacioon paciente no red y poblacion objeto
+cauntos refirieron para torre y urgencias 
+espcialidades negadas 
+
+

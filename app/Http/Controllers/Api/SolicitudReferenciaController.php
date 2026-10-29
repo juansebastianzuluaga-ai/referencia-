@@ -76,6 +76,9 @@ class SolicitudReferenciaController extends Controller
             'hora_llegada' => ['nullable', Rule::requiredIf(fn () => ! $sinDisponibilidad), 'date_format:H:i'],
             'lugar_llegada' => ['nullable', Rule::requiredIf(fn () => ! $sinDisponibilidad), 'string', 'max:150'],
             'sede' => ['nullable', Rule::requiredIf(fn () => ! $sinDisponibilidad), Rule::in(['URGENCIAS', 'CENTRAL DE ESPECIALISTAS', 'CAC SANTA BARBARA'])],
+            // EPS confirmada al momento de la respuesta — el operador la
+            // valida/corrige y queda guardada en la solicitud.
+            'eps' => ['required', 'string', 'max:120'],
             'observaciones_respuesta' => ['nullable', 'string'],
         ]);
 
@@ -84,6 +87,7 @@ class SolicitudReferenciaController extends Controller
             // disponibilidad — entonces se envía el código y pasa a en_espera.
             $solicitud->update([
                 'estado' => 'pendiente_cama',
+                'eps' => $validated['eps'],
                 'hora_respuesta' => $validated['hora_respuesta'],
                 'nombre_quien_responde' => $validated['nombre_quien_responde'],
                 'observaciones_respuesta' => $validated['observaciones_respuesta'] ?? null,
@@ -123,6 +127,7 @@ class SolicitudReferenciaController extends Controller
         // un estado "aceptado" intermedio.
         $solicitud->update([
             'estado' => 'en_espera',
+            'eps' => $validated['eps'],
             'codigo_aceptacion' => $validated['codigo_aceptacion'],
             'hora_respuesta' => $validated['hora_respuesta'],
             'nombre_quien_responde' => $validated['nombre_quien_responde'],
@@ -174,12 +179,14 @@ class SolicitudReferenciaController extends Controller
             'hora_respuesta' => ['required', 'date_format:H:i'],
             'grupo_negacion' => ['required', 'string', 'in:no_red,poblacion_objeto'],
             'motivo_negacion' => ['required', 'string', 'max:250'],
+            'eps' => ['required', 'string', 'max:120'],
             'nombre_quien_responde' => ['required', 'string', 'max:200'],
             'observaciones_respuesta' => ['nullable', 'string'],
         ]);
 
         $solicitud->update([
             'estado' => 'negado',
+            'eps' => $validated['eps'],
             'hora_respuesta' => $validated['hora_respuesta'],
             'grupo_negacion' => $validated['grupo_negacion'],
             'motivo_negacion' => $validated['motivo_negacion'],
@@ -242,6 +249,9 @@ class SolicitudReferenciaController extends Controller
             'hora_llegada' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'en_espera'), 'date_format:H:i'],
             'lugar_llegada' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'en_espera'), 'string', 'max:150'],
             'sede' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'en_espera' && ! $solicitud->sede), Rule::in(['URGENCIAS', 'CENTRAL DE ESPECIALISTAS', 'CAC SANTA BARBARA'])],
+            // EPS confirmada al decidir — se exige al dejarla pendiente
+            // (espera/cupo) o al negarla; al completar se conserva la que hay.
+            'eps' => ['nullable', Rule::requiredIf(fn () => in_array($request->input('estado'), ['en_espera', 'pendiente_cama', 'negado'], true)), 'string', 'max:120'],
             'numero_ingreso' => ['nullable', Rule::requiredIf(fn () => $request->input('estado') === 'completado'), 'integer'],
         ]);
 
@@ -256,6 +266,7 @@ class SolicitudReferenciaController extends Controller
             'hora_llegada' => $validated['estado'] === 'en_espera' ? $validated['hora_llegada'] : $solicitud->hora_llegada,
             'lugar_llegada' => $validated['estado'] === 'en_espera' ? $validated['lugar_llegada'] : $solicitud->lugar_llegada,
             'sede' => $validated['estado'] === 'en_espera' ? ($validated['sede'] ?? $solicitud->sede) : $solicitud->sede,
+            'eps' => $validated['eps'] ?? $solicitud->eps,
             'numero_ingreso' => $validated['estado'] === 'completado' ? $validated['numero_ingreso'] : $solicitud->numero_ingreso,
             'motivo_negacion' => $validated['estado'] === 'negado' ? $validated['motivo'] : $solicitud->motivo_negacion,
             'grupo_negacion' => $validated['estado'] === 'negado' && ! $solicitud->grupo_negacion ? 'no_red' : $solicitud->grupo_negacion,
@@ -428,6 +439,62 @@ class SolicitudReferenciaController extends Controller
         );
 
         return response()->json(['data' => $solicitud, 'message' => 'Solicitud completada']);
+    }
+
+    /**
+     * El paciente en espera nunca llegó a la institución: la referencia se
+     * cierra como negada y queda el motivo de no ingreso que elige el
+     * operador (alta médica, fallecimiento, otra IPS, etc.). La clínica
+     * queda notificada igual que con una negación normal.
+     */
+    public function noIngreso(Request $request, SolicitudReferencia $solicitud): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
+
+        if ($solicitud->estado !== 'en_espera') {
+            return response()->json(['message' => 'Solo se puede registrar no ingreso de solicitudes en espera de llegada.'], 422);
+        }
+
+        $validated = $request->validate([
+            'motivo_no_ingreso' => ['required', 'string', 'max:250'],
+        ]);
+
+        $solicitud->update([
+            'estado' => 'negado',
+            'motivo_no_ingreso' => $validated['motivo_no_ingreso'],
+            // También en motivo_negacion — así el detalle y el correo de
+            // negada (que leen ese campo) muestran la razón sin cambios.
+            'motivo_negacion' => 'No ingreso: '.$validated['motivo_no_ingreso'],
+        ]);
+
+        $solicitud->load('clinica');
+
+        SolicitudReferenciaEvento::create([
+            'solicitud_referencia_id' => $solicitud->id,
+            'tipo' => 'negado',
+            'titulo' => 'Paciente no llegó',
+            'descripcion' => 'El paciente no se presentó a la institución. Motivo de no ingreso: '.$validated['motivo_no_ingreso'],
+        ]);
+
+        if ($solicitud->correoNotificacion()) {
+            Mail::send(
+                'emails.solicitud-negada',
+                ['solicitud' => $solicitud],
+                function ($message) use ($solicitud) {
+                    $message->to($solicitud->correoNotificacion())
+                        ->subject("Solicitud de referencia NEGADA - {$solicitud->primer_nombre} {$solicitud->primer_apellido}");
+                }
+            );
+        }
+
+        $this->notificarClinica(
+            $solicitud,
+            'Paciente no llegó',
+            "El paciente {$solicitud->primer_nombre} {$solicitud->primer_apellido} no se presentó a la institución. Motivo: {$validated['motivo_no_ingreso']}.",
+            'error',
+        );
+
+        return response()->json(['data' => $solicitud, 'message' => 'Se registró que el paciente no llegó']);
     }
 
     /**

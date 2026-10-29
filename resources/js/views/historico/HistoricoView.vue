@@ -66,6 +66,9 @@
             <el-select v-model="filtroEspecialidad" placeholder="Todas las especialidades" clearable filterable size="small" class="sol-select">
               <el-option v-for="e in especialidadesUnicas" :key="e" :label="e" :value="e" />
             </el-select>
+            <el-select v-model="filtroEps" placeholder="Todas las aseguradoras" clearable filterable size="small" class="sol-select">
+              <el-option v-for="e in EPS_LIST" :key="e" :label="e" :value="e" />
+            </el-select>
             <el-select v-model="filtroEstado" placeholder="Todos los estados" clearable size="small" class="sol-select" @update:model-value="onEstadoSelect">
               <el-option label="Completado" value="completado" />
               <el-option label="Negado" value="negado" />
@@ -537,6 +540,12 @@
                     <el-option v-for="op in opcionesCambioEstado" :key="op.value" :label="op.label" :value="op.value" />
                   </el-select>
                 </div>
+                <div v-if="['en_espera', 'pendiente_cama', 'negado'].includes(formCambiar.estado)" class="mb-1.5">
+                  <label class="accion-field-label">EPS <span class="accion-required">*</span></label>
+                  <el-select v-model="formCambiar.eps" filterable placeholder="Seleccione la EPS" class="w-full" popper-class="negar-motivo-popper">
+                    <el-option v-for="e in EPS_LIST" :key="e" :label="e" :value="e" />
+                  </el-select>
+                </div>
                 <div v-if="formCambiar.estado === 'en_espera'" class="grid grid-cols-2 gap-2 mb-1.5">
                   <div>
                     <label class="accion-field-label">Sede <span class="accion-required">*</span></label>
@@ -648,6 +657,7 @@ import {
   StickyNote as StickyNoteIcon,
 } from '@lucide/vue';
 import http from '@/plugins/axios';
+import { EPS_LIST } from '@/data/referencia';
 import { useAuthStore } from '@/stores/auth';
 import StatCard from '@/components/ui/StatCard.vue';
 import DateRangeFilter from '@/components/ui/DateRangeFilter.vue';
@@ -739,10 +749,11 @@ onClickOutside(filtrosWrap, (e) => {
 const rangoFechas = ref<[string, string] | null>(null);
 const filtroClinica = ref<number | ''>('');
 const filtroEspecialidad = ref('');
+const filtroEps = ref('');
 const filtroEstado = ref<'' | 'completado' | 'negado' | 'en_espera' | 'pendiente' | 'pendiente_cama'>('');
 const seleccionadas = ref<Set<number>>(new Set());
 
-watch([itemsPorPagina, rangoFechas, filtroClinica, filtroEspecialidad, filtroEstado, buscarDebounced], () => {
+watch([itemsPorPagina, rangoFechas, filtroClinica, filtroEspecialidad, filtroEps, filtroEstado, buscarDebounced], () => {
   paginaActual.value = 1;
 });
 
@@ -845,12 +856,12 @@ const especialidadesUnicas = computed(() =>
 
 const hayFiltrosActivos = computed(() =>
   !!filtro.value.buscar || tabActiva.value !== 'todas' || !!rangoFechas.value ||
-  filtroClinica.value !== '' || filtroEspecialidad.value !== '' || filtroEstado.value !== ''
+  filtroClinica.value !== '' || filtroEspecialidad.value !== '' || filtroEps.value !== '' || filtroEstado.value !== ''
 );
 
 /** Cuántos filtros del panel están activos (el tab de estado no cuenta — ya se ve en los chips). */
 const conteoFiltros = computed(() =>
-  [filtroClinica.value !== '', filtroEspecialidad.value !== '', !!rangoFechas.value, filtroEstado.value !== '', !!filtro.value.buscar]
+  [filtroClinica.value !== '', filtroEspecialidad.value !== '', filtroEps.value !== '', !!rangoFechas.value, filtroEstado.value !== '', !!filtro.value.buscar]
     .filter(Boolean).length
 );
 
@@ -866,6 +877,7 @@ const solicitudesFiltradas = computed(() => {
     if (filtroEstado.value !== '' && s.estado !== filtroEstado.value) return false;
     if (filtroClinica.value !== '' && s.clinica_id !== filtroClinica.value) return false;
     if (filtroEspecialidad.value !== '' && s.especialidad_requerida !== filtroEspecialidad.value) return false;
+    if (filtroEps.value !== '' && s.eps !== filtroEps.value) return false;
     if (rangoFechas.value) {
       const f = s.created_at?.slice(0, 10) ?? '';
       if (f < rangoFechas.value[0] || f > rangoFechas.value[1]) return false;
@@ -1234,6 +1246,7 @@ function limpiarFiltros() {
   rangoFechas.value = null;
   filtroClinica.value = '';
   filtroEspecialidad.value = '';
+  filtroEps.value = '';
   filtroEstado.value = '';
 }
 
@@ -1328,7 +1341,7 @@ function cerrarDetalle() {
 const authStore = useAuthStore();
 const procesando = ref(false);
 const modalCambiar = ref(false);
-const formCambiar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', estado: '', motivo: '', sede: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', numero_ingreso: '' });
+const formCambiar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', estado: '', motivo: '', sede: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', numero_ingreso: '', eps: '' });
 
 // "Nueva solicitud" queda fuera del cambio manual — las nuevas solo
 // avanzan por el flujo normal (aceptar/negar).
@@ -1365,6 +1378,7 @@ function abrirCambiar(s: Solicitud) {
     hora_llegada: '',
     lugar_llegada: '',
     numero_ingreso: '',
+    eps: s.eps || '',
   };
   modalCambiar.value = true;
 }
@@ -1372,6 +1386,7 @@ function abrirCambiar(s: Solicitud) {
 async function cambiarEstado() {
   const f = formCambiar.value;
   if (!f.hora_respuesta || !f.estado || !f.motivo.trim() || !f.nombre_quien_responde.trim()
+    || (['en_espera', 'pendiente_cama', 'negado'].includes(f.estado) && !f.eps)
     || (f.estado === 'en_espera' && (!f.codigo_aceptacion.trim() || !f.hora_llegada || !f.lugar_llegada.trim() || !f.sede))
     || (f.estado === 'completado' && !String(f.numero_ingreso).trim())) {
     notify.warning('Complete los campos obligatorios');

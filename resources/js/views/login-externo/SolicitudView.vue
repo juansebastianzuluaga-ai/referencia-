@@ -2170,6 +2170,42 @@ function limpiarFormulario() {
 .confirm-main > *:nth-child(3) { animation-delay: .19s; }
 
 /* ── Modal registro de clínica ── */
+/* Encabezado del modal — las clases .confirm-hero* existían en el HTML sin
+   estilos: por eso el ícono y el título quedaban pegados al borde superior. */
+.confirm-hero {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  margin: .9rem 1.1rem .2rem;
+  padding: .6rem .75rem;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid #bfdbfe;
+}
+.dark .confirm-hero {
+  background: linear-gradient(90deg, rgba(30,91,191,.18), rgba(59,130,246,.12));
+  border-color: #2b3550;
+}
+.confirm-icon-wrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #16468e;
+}
+.dark .confirm-icon-wrap {
+  background: linear-gradient(135deg, rgba(30,91,191,.3), rgba(59,130,246,.2));
+  color: #93c5fd;
+}
+.confirm-hero-text { flex: 1; min-width: 0; }
+.confirm-title { margin: 0; font-size: .88rem; font-weight: 800; color: #0D2D6B; }
+.dark .confirm-title { color: #bfdbfe; }
+.confirm-subtitle { margin: .1rem 0 0; font-size: .68rem; color: #64748b; line-height: 1.45; }
+.dark .confirm-subtitle { color: #94a3b8; }
+
 .clinica-form {
   display: grid;
   grid-template-columns: 1fr 1fr;

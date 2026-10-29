@@ -1,36 +1,33 @@
 <template>
   <div class="evo-page h-full overflow-y-auto p-4 sm:p-5 animate-fade-in-up"
+    :class="{ 'evo-page-results': hasSearched }"
     style="animation-duration: 0.4s; animation-fill-mode: both;">
 
-    <!-- ── Header ── -->
-    <div class="flex items-center justify-between mb-4 shrink-0">
-      <div class="flex items-center gap-2.5">
-        <span class="evo-header-bar"></span>
-        <div>
-          <h1 class="evo-title text-lg sm:text-xl font-bold">Evolución de pacientes</h1>
-          <p class="evo-sub text-xs mt-1">Registre cada día cómo evolucionan los pacientes con referencia pendiente.</p>
-        </div>
-      </div>
-      <button @click="cargar" class="evo-refresh inline-flex items-center gap-1.5 text-xs font-medium transition-colors">
-        <component :is="RefreshCwIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': cargando }" />
-        Actualizar
-      </button>
-    </div>
-
-    <!-- ── Buscador ── -->
-    <div class="evo-search-card rounded-2xl p-3 sm:p-4 mb-4">
-      <label class="filter-label">Buscar paciente</label>
-      <el-input
-        v-model="busqueda"
-        placeholder="ID de la referencia (ej. ID000865) o cédula del paciente…"
-        :prefix-icon="SearchIcon"
-        clearable
-        size="default"
-      />
-    </div>
+    <main class="evo-workspace" :class="{ 'evo-workspace-results': hasSearched }">
+      <form
+        class="evo-lookup-card"
+        :class="{ 'evo-lookup-card-compact': hasSearched }"
+        @submit.prevent="buscarPaciente"
+      >
+        <div class="evo-lookup-icon"><component :is="ClipboardIcon" /></div>
+        <h1 class="evo-lookup-title">Evolución de pacientes</h1>
+        <p class="evo-lookup-subtitle">Consulte la evolución de un paciente con referencia pendiente.</p>
+        <el-input
+          v-model="busqueda"
+          placeholder="ID de la referencia o cédula..."
+          :prefix-icon="SearchIcon"
+          clearable
+          size="large"
+          aria-label="ID de la referencia o cédula del paciente"
+        />
+        <button class="evo-lookup-submit" type="submit" :disabled="cargando || busqueda.trim().length < 3">
+          <component :is="cargando ? LoaderIcon : SearchIcon" :class="{ 'animate-spin': cargando }" />
+          {{ cargando ? 'Buscando...' : 'Buscar' }}
+        </button>
+      </form>
 
       <!-- ── Cargando ── -->
-      <div v-if="cargando" class="space-y-3">
+      <div v-if="cargando && hasSearched" class="evo-results-list">
         <div v-for="i in 3" :key="i" class="evo-card rounded-2xl p-4 space-y-2.5">
           <div class="flex items-center gap-3">
             <div class="skeleton-circle"></div>
@@ -44,15 +41,15 @@
       </div>
 
       <!-- ── Vacío ── -->
-      <div v-else-if="solicitudesFiltradas.length === 0" class="evo-login-prompt">
+      <div v-else-if="hasSearched && solicitudesFiltradas.length === 0" class="evo-login-prompt">
         <div class="evo-empty-icon"><component :is="busqueda ? SearchIcon : ActivityIcon" class="w-7 h-7" /></div>
         <p class="evo-empty-title">{{ tituloVacio }}</p>
         <p class="evo-empty-sub">{{ subtituloVacio }}</p>
       </div>
 
       <!-- ── Pacientes ── -->
-      <div v-else class="space-y-3">
-        <div v-for="sol in solicitudesFiltradas" :key="sol.id" class="evo-card rounded-2xl overflow-hidden anim-slide-up">
+      <div v-else-if="hasSearched && !cargando" class="evo-results-list">
+        <div v-for="sol in solicitudesFiltradas" :id="`evo-card-${sol.id}`" :key="sol.id" class="evo-card rounded-2xl overflow-hidden anim-slide-up">
           <!-- Cabecera del paciente -->
           <div class="evo-card-head px-4 py-3 flex items-center gap-3 flex-wrap">
             <div class="evo-avatar">{{ inicialesPaciente(sol) }}</div>
@@ -109,6 +106,7 @@
                 </span>
               </div>
               <textarea
+                :id="`evo-nota-${sol.id}`"
                 v-model="drafts[sol.id]"
                 rows="2"
                 maxlength="2000"
@@ -146,10 +144,11 @@
           </div>
         </div>
       </div>
+    </main>
 
     <el-dialog
       v-model="detalleVisible"
-      width="min(920px, calc(100vw - 32px))"
+      width="min(1000px, calc(100vw - 28px))"
       class="evo-detail-dialog"
       :show-close="false"
       align-center
@@ -157,10 +156,17 @@
     >
       <template #header>
         <div v-if="solicitudDetalle" class="evo-modal-header">
+          <div class="evo-modal-brand">
+            <img :src="logoColor" alt="" class="evo-modal-logo" />
+            <div class="evo-modal-brand-copy">
+              <strong>Santa Bárbara</strong>
+              <span>Portal de clínicas</span>
+            </div>
+          </div>
           <div class="evo-modal-title-group">
-            <div class="evo-modal-title-icon"><component :is="ClipboardIcon" class="w-4 h-4" /></div>
+            <div class="evo-modal-title-icon"><component :is="ClipboardIcon" class="w-5 h-5" /></div>
             <div>
-              <h2 class="evo-modal-title">Detalle de solicitud</h2>
+              <h2 class="evo-modal-title">Detalle de evolución</h2>
               <p class="evo-modal-subtitle">{{ formatId(solicitudDetalle.id) }} · {{ formatFecha(solicitudDetalle.created_at) }} · {{ formatHoraNota(solicitudDetalle.created_at) }}</p>
             </div>
           </div>
@@ -179,13 +185,10 @@
           <section class="evo-panel evo-panel-blue">
             <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="UserIcon" class="w-4 h-4" /></span> Paciente</div>
             <div class="evo-info-rows">
-              <div class="evo-info-row"><span>Nombre</span><strong>{{ nombrePaciente(solicitudDetalle) }}</strong></div>
+              <div class="evo-info-row"><span>Nombre completo</span><strong>{{ nombrePaciente(solicitudDetalle) }}</strong></div>
               <div class="evo-info-row"><span>Documento</span><strong>{{ solicitudDetalle.tipo_documento }} {{ solicitudDetalle.numero_documento }}</strong></div>
               <div class="evo-info-row"><span>Edad / Género</span><strong>{{ solicitudDetalle.edad ? `${solicitudDetalle.edad} años` : '—' }} · {{ solicitudDetalle.genero === 'F' ? 'Femenino' : solicitudDetalle.genero === 'M' ? 'Masculino' : '—' }}</strong></div>
               <div class="evo-info-row"><span>EPS</span><strong>{{ solicitudDetalle.eps || '—' }}</strong></div>
-              <div class="evo-info-row"><span>Municipio</span><strong>{{ solicitudDetalle.municipio_capita || '—' }}</strong></div>
-              <div class="evo-info-row"><span>Especialidad</span><strong>{{ solicitudDetalle.especialidad_requerida || '—' }}</strong></div>
-              <div class="evo-info-row"><span>Servicio actual</span><strong>{{ solicitudDetalle.servicio_ubicacion_actual || '—' }}</strong></div>
             </div>
           </section>
 
@@ -216,11 +219,10 @@
         </div>
 
         <div class="evo-detail-bottom">
-          <section class="evo-panel evo-panel-history">
-            <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="ClipboardIcon" class="w-4 h-4" /></span> Historia clínica</div>
-            <div class="evo-history-copy">{{ solicitudDetalle.resumen_historia_clinica || 'No se agregó resumen de historia clínica.' }}</div>
-            <div v-if="solicitudDetalle.observaciones || solicitudDetalle.condicion_especial || solicitudDetalle.requiere_aislamiento" class="evo-extra-info">
-              <div v-if="solicitudDetalle.observaciones"><strong>Observaciones:</strong> {{ solicitudDetalle.observaciones }}</div>
+          <section class="evo-panel evo-panel-clinical">
+            <div class="evo-panel-title"><span class="evo-panel-icon"><component :is="ClipboardIcon" class="w-4 h-4" /></span> Evolución clínica</div>
+            <p class="evo-clinical-note">{{ evolucionActual?.nota || solicitudDetalle.resumen_historia_clinica || 'La clínica aún no registra una evolución para este paciente.' }}</p>
+            <div v-if="solicitudDetalle.condicion_especial || solicitudDetalle.requiere_aislamiento" class="evo-clinical-alerts">
               <div v-if="solicitudDetalle.condicion_especial"><strong>Condición especial:</strong> {{ solicitudDetalle.condicion_especial }}</div>
               <div v-if="solicitudDetalle.requiere_aislamiento"><strong>Aislamiento:</strong> {{ solicitudDetalle.tipo_aislamiento || 'Requerido' }}</div>
             </div>
@@ -260,9 +262,14 @@
       <template #footer>
         <div class="evo-modal-footer">
           <span><component :is="ShieldIcon" class="w-3.5 h-3.5" /> Información clínica confidencial</span>
-          <button class="evo-detail-footer-btn" type="button" @click="detalleVisible = false">
-            <component :is="XIcon" class="w-3.5 h-3.5" /> Cerrar
-          </button>
+          <div class="evo-modal-footer-actions">
+            <button class="evo-detail-footer-btn evo-detail-footer-btn-light" type="button" @click="volverAFicha">
+              <component :is="EyeIcon" class="w-3.5 h-3.5" /> Ver ficha
+            </button>
+            <button class="evo-detail-footer-btn" type="button" @click="irARegistrarEvolucion">
+              <component :is="SendIcon" class="w-3.5 h-3.5" /> Registrar evolución
+            </button>
+          </div>
         </div>
       </template>
     </el-dialog>
@@ -271,8 +278,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive, watch } from 'vue';
-import { Search as SearchIcon, RefreshCw as RefreshCwIcon, Clock as ClockIcon, Activity as ActivityIcon, CheckCircle as CheckCircleIcon, Send as SendIcon, Loader2 as LoaderIcon, Calendar as CalendarIcon, Eye as EyeIcon, X as XIcon, User as UserIcon, Building2 as BuildingIcon, Stethoscope as StethoscopeIcon, ClipboardList as ClipboardIcon, Paperclip as PaperclipIcon, ShieldCheck as ShieldIcon } from '@lucide/vue';
+import { ref, computed, onMounted, reactive, nextTick } from 'vue';
+import { Search as SearchIcon, Clock as ClockIcon, Activity as ActivityIcon, CheckCircle as CheckCircleIcon, Send as SendIcon, Loader2 as LoaderIcon, Calendar as CalendarIcon, Eye as EyeIcon, X as XIcon, User as UserIcon, Building2 as BuildingIcon, Stethoscope as StethoscopeIcon, ClipboardList as ClipboardIcon, Paperclip as PaperclipIcon, ShieldCheck as ShieldIcon } from '@lucide/vue';
 import { ElDialog, ElInput } from 'element-plus';
 import http from '@/plugins/axios';
 import notify from '@/plugins/toast';
@@ -330,23 +337,28 @@ interface Solicitud {
 const clinicaAuth = useClinicaAuthStore();
 const layout = useClinicaLayoutStore();
 const isDark = computed(() => layout.isDarkMode);
+const logoColor = '/images/logo-avatar.png';
 
 const solicitudes = ref<Solicitud[]>([]);
 const cargando = ref(false);
 const busqueda = ref('');
+const busquedaAplicada = ref('');
+const hasSearched = ref(false);
 const drafts = reactive<Record<number, string>>({});
 const guardando = reactive(new Set<number>());
 const detalleVisible = ref(false);
 const solicitudDetalle = ref<Solicitud | null>(null);
+const evolucionActual = computed(() =>
+  [...(solicitudDetalle.value?.evoluciones ?? [])]
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null
+);
 
 const hoyLabel = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
 
-// Con sesión el servidor ya devuelve solo las de la clínica y el filtro es
-// instantáneo en cliente; sin sesión (portal público) la búsqueda va al
-// servidor — no se muestra nada hasta escribir el ID o la cédula.
+// La consulta se ejecuta al enviar el formulario, no mientras se escribe.
 const solicitudesFiltradas = computed(() => {
   if (!clinicaAuth.isAuthenticated) return solicitudes.value;
-  const term = busqueda.value.trim().toLowerCase();
+  const term = busquedaAplicada.value.trim().toLowerCase();
   if (!term) return solicitudes.value;
   const digitos = term.replace(/\D/g, '');
   return solicitudes.value.filter((sol) => {
@@ -358,19 +370,11 @@ const solicitudesFiltradas = computed(() => {
 });
 
 const tituloVacio = computed(() => {
-  if (!clinicaAuth.isAuthenticated && busqueda.value.trim().length < 3) return 'Busque a su paciente';
-  if (busqueda.value.trim()) return 'Sin resultados';
-  return 'No hay pacientes pendientes';
+  return 'Sin resultados';
 });
 
 const subtituloVacio = computed(() => {
-  if (!clinicaAuth.isAuthenticated && busqueda.value.trim().length < 3) {
-    return 'Escriba el ID de la referencia (ID000865) o la cédula completa del paciente para ver sus evoluciones.';
-  }
-  if (busqueda.value.trim()) {
-    return 'Ningún paciente pendiente coincide con esa búsqueda. Verifique el ID de la referencia o la cédula.';
-  }
-  return 'Cuando una referencia de su clínica esté pendiente, el paciente aparecerá aquí para anotar su evolución diaria.';
+  return 'No encontramos una referencia pendiente con ese ID o número de cédula. Verifique los datos e inténtelo nuevamente.';
 });
 
 function formatId(id: number): string {
@@ -419,6 +423,26 @@ function verDetalle(solicitud: Solicitud): void {
   detalleVisible.value = true;
 }
 
+async function volverAFicha(): Promise<void> {
+  const id = solicitudDetalle.value?.id;
+  detalleVisible.value = false;
+  await nextTick();
+  if (id) {
+    document.getElementById(`evo-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+async function irARegistrarEvolucion(): Promise<void> {
+  const id = solicitudDetalle.value?.id;
+  detalleVisible.value = false;
+  await nextTick();
+  const textarea = id
+    ? document.getElementById(`evo-nota-${id}`) as HTMLTextAreaElement | null
+    : null;
+  textarea?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  textarea?.focus({ preventScroll: true });
+}
+
 function extensionArchivo(nombre: string): string {
   return nombre.split('.').pop()?.slice(0, 4).toUpperCase() || 'FILE';
 }
@@ -436,16 +460,10 @@ function tieneNotaHoy(sol: Solicitud): boolean {
 }
 
 async function cargar() {
-  // Portal público: sin sesión no se pide nada hasta que haya búsqueda —
-  // el servidor exige el ID o la cédula (mín. 3 caracteres) para devolver datos.
-  if (!clinicaAuth.isAuthenticated && busqueda.value.trim().length < 3) {
-    solicitudes.value = [];
-    return;
-  }
   cargando.value = true;
   try {
     const { data } = await http.get('/api/externo/evoluciones', {
-      params: { buscar: busqueda.value.trim() || undefined },
+      params: { buscar: busquedaAplicada.value },
       headers: { 'X-Skip-Auth-Redirect': '1' },
     });
     solicitudes.value = data.data;
@@ -456,11 +474,16 @@ async function cargar() {
   }
 }
 
-let buscarTimer: ReturnType<typeof setTimeout> | null = null;
-watch(busqueda, () => {
-  if (buscarTimer) clearTimeout(buscarTimer);
-  buscarTimer = setTimeout(cargar, 350);
-});
+async function buscarPaciente() {
+  const query = busqueda.value.trim();
+  if (query.length < 3) {
+    notify.warning('Escriba un ID de referencia o una cédula de al menos 3 caracteres');
+    return;
+  }
+  busquedaAplicada.value = query;
+  hasSearched.value = true;
+  await cargar();
+}
 
 async function guardarNota(sol: Solicitud) {
   const nota = drafts[sol.id]?.trim();
@@ -482,11 +505,169 @@ onMounted(async () => {
   if (!clinicaAuth.isHydrated) {
     await clinicaAuth.fetchClinica();
   }
-  cargar();
 });
 </script>
 
 <style scoped>
+.evo-page {
+  background:
+    radial-gradient(ellipse at 12% 18%, rgba(108, 157, 238, .17), transparent 38%),
+    radial-gradient(ellipse at 88% 82%, rgba(70, 133, 221, .11), transparent 34%),
+    linear-gradient(145deg, #f5f8ff 0%, #eaf1ff 52%, #f2f6ff 100%);
+}
+.dark .evo-page {
+  background:
+    radial-gradient(ellipse at 12% 18%, rgba(37, 99, 235, .13), transparent 38%),
+    linear-gradient(145deg, #0c1423 0%, #111c30 52%, #0d1728 100%);
+}
+.evo-workspace {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 0 0 76px;
+}
+.evo-workspace-results {
+  align-items: stretch;
+  justify-content: flex-start;
+  padding-bottom: 0;
+}
+.evo-lookup-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: min(440px, 100%);
+  flex-direction: column;
+  align-items: center;
+  padding: 22px 30px 27px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .95);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .76);
+  box-shadow: 0 14px 30px rgba(35, 74, 139, .15), 0 3px 8px rgba(35, 74, 139, .06);
+  backdrop-filter: blur(14px);
+  text-align: center;
+}
+.evo-lookup-card::before {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: -16px;
+  width: 105px;
+  height: 62px;
+  border-radius: 0 0 0 100%;
+  background: linear-gradient(135deg, rgba(125, 211, 252, .12), rgba(56, 162, 239, .56));
+  content: '';
+  transform: rotate(-5deg);
+}
+.dark .evo-lookup-card {
+  border-color: rgba(125, 153, 197, .25);
+  background: rgba(17, 29, 49, .86);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, .28);
+}
+.evo-lookup-icon {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  place-items: center;
+  margin-bottom: 11px;
+  border: 1px solid #e1ebff;
+  border-radius: 19px;
+  background: linear-gradient(145deg, #fff, #eff5ff);
+  color: #0754b5;
+  box-shadow: 0 5px 14px rgba(37, 99, 235, .13);
+}
+.evo-lookup-icon :deep(svg) { width: 38px; height: 38px; stroke-width: 1.8; }
+.dark .evo-lookup-icon { border-color: #29466e; background: #172c4b; color: #77b8ff; }
+.evo-lookup-title {
+  margin: 0;
+  color: #0d285a;
+  font-size: 21px;
+  font-weight: 850;
+  letter-spacing: -.035em;
+  line-height: 1.25;
+}
+.dark .evo-lookup-title { color: #e6f0ff; }
+.evo-lookup-subtitle {
+  max-width: 300px;
+  margin: 7px 0 19px;
+  color: #7a8dac;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.dark .evo-lookup-subtitle { color: #a0b2cc; }
+.evo-lookup-card :deep(.el-input) { width: 100%; }
+.evo-lookup-card :deep(.el-input__wrapper) {
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid #c8d7f0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .72);
+  box-shadow: none;
+}
+.evo-lookup-card :deep(.el-input__wrapper.is-focus) {
+  border-color: #3984df;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+}
+.evo-lookup-card :deep(.el-input__inner) { color: #334b73; font-size: 12px; }
+.evo-lookup-card :deep(.el-input__inner::placeholder) { color: #7f91b0; }
+.evo-lookup-card :deep(.el-input__prefix-inner) { color: #0754b5; }
+.dark .evo-lookup-card :deep(.el-input__wrapper) { border-color: #385477; background: #101d31; }
+.dark .evo-lookup-card :deep(.el-input__inner) { color: #e2e8f0; }
+.dark .evo-lookup-card :deep(.el-input__prefix-inner) { color: #7dbbff; }
+.evo-lookup-submit {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 17px;
+  border: 1px solid #0754b5;
+  border-radius: 11px;
+  background: linear-gradient(110deg, #0754b5, #06469d);
+  color: #fff;
+  box-shadow: 0 5px 12px rgba(7, 84, 181, .2);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+.evo-lookup-submit :deep(svg) { width: 15px; height: 15px; }
+.evo-lookup-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(7, 84, 181, .25); filter: brightness(1.05); }
+.evo-lookup-submit:disabled { cursor: not-allowed; opacity: .6; }
+.evo-lookup-card-compact {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 38px minmax(150px, .8fr) minmax(220px, 1.2fr) 112px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  text-align: left;
+}
+.evo-lookup-card-compact::before { display: none; }
+.evo-lookup-card-compact .evo-lookup-icon { width: 36px; height: 36px; margin: 0; border-radius: 11px; }
+.evo-lookup-card-compact .evo-lookup-icon :deep(svg) { width: 21px; height: 21px; }
+.evo-lookup-card-compact .evo-lookup-title { font-size: 14px; }
+.evo-lookup-card-compact .evo-lookup-subtitle { display: none; }
+.evo-lookup-card-compact :deep(.el-input__wrapper) { min-height: 36px; }
+.evo-lookup-card-compact .evo-lookup-submit { min-height: 36px; margin: 0; }
+.evo-results-list { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.evo-workspace-results .evo-login-prompt { align-self: center; width: min(480px, 100%); }
+@media (max-width: 680px) {
+  .evo-workspace { padding-bottom: 40px; }
+  .evo-lookup-card-compact { grid-template-columns: 36px minmax(0, 1fr); }
+  .evo-lookup-card-compact .evo-lookup-title { grid-column: 2; }
+  .evo-lookup-card-compact :deep(.el-input) { grid-column: 1 / -1; }
+  .evo-lookup-card-compact .evo-lookup-submit { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .evo-page { animation: none !important; }
+  .evo-lookup-submit { transition: none; }
+}
+
 .evo-header-bar {
   width: 4px;
   height: 38px;
@@ -860,26 +1041,31 @@ onMounted(async () => {
 }
 .evo-detail-dialog :deep(.el-dialog__header) {
   margin: 0;
-  padding: 12px 18px;
-  border-bottom: 1px solid #e8edf5;
+  padding: 11px 20px;
+  border-bottom: 1px solid rgba(255,255,255,.14);
   background:
-    radial-gradient(circle, rgba(59,130,246,.13) 1px, transparent 1.2px) 0 0 / 13px 13px,
-    linear-gradient(110deg, #fff 10%, #f8fbff 100%);
+    radial-gradient(ellipse at 90% 0%, rgba(56,189,248,.3), transparent 35%),
+    linear-gradient(108deg, #09275e 0%, #0c397f 58%, #0758ac 100%);
 }
-.evo-detail-dialog :deep(.el-dialog__body) { padding: 8px 12px 10px; max-height: calc(100vh - 132px); overflow-y: auto; background: #f5f8fc; }
-.evo-detail-dialog :deep(.el-dialog__footer) { padding: 0 16px 10px; background: #fff; flex-shrink: 0; }
+.evo-detail-dialog :deep(.el-dialog__body) { padding: 13px 20px 15px; max-height: calc(100vh - 145px); overflow-y: auto; background: #f5f8fc; }
+.evo-detail-dialog :deep(.el-dialog__footer) { padding: 0 20px 16px; background: #fff; flex-shrink: 0; }
 .dark .evo-detail-dialog :deep(.el-dialog) { border-color: #263352; background: #0f172a; }
-.dark .evo-detail-dialog :deep(.el-dialog__header) { border-color: #263352; background: radial-gradient(circle, rgba(96,165,250,.11) 1px, transparent 1.2px) 0 0 / 13px 13px, #111a2b; }
+.dark .evo-detail-dialog :deep(.el-dialog__header) { border-color: rgba(255,255,255,.1); background: linear-gradient(108deg, #071a3b, #0b2c60 65%, #0c4279); }
 .dark .evo-detail-dialog :deep(.el-dialog__body) { background: #0b1220; color: #cbd5e1; }
 .dark .evo-detail-dialog :deep(.el-dialog__footer) { background: #0f172a; }
-.evo-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-.evo-modal-title-group { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.evo-modal-title-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: linear-gradient(135deg, #6d4aff, #3b82f6); color: white; box-shadow: 0 5px 12px rgba(79,70,229,.22); }
-.evo-modal-title { margin: 0; color: #17233b; font-size: 13px; font-weight: 850; }
+.evo-modal-header { display: flex; align-items: center; gap: 18px; min-height: 48px; }
+.evo-modal-brand { display: flex; align-items: center; gap: 9px; min-width: 185px; padding-right: 18px; border-right: 1px solid rgba(255,255,255,.22); }
+.evo-modal-logo { display: block; width: 37px; height: 37px; padding: 3px; border-radius: 50%; background: #fff; object-fit: contain; box-shadow: 0 0 0 2px rgba(255,255,255,.25); }
+.evo-modal-brand-copy { display: flex; flex-direction: column; gap: 2px; color: #fff; line-height: 1.1; }
+.evo-modal-brand-copy strong { font-size: 13px; font-weight: 800; }
+.evo-modal-brand-copy span { color: rgba(255,255,255,.7); font-size: 9px; }
+.evo-modal-title-group { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+.evo-modal-title-icon { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid rgba(255,255,255,.23); border-radius: 10px; background: rgba(255,255,255,.12); color: white; }
+.evo-modal-title { margin: 0; color: #fff; font-size: 17px; font-weight: 850; }
 .dark .evo-modal-title { color: #e2e8f0; }
-.evo-modal-subtitle { margin: 3px 0 0; color: #8493aa; font-size: 9.5px; }
-.evo-modal-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-.evo-modal-status { padding: 4px 9px; border-radius: 999px; background: #e0f2fe; color: #0369a1; font-size: 9px; font-weight: 800; }
+.evo-modal-subtitle { margin: 3px 0 0; color: rgba(235,243,255,.78); font-size: 10.5px; }
+.evo-modal-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.evo-modal-status { padding: 5px 11px; border-radius: 999px; background: #e0f2fe; color: #0369a1; font-size: 10px; font-weight: 800; }
 .evo-modal-status.status-pendiente { background: #fef3c7; color: #b45309; }
 .evo-modal-status.status-pendiente_cama { background: #ffedd5; color: #c2410c; }
 .evo-modal-status.status-en_espera { background: #dbeafe; color: #1d4ed8; }
@@ -890,34 +1076,34 @@ onMounted(async () => {
 .evo-detail-close {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid #e2e8f0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255,255,255,.2);
   border-radius: 9px;
-  color: #64748b;
-  background: #fff;
+  color: #fff;
+  background: rgba(255,255,255,.12);
   cursor: pointer;
 }
-.evo-detail-close:hover { background: #f1f5f9; color: #1e293b; }
-.dark .evo-detail-close { border-color: #334155; background: #172033; color: #94a3b8; }
-.evo-modal-body { display: flex; flex-direction: column; gap: 7px; }
-.evo-detail-top { display: grid; grid-template-columns: 1fr 1fr .95fr; gap: 7px; align-items: stretch; }
-.evo-detail-bottom { display: grid; grid-template-columns: 1.7fr .9fr; gap: 7px; align-items: stretch; }
+.evo-detail-close:hover { background: rgba(255,255,255,.22); color: #fff; }
+.dark .evo-detail-close { border-color: rgba(255,255,255,.2); background: rgba(255,255,255,.1); color: #e2e8f0; }
+.evo-modal-body { display: flex; flex-direction: column; gap: 10px; }
+.evo-detail-top { display: grid; grid-template-columns: 1fr 1.05fr .95fr; gap: 10px; align-items: stretch; }
+.evo-detail-bottom { display: grid; grid-template-columns: 1.7fr .9fr; gap: 10px; align-items: stretch; }
 .evo-detail-side { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
-.evo-panel { min-width: 0; padding: 8px 9px; border: 1px solid #e2e9f4; border-radius: 12px; background: #fff; box-shadow: 0 2px 5px rgba(20,48,88,.025); }
+.evo-panel { min-width: 0; padding: 11px 12px; border: 1px solid #e2e9f4; border-radius: 15px; background: #fff; box-shadow: 0 2px 7px rgba(20,48,88,.04); }
 .dark .evo-panel { border-color: #263352; background: #121c2d; box-shadow: none; }
 .evo-panel-blue { --panel: #2563eb; --panel-soft: #eff6ff; --panel-border: #dbeafe; }
 .evo-panel-amber { --panel: #d97706; --panel-soft: #fffbeb; --panel-border: #fde68a; }
 .evo-panel-violet { --panel: #7c3aed; --panel-soft: #f5f3ff; --panel-border: #ddd6fe; }
 .evo-panel-slate { --panel: #475569; --panel-soft: #f1f5f9; --panel-border: #e2e8f0; }
 .evo-panel-red { --panel: #e11d48; --panel-soft: #fff1f2; --panel-border: #fecdd3; }
-.evo-panel-title { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; color: var(--panel); font-size: 9.5px; font-weight: 850; }
-.evo-panel-icon { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: var(--panel-soft); color: var(--panel); }
+.evo-panel-title { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; color: var(--panel); font-size: 13px; font-weight: 850; }
+.evo-panel-icon { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 9px; background: var(--panel-soft); color: var(--panel); }
 .dark .evo-panel-icon { background: color-mix(in srgb, var(--panel) 17%, #121c2d); }
-.evo-info-rows { display: flex; flex-direction: column; gap: 5px; }
+.evo-info-rows { display: flex; flex-direction: column; gap: 7px; }
 .evo-info-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
-.evo-info-row span { flex: 0 0 39%; color: #94a3b8; font-size: 7.5px; font-weight: 800; letter-spacing: .035em; text-transform: uppercase; }
-.evo-info-row strong { min-width: 0; flex: 1; color: #334155; font-size: 8.5px; font-weight: 700; line-height: 1.25; text-align: right; overflow-wrap: anywhere; }
+.evo-info-row span { flex: 0 0 39%; color: #8494ad; font-size: 10px; font-weight: 650; }
+.evo-info-row strong { min-width: 0; flex: 1; color: #24334d; font-size: 10.5px; font-weight: 750; line-height: 1.3; text-align: left; overflow-wrap: anywhere; }
 .dark .evo-info-row strong { color: #d5deea; }
 .evo-panel-violet .evo-diagnosis { background: #faf8ff; border-color: #ede9fe; }
 .dark .evo-panel-violet .evo-diagnosis { background: #1b1730; border-color: #3b2c64; }
@@ -931,6 +1117,47 @@ onMounted(async () => {
 .evo-principal-chip { flex-shrink: 0; margin-left: auto; padding: 2px 6px; border-radius: 999px; background: #eff6ff; color: #2563eb; font-size: 7px; font-weight: 800; }
 .evo-detail-paragraph { margin: 0; padding: 9px; border-radius: 9px; background: #f8fafc; color: #64748b; font-size: 9px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .dark .evo-detail-paragraph { background: #0f172a; color: #cbd5e1; }
+.evo-panel-clinical {
+  --panel: #0754b5;
+  --panel-soft: #eaf3ff;
+  --panel-border: #c7ddff;
+  padding: 12px 13px;
+  background:
+    radial-gradient(ellipse at 95% 0%, rgba(96,165,250,.1), transparent 30%),
+    #fff;
+}
+.dark .evo-panel-clinical { background: linear-gradient(140deg, #12233d, #111b2c); }
+.evo-clinical-note {
+  min-height: 90px;
+  max-height: 170px;
+  margin: 0;
+  padding: 13px 15px;
+  overflow-y: auto;
+  border: 1px solid #a9ccff;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #fafdff, #f2f7ff);
+  color: #253753;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.dark .evo-clinical-note { border-color: #345985; background: #0d192b; color: #d9e7fa; }
+.evo-clinical-alerts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #fde3b0;
+  border-radius: 10px;
+  background: linear-gradient(100deg, #fff7e6, #fff3d5);
+  color: #85420c;
+  font-size: 10.5px;
+}
+.evo-clinical-alerts > div + div { padding-left: 18px; border-left: 1px solid #e7bf78; }
+.dark .evo-clinical-alerts { border-color: #62451c; background: #2c2416; color: #fdc979; }
+.dark .evo-clinical-alerts > div + div { border-color: #725625; }
 .evo-history-copy { max-height: 148px; overflow-y: auto; padding: 8px; border-radius: 9px; background: #f5f9ff; color: #53647d; font-size: 8px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
 .dark .evo-history-copy { background: #0d1728; color: #b6c3d7; }
 .evo-extra-info { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; padding: 7px 8px; border-radius: 9px; background: #fff7ed; color: #9a3412; font-size: 8px; line-height: 1.35; }
@@ -957,15 +1184,20 @@ onMounted(async () => {
 .evo-attachment small { flex-shrink: 0; color: #94a3b8; font-size: 7px; }
 .dark .evo-attachment-name { color: #cbd5e1; }
 .evo-no-attachments { margin: 0; color: #94a3b8; font-size: 8px; font-style: italic; }
-.evo-modal-footer { display: flex; align-items: center; justify-content: space-between; }
-.evo-modal-footer > span { display: inline-flex; align-items: center; gap: 5px; color: #94a3b8; font-size: 8px; }
-.evo-detail-footer-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 29px; padding: 0 12px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #2563eb, #16468e); color: #fff; font-size: 8.5px; font-weight: 850; cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,.2); }
+.evo-modal-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.evo-modal-footer > span { display: inline-flex; align-items: center; gap: 6px; color: #657795; font-size: 10px; }
+.evo-modal-footer-actions { display: flex; align-items: center; gap: 10px; }
+.evo-detail-footer-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 0 15px; border: 0; border-radius: 10px; background: linear-gradient(135deg, #0870d1, #08489f); color: #fff; font-size: 11px; font-weight: 850; cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,.2); }
+.evo-detail-footer-btn-light { border: 1px solid #8ab7f7; background: #fff; color: #0754b5; box-shadow: none; }
 .evo-detail-footer-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.dark .evo-detail-footer-btn-light { border-color: #345985; background: #13233a; color: #aad0ff; }
 
 @media (max-width: 900px) {
   .evo-detail-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .evo-panel-violet { grid-column: 1 / -1; }
   .evo-detail-bottom { grid-template-columns: 1.3fr 1fr; }
+  .evo-modal-header { gap: 11px; }
+  .evo-modal-brand { min-width: 155px; padding-right: 12px; }
 }
 
 .skeleton-circle {
@@ -999,10 +1231,14 @@ onMounted(async () => {
   .evo-detail-dialog :deep(.el-dialog__header) { padding: 15px; }
   .evo-detail-dialog :deep(.el-dialog__body) { padding: 12px 14px 6px; }
   .evo-detail-dialog :deep(.el-dialog__footer) { padding: 0 14px 14px; }
-  .evo-modal-header { align-items: flex-start; }
-  .evo-modal-actions { justify-content: flex-end; }
+  .evo-modal-header { align-items: flex-start; flex-wrap: wrap; }
+  .evo-modal-brand { min-width: 0; padding-right: 10px; }
+  .evo-modal-title-group { flex: 1 1 210px; }
+  .evo-modal-actions { width: 100%; justify-content: flex-end; }
   .evo-detail-top, .evo-detail-bottom { grid-template-columns: 1fr; }
   .evo-panel-violet { grid-column: auto; }
+  .evo-modal-footer { align-items: stretch; flex-direction: column; }
+  .evo-modal-footer-actions { justify-content: flex-end; }
 }
 
 @media (max-width: 420px) {

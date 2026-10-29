@@ -78,6 +78,9 @@
               <el-select v-model="filtroEspecialidad" placeholder="Todas las especialidades" clearable filterable size="small" class="sol-select">
                 <el-option v-for="e in especialidadesFiltro" :key="e" :label="e" :value="e" />
               </el-select>
+              <el-select v-model="filtroEps" placeholder="Todas las aseguradoras" clearable filterable size="small" class="sol-select">
+                <el-option v-for="e in EPS_LIST" :key="e" :label="e" :value="e" />
+              </el-select>
               <el-select
                 :model-value="tabActiva"
                 placeholder="Todos los estados"
@@ -196,17 +199,19 @@
                     <el-button circle size="small" title="Ver detalle" aria-label="Ver detalle de la solicitud" @click="verDetalle(s)">
                       <component :is="EyeIcon" class="w-3.5 h-3.5" />
                     </el-button>
-                    <el-button
-                      v-if="tieneEvoluciones(s)"
-                      circle
-                      size="small"
-                      class="sol-evoluciones-btn"
-                      :title="`Ver evoluciones (${contarEvoluciones(s)})`"
-                      aria-label="Ver evoluciones del paciente"
-                      @click="verEvoluciones(s)"
-                    >
-                      <component :is="ActivityIcon" class="w-3.5 h-3.5" />
-                    </el-button>
+                    <span v-if="tieneEvoluciones(s)" class="sol-evo-wrap">
+                      <el-button
+                        circle
+                        size="small"
+                        class="sol-evoluciones-btn"
+                        :title="`Ver evoluciones (${contarEvoluciones(s)})`"
+                        aria-label="Ver evoluciones del paciente"
+                        @click="verEvoluciones(s)"
+                      >
+                        <component :is="ActivityIcon" class="w-3.5 h-3.5" />
+                      </el-button>
+                      <span class="sol-evo-count">{{ contarEvoluciones(s) }}</span>
+                    </span>
                     <el-dropdown v-if="s.estado !== 'completado'" trigger="click" placement="bottom-end" :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [8, 8] } }] }" popper-class="sol-acciones-menu" @command="(cmd: string) => manejarAccionFila(cmd, s)">
                       <el-button circle size="small" title="Más acciones" aria-label="Más acciones de la solicitud" :loading="enviandoGomedisysId === s.id || consultandoIngresoId === s.id">
                         <component :is="MoreIcon" class="w-3.5 h-3.5" />
@@ -699,6 +704,12 @@
                     </button>
                   </div>
                 </div>
+                <div class="mb-1.5">
+                  <label class="accion-field-label">EPS <span class="accion-required">*</span></label>
+                  <el-select v-model="formAceptar.eps" filterable placeholder="Seleccione la EPS" class="w-full" popper-class="negar-motivo-popper">
+                    <el-option v-for="e in EPS_LIST" :key="e" :label="e" :value="e" />
+                  </el-select>
+                </div>
                 <div v-if="formAceptar.sin_disponibilidad" class="accion-sin-cama-callout mb-1.5">
                   <component :is="SendIcon" class="w-3.5 h-3.5 shrink-0" />
                   <span>A la clínica le llegará: <strong>«Paciente aceptado en espera de cupo — le estaremos enviando el código cuando haya disponibilidad»</strong>. Cuando haya cupo, usa «Asignar cupo y enviar código» desde el menú de la fila.</span>
@@ -813,6 +824,12 @@
                   <el-input :model-value="formNegar.nombre_quien_responde" disabled />
                 </div>
                 <div class="mb-2">
+                  <label class="accion-field-label">EPS <span class="accion-required">*</span></label>
+                  <el-select v-model="formNegar.eps" filterable placeholder="Seleccione la EPS" class="w-full" popper-class="negar-motivo-popper">
+                    <el-option v-for="e in EPS_LIST" :key="e" :label="e" :value="e" />
+                  </el-select>
+                </div>
+                <div class="mb-2">
                   <label class="accion-field-label">Grupo de negación <span class="accion-required">*</span></label>
                   <div class="negar-grupo-btns">
                     <button
@@ -912,6 +929,12 @@
                   <label class="accion-field-label">Nuevo estado <span class="accion-required">*</span></label>
                   <el-select v-model="formCambiar.estado" placeholder="Seleccione el estado" class="w-full" popper-class="negar-motivo-popper">
                     <el-option v-for="op in opcionesCambioEstado" :key="op.value" :label="op.label" :value="op.value" />
+                  </el-select>
+                </div>
+                <div v-if="['en_espera', 'pendiente_cama', 'negado'].includes(formCambiar.estado)" class="mb-1.5">
+                  <label class="accion-field-label">EPS <span class="accion-required">*</span></label>
+                  <el-select v-model="formCambiar.eps" filterable placeholder="Seleccione la EPS" class="w-full" popper-class="negar-motivo-popper">
+                    <el-option v-for="e in EPS_LIST" :key="e" :label="e" :value="e" />
                   </el-select>
                 </div>
                 <div v-if="formCambiar.estado === 'en_espera'" class="grid grid-cols-2 gap-2 mb-1.5">
@@ -1095,9 +1118,9 @@
       </template>
     </el-dialog>
 
-    <!-- ── Modal: Confirmar ingreso encontrado en Gomedisys ── -->
+    <!-- ── Modal: Confirmar ingreso (Gomedisys o manual) ── -->
     <el-dialog v-model="modalConfirmarIngreso" width="560px" class="accion-dialog" :show-close="false" align-center>
-      <template v-if="solicitudSeleccionada && datosIngresoGomedisys">
+      <template v-if="solicitudSeleccionada">
         <div class="detalle-content">
           <button type="button" class="detalle-close-btn" @click="modalConfirmarIngreso = false">
             <component :is="XIcon" class="w-4 h-4" />
@@ -1109,12 +1132,12 @@
             </div>
             <div class="detalle-head-info">
               <p class="detalle-head-title">Confirmar ingreso</p>
-              <p class="detalle-head-sub">ID #{{ solicitudSeleccionada.id }} · verifica que sea el paciente correcto antes de completar</p>
+              <p class="detalle-head-sub">ID #{{ solicitudSeleccionada.id }} · completa con el número de ingreso o marca por qué no llegó</p>
             </div>
           </div>
 
           <div class="detalle-body">
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid gap-2" :class="datosIngresoGomedisys ? 'grid-cols-2' : 'grid-cols-1'">
               <div class="detalle-card">
                 <div class="detalle-card-head">
                   <span class="detalle-card-icon detalle-card-icon-blue"><component :is="UserIcon" class="w-3.5 h-3.5" /></span>
@@ -1127,7 +1150,7 @@
                   <div class="data-row"><span>Género</span><strong>{{ solicitudSeleccionada.genero === 'M' ? 'Masc.' : 'Fem.' }}</strong></div>
                 </div>
               </div>
-              <div class="detalle-card">
+              <div v-if="datosIngresoGomedisys" class="detalle-card">
                 <div class="detalle-card-head">
                   <span class="detalle-card-icon detalle-card-icon-violet"><component :is="SearchIcon" class="w-3.5 h-3.5" /></span>
                   <p class="detalle-card-title detalle-card-title-violet">Encontrado en Gomedisys</p>
@@ -1137,19 +1160,42 @@
                   <div class="data-row"><span>Documento</span><strong>{{ datosIngresoGomedisys.document_type }} {{ datosIngresoGomedisys.identification_number }}</strong></div>
                   <div class="data-row"><span>Nacimiento</span><strong>{{ datosIngresoGomedisys.birthdate || '—' }}</strong></div>
                   <div class="data-row"><span>Sexo</span><strong>{{ datosIngresoGomedisys.sex || '—' }}</strong></div>
-                  <div class="data-row"><span>N.° de ingreso</span><strong>{{ datosIngresoGomedisys.admission_number }}</strong></div>
                   <div class="data-row"><span>Fecha de ingreso</span><strong>{{ datosIngresoGomedisys.admission_date || '—' }}</strong></div>
                 </div>
+              </div>
+            </div>
+            <div v-if="!datosIngresoGomedisys" class="accion-sin-cama-callout mt-2">
+              <component :is="SearchIcon" class="w-3.5 h-3.5 shrink-0" />
+              <span>Sin ingreso consultado en Gomedisys — regístrelo manual o indique por qué el paciente no llegó.</span>
+            </div>
+
+            <!-- No llegó: siempre visible, sin paso extra -->
+            <div class="detalle-card mt-2">
+              <div class="card-body accion-form-body">
+                <label class="accion-field-label">Si el paciente no llegó — motivo de no ingreso</label>
+                <div class="flex gap-2">
+                  <el-select v-model="motivoNoIngreso" placeholder="Seleccione el motivo" class="flex-1" popper-class="negar-motivo-popper">
+                    <el-option v-for="m in MOTIVOS_NO_INGRESO" :key="m" :label="m" :value="m" />
+                  </el-select>
+                  <button type="button" class="accion-confirmar-btn accion-confirmar-danger" :disabled="procesandoIngreso" @click="registrarNoIngreso">
+                    <component :is="procesandoIngreso ? Loader2Icon : UserXIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': procesandoIngreso }" />
+                    No llegó
+                  </button>
+                </div>
+                <p class="accion-field-hint mt-1.5">Cierra la referencia como negada y avisa a la clínica con este motivo.</p>
               </div>
             </div>
           </div>
 
           <div class="detalle-footer">
             <button type="button" class="accion-cancelar-btn" @click="modalConfirmarIngreso = false">Cancelar</button>
-            <button type="button" class="accion-confirmar-btn accion-confirmar-violet" :disabled="procesandoIngreso" @click="confirmarIngresoPaciente">
-              <component :is="procesandoIngreso ? Loader2Icon : CheckIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': procesandoIngreso }" />
-              Sí, es el paciente — completar
-            </button>
+            <div class="ingreso-footer-group">
+              <el-input v-model="numeroIngresoManual" placeholder="N.° de ingreso" class="ingreso-num-input" />
+              <button type="button" class="accion-confirmar-btn accion-confirmar-violet" :disabled="procesandoIngreso" @click="confirmarIngresoPaciente">
+                <component :is="procesandoIngreso ? Loader2Icon : CheckIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': procesandoIngreso }" />
+                Completar
+              </button>
+            </div>
           </div>
         </div>
       </template>
@@ -1210,6 +1256,7 @@ import StatCard from '@/components/ui/StatCard.vue';
 import DateRangeFilter from '@/components/ui/DateRangeFilter.vue';
 import PanelHelp from '@/components/ui/PanelHelp.vue';
 import { autocompletarEnGomedisys } from '@/lib/gomedisys';
+import { EPS_LIST } from '@/data/referencia';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
@@ -1316,6 +1363,7 @@ onClickOutside(filtrosWrap, (e) => {
 });
 const filtroClinica = ref<number | string | ''>('');
 const filtroEspecialidad = ref('');
+const filtroEps = ref('');
 const rangoFechas = ref<[string, string] | null>(null);
 
 // Datos del panel lateral (dona, barras por día, top clínicas) y de los chips
@@ -1348,10 +1396,10 @@ const modalFichaGomedisys = ref(false);
 const campoCopiado = ref<string | null>(null);
 const adjuntoActivo = ref<{ id: number; nombre_original: string; mime_type: string; tamano: number } | null>(null);
 
-const formAceptar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', sin_disponibilidad: false, sede: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', observaciones_respuesta: '' });
-const formNegar = ref({ fecha_respuesta: '', hora_respuesta: '', grupo_negacion: '', motivo_negacion: '', nombre_quien_responde: '', observaciones_respuesta: '' });
+const formAceptar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', sin_disponibilidad: false, sede: '', eps: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', observaciones_respuesta: '' });
+const formNegar = ref({ fecha_respuesta: '', hora_respuesta: '', grupo_negacion: '', motivo_negacion: '', eps: '', nombre_quien_responde: '', observaciones_respuesta: '' });
 const modalCambiar = ref(false);
-const formCambiar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', estado: '', motivo: '', sede: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', numero_ingreso: '' });
+const formCambiar = ref({ fecha_respuesta: '', hora_respuesta: '', nombre_quien_responde: '', estado: '', motivo: '', sede: '', codigo_aceptacion: '', hora_llegada: '', lugar_llegada: '', numero_ingreso: '', eps: '' });
 
 // Destinos posibles del cambio manual — "Nueva solicitud" queda excluida:
 // las nuevas solo avanzan por el flujo normal (aceptar/negar). Tampoco se
@@ -1567,12 +1615,12 @@ const topEspecialidadesCola = computed(() => {
 
 const hayFiltros = computed(() =>
   !!filtro.value.buscar || tabActiva.value !== 'todas'
-  || filtroClinica.value !== '' || !!filtroEspecialidad.value || !!rangoFechas.value
+  || filtroClinica.value !== '' || !!filtroEspecialidad.value || !!filtroEps.value || !!rangoFechas.value
   || !!edadCola.value
 );
 /** Cuántos filtros del panel están activos (el tab de estado no cuenta — ya se ve en los chips). */
 const conteoFiltros = computed(() =>
-  [filtroClinica.value !== '', !!filtroEspecialidad.value, !!rangoFechas.value, !!filtro.value.buscar]
+  [filtroClinica.value !== '', !!filtroEspecialidad.value, !!filtroEps.value, !!rangoFechas.value, !!filtro.value.buscar]
     .filter(Boolean).length
 );
 
@@ -1629,6 +1677,7 @@ const solicitudesFiltradas = computed(() => {
       if (!coincide) return false;
     }
     if (filtroEspecialidad.value && s.especialidad_requerida !== filtroEspecialidad.value) return false;
+    if (filtroEps.value && s.eps !== filtroEps.value) return false;
     if (rangoFechas.value) {
       const dia = (s.fecha ?? s.created_at)?.slice(0, 10);
       if (dia && (dia < rangoFechas.value[0] || dia > rangoFechas.value[1])) return false;
@@ -1954,6 +2003,7 @@ function limpiarFiltros() {
   tabActiva.value = 'todas';
   filtroClinica.value = '';
   filtroEspecialidad.value = '';
+  filtroEps.value = '';
   rangoFechas.value = null;
   edadCola.value = null;
 }
@@ -2087,13 +2137,14 @@ async function consultarIngreso(s: Solicitud) {
   consultandoIngresoId.value = s.id;
   try {
     const { data } = await http.post(`/api/solicitudes-referencia/${s.id}/consultar-ingreso`);
-    if (data.ingreso) {
-      solicitudSeleccionada.value = s;
-      datosIngresoGomedisys.value = data.paciente;
-      modalConfirmarIngreso.value = true;
-    } else {
-      notify.info(data.message);
-    }
+    // El modal abre siempre: si Gomedisys tiene el ingreso muestra la
+    // comparación y precarga el número; si no, permite registrarlo manual
+    // o marcar por qué el paciente no llegó.
+    solicitudSeleccionada.value = s;
+    datosIngresoGomedisys.value = data.ingreso ? data.paciente : null;
+    numeroIngresoManual.value = data.paciente?.admission_number ? String(data.paciente.admission_number) : '';
+    motivoNoIngreso.value = '';
+    modalConfirmarIngreso.value = true;
   } catch (e: any) {
     notify.error(e.response?.data?.message || 'No se pudo consultar el ingreso en Gomedisys');
   } finally {
@@ -2101,15 +2152,19 @@ async function consultarIngreso(s: Solicitud) {
   }
 }
 
-/** Confirma que el paciente encontrado en Gomedisys es el correcto y completa la solicitud con ese número de ingreso. */
+/** Completa la solicitud con el número de ingreso — el de Gomedisys precargado o uno escrito manual. */
 async function confirmarIngresoPaciente() {
   const s = solicitudSeleccionada.value;
-  const datos = datosIngresoGomedisys.value;
-  if (!s || !datos) return;
+  const numero = Number(numeroIngresoManual.value.trim());
+  if (!s) return;
+  if (!numero || !Number.isInteger(numero) || numero <= 0) {
+    notify.warning('Escribe el número de ingreso (el de Gomedisys o el manual)');
+    return;
+  }
   try {
     procesandoIngreso.value = true;
     const { data } = await http.post(`/api/solicitudes-referencia/${s.id}/completado`, {
-      numero_ingreso: datos.admission_number,
+      numero_ingreso: numero,
     });
     notify.success('Solicitud completada');
     const idx = solicitudes.value.findIndex(x => x.id === s.id);
@@ -2118,6 +2173,51 @@ async function confirmarIngresoPaciente() {
     datosIngresoGomedisys.value = null;
   } catch (e: any) {
     notify.error(e.response?.data?.message || 'Error al completar la solicitud');
+  } finally {
+    procesandoIngreso.value = false;
+  }
+}
+
+/** Motivos por los que el paciente esperado nunca llegó a la institución —
+   la referencia se cierra (negada) con esta razón en `motivo_no_ingreso`. */
+const MOTIVOS_NO_INGRESO = [
+  'N/A',
+  'Alta Médica',
+  'Alta Voluntaria',
+  'Desestimiento',
+  'EPS Autoriza Estancia',
+  'Fallecimiento',
+  'Médico cancela trámite',
+  'No trasladable',
+  'Otros Motivos',
+  'Silencio Administrativo',
+  'Superó tiempo de respuesta',
+  'Ubicado en Otra IPS',
+  'Direccionamiento CAC',
+];
+const numeroIngresoManual = ref('');
+const motivoNoIngreso = ref('');
+
+/** Registra que el paciente en espera nunca llegó — cierra la referencia con el motivo elegido. */
+async function registrarNoIngreso() {
+  const s = solicitudSeleccionada.value;
+  if (!s || !motivoNoIngreso.value) {
+    notify.warning('Seleccione el motivo de no ingreso');
+    return;
+  }
+  try {
+    procesandoIngreso.value = true;
+    const { data } = await http.post(`/api/solicitudes-referencia/${s.id}/no-ingreso`, {
+      motivo_no_ingreso: motivoNoIngreso.value,
+    });
+    notify.success(data.message || 'Se registró que el paciente no llegó');
+    // Sale de la cola activa (queda negada) — se quita de la lista.
+    const idx = solicitudes.value.findIndex(x => x.id === s.id);
+    if (idx !== -1) solicitudes.value.splice(idx, 1);
+    modalConfirmarIngreso.value = false;
+    datosIngresoGomedisys.value = null;
+  } catch (e: any) {
+    notify.error(e.response?.data?.message || 'No se pudo registrar el motivo de no ingreso');
   } finally {
     procesandoIngreso.value = false;
   }
@@ -2161,6 +2261,7 @@ function abrirAceptar(s: Solicitud) {
     nombre_quien_responde: authStore.user?.full_name ?? '',
     sin_disponibilidad: false,
     sede: s.sede || '',
+    eps: s.eps || '',
     codigo_aceptacion: '',
     hora_llegada: '',
     lugar_llegada: '',
@@ -2290,6 +2391,7 @@ function abrirCambiar(s: Solicitud) {
     hora_llegada: '',
     lugar_llegada: '',
     numero_ingreso: '',
+    eps: s.eps || '',
   };
   modalCambiar.value = true;
 }
@@ -2297,6 +2399,7 @@ function abrirCambiar(s: Solicitud) {
 async function cambiarEstado() {
   const f = formCambiar.value;
   if (!f.hora_respuesta || !f.estado || !f.motivo.trim() || !f.nombre_quien_responde.trim()
+    || (['en_espera', 'pendiente_cama', 'negado'].includes(f.estado) && !f.eps)
     || (f.estado === 'en_espera' && (!f.codigo_aceptacion.trim() || !f.hora_llegada || !f.lugar_llegada.trim() || !f.sede))
     || (f.estado === 'completado' && !String(f.numero_ingreso).trim())) {
     notify.warning('Complete los campos obligatorios');
@@ -2370,6 +2473,7 @@ function abrirNegar(s: Solicitud) {
     hora_respuesta: horaActual(),
     grupo_negacion: '',
     motivo_negacion: '',
+    eps: s.eps || '',
     nombre_quien_responde: authStore.user?.full_name ?? '',
     observaciones_respuesta: '',
   };
@@ -2377,7 +2481,7 @@ function abrirNegar(s: Solicitud) {
 }
 
 async function aceptar() {
-  if (!formAceptar.value.hora_respuesta || !formAceptar.value.nombre_quien_responde.trim()
+  if (!formAceptar.value.hora_respuesta || !formAceptar.value.nombre_quien_responde.trim() || !formAceptar.value.eps
     || (!formAceptar.value.sin_disponibilidad && (!formAceptar.value.sede || !formAceptar.value.codigo_aceptacion.trim() || !formAceptar.value.hora_llegada || !formAceptar.value.lugar_llegada.trim()))) {
     notify.warning('Complete los campos obligatorios');
     return;
@@ -2397,7 +2501,7 @@ async function aceptar() {
 }
 
 async function negar() {
-  if (!formNegar.value.hora_respuesta || !formNegar.value.grupo_negacion || !formNegar.value.motivo_negacion.trim() || !formNegar.value.nombre_quien_responde.trim()) {
+  if (!formNegar.value.hora_respuesta || !formNegar.value.grupo_negacion || !formNegar.value.motivo_negacion.trim() || !formNegar.value.eps || !formNegar.value.nombre_quien_responde.trim()) {
     notify.warning('Complete los campos obligatorios');
     return;
   }
@@ -3173,8 +3277,16 @@ usePolling(() => {
 }
 .sol-reference-card:hover { border-color: #bfd4f5; box-shadow: 0 4px 14px rgba(42,88,149,.1); }
 .sol-reference-card > div { min-width: 0; }
-.sol-reference-urgent { border-color: #f7829a; background: linear-gradient(110deg, #ffe7ed, #fff1f4); box-shadow: inset 3px 0 0 #e11d48; }
-.sol-reference-urgent:hover { border-color: #f43f5e; box-shadow: inset 3px 0 0 #be123c, 0 4px 14px rgba(225,29,72,.12); }
+.sol-reference-urgent {
+  border-color: #f43f5e;
+  background: linear-gradient(110deg, #ffdfe7, #fff0f3);
+  animation: sol-vital-card-glow 1.8s ease-in-out infinite;
+}
+@keyframes sol-vital-card-glow {
+  0%, 100% { box-shadow: inset 4px 0 0 #dc1139, 0 0 0 0 rgba(225, 29, 72, .4); }
+  50% { box-shadow: inset 4px 0 0 #be123c, 0 0 0 6px rgba(225, 29, 72, 0); }
+}
+.sol-reference-urgent:hover { border-color: #e11d48; }
 .sol-reference-card--pendiente { border-color: #f5dda6; background: linear-gradient(110deg, #fff6e3, #fffbef); box-shadow: inset 3px 0 0 #f59e0b; }
 .sol-reference-card--pendiente:hover { border-color: #eec878; box-shadow: inset 3px 0 0 #d97706, 0 4px 14px rgba(217,119,6,.1); }
 .sol-reference-card--pendiente_cama { border-color: #f7cd9e; background: linear-gradient(110deg, #fff0dd, #fff8ec); box-shadow: inset 3px 0 0 #f97316; }
@@ -3211,7 +3323,15 @@ usePolling(() => {
 .sol-reference-status--pendiente_cama { background: #ffecd9; color: #e45a00; }
 .sol-reference-status--en_espera { background: #e1edff; color: #0960e8; }
 .sol-reference-status--completado { background: #dcfce7; color: #15803d; }
-.sol-reference-status--negado, .sol-reference-vital { background: #ffe0e7; color: #df123d; font-weight: 650; }
+.sol-reference-status--negado { background: #ffe0e7; color: #df123d; font-weight: 650; }
+.sol-reference-vital {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  border-color: #b91c1c;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+}
+.sol-reference-vital .sol-status-dot { background: #fff; }
 .sol-reference-date { margin: 4px 0 3px; color: #506b95; font-size: 10.5px; white-space: nowrap; }
 .sol-reference-age { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .sol-reference-age .sol-edad, .sol-reference-age .sol-reference-status { margin: 0; font-size: 9.5px; font-weight: 500; padding: 3px 8px; line-height: 1.15; }
@@ -3227,7 +3347,8 @@ usePolling(() => {
 .dark .sol-list-tools button:hover:not(:disabled) { background: #263d5d; }
 .dark .sol-reference-card { background: linear-gradient(115deg, #192439, #162133); border-color: #293b56; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
 .dark .sol-reference-card:hover { border-color: #4771ab; }
-.dark .sol-reference-urgent { border-color: #b03d5c; background: linear-gradient(110deg, #3d1f2e, #2c1d2b); box-shadow: inset 3px 0 0 #fb4d78; }
+.dark .sol-reference-urgent { border-color: #e11d48; background: linear-gradient(110deg, #4a1f2e, #331c29); animation: sol-vital-card-glow 1.8s ease-in-out infinite; }
+.dark .sol-reference-vital { background: linear-gradient(135deg, #e11d48, #be123c); color: #fff; border-color: #f43f5e; }
 .dark .sol-reference-card--pendiente { border-color: #6b5526; background: linear-gradient(110deg, #33290f, #28220f); box-shadow: inset 3px 0 0 #d9a028; }
 .dark .sol-reference-card--pendiente_cama { border-color: #7a4d21; background: linear-gradient(110deg, #35240f, #2a1f10); box-shadow: inset 3px 0 0 #f07d22; }
 .dark .sol-reference-card--en_espera { border-color: #2e5a9c; background: linear-gradient(110deg, #16263f, #182135); box-shadow: inset 3px 0 0 #4d8ef7; }
@@ -3243,7 +3364,7 @@ usePolling(() => {
 .dark .sol-reference-status--pendiente_cama { background: #492e20; color: #ffb879; }
 .dark .sol-reference-status--en_espera { background: #1f3d69; color: #9ec8ff; }
 .dark .sol-reference-status--completado { background: #184333; color: #86efac; }
-.dark .sol-reference-status--negado, .dark .sol-reference-vital { background: #592539; color: #ffa7bb; }
+.dark .sol-reference-status--negado { background: #592539; color: #ffa7bb; }
 .dark .sol-reference-actions :deep(.el-button) { background: #1b2b44; border-color: #3b5273; color: #bcd5f7; }
 
 @container (max-width: 850px) {
@@ -3415,6 +3536,20 @@ usePolling(() => {
 .dark .sol-urgencia-badge { background: rgba(127, 29, 29, .35); border-color: rgba(248, 113, 113, .4); color: #fca5a5; }
 .dark .sol-urgencia-badge-dot { background: #f87171; }
 .sol-status-dot { width: 5px; height: 5px; border-radius: 50%; }
+/* Urgencia vital — punto parpadeante + anillo pulsante en el chip */
+@keyframes sol-vital-dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.45); opacity: .55; }
+}
+@keyframes sol-vital-chip-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(223, 18, 61, .35); }
+  50% { box-shadow: 0 0 0 4px rgba(223, 18, 61, 0); }
+}
+.sol-reference-vital,
+.sol-urgencia-badge,
+.sol-urgencia-detail-badge { animation: sol-vital-chip-ring 1.5s ease-in-out infinite; }
+.sol-reference-vital .sol-status-dot,
+.sol-urgencia-badge-dot { animation: sol-vital-dot-pulse 1s ease-in-out infinite; }
 .sol-status-pending { background: #fef3c7; color: #d97706; }
 .sol-status-pending .sol-status-dot { background: #fbbf24; }
 .sol-status-cama { background: #ffedd5; color: #ea580c; }
@@ -3430,6 +3565,26 @@ usePolling(() => {
   margin-left: 0 !important;
   transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s ease, filter .2s ease;
 }
+.sol-evo-wrap { position: relative; display: inline-flex; }
+.sol-evo-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #fff;
+  pointer-events: none;
+  z-index: 1;
+}
+.dark .sol-evo-count { border-color: #131a2a; }
 .sol-table-actions .sol-evoluciones-btn {
   color: #2563eb;
   border-color: #bfdbfe;
@@ -3889,6 +4044,8 @@ usePolling(() => {
   background: #fff;
   border-top: 1px solid #F1F5F9;
 }
+.ingreso-footer-group { margin-left: auto; display: flex; align-items: center; gap: .5rem; }
+.ingreso-num-input { width: 140px; }
 .detalle-footer-note {
   flex: 1;
   display: flex;

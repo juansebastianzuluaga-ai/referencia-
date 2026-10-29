@@ -122,6 +122,7 @@ Route::prefix('api')->name('api.')->group(function (): void {
         Route::post('solicitudes-referencia/{solicitud}/cambiar-estado', [SolicitudReferenciaController::class, 'cambiarEstado'])->name('solicitudes-referencia.cambiar-estado')->middleware('permission:solicitudes.view|historico.view');
         Route::post('solicitudes-referencia/{solicitud}/notas', [SolicitudReferenciaController::class, 'agregarNota'])->name('solicitudes-referencia.notas')->middleware('permission:solicitudes.view|historico.view');
         Route::post('solicitudes-referencia/{solicitud}/completado', [SolicitudReferenciaController::class, 'completado'])->name('solicitudes-referencia.completado')->middleware('permission:solicitudes.view|historico.view');
+        Route::post('solicitudes-referencia/{solicitud}/no-ingreso', [SolicitudReferenciaController::class, 'noIngreso'])->name('solicitudes-referencia.no-ingreso')->middleware('permission:solicitudes.view|historico.view');
         Route::post('solicitudes-referencia/{solicitud}/consultar-ingreso', [SolicitudReferenciaController::class, 'consultarIngreso'])->name('solicitudes-referencia.consultar-ingreso')->middleware('permission:solicitudes.view|historico.view');
         Route::get('solicitudes-referencia/{solicitud}/adjuntos/{adjunto}/descargar', [SolicitudReferenciaController::class, 'descargarAdjunto'])->name('solicitudes-referencia.adjuntos.descargar')->middleware('permission:solicitudes.view|historico.view|dashboard.view');
 
