@@ -74,10 +74,24 @@
 
         </div>
       </div>
+
+      <!-- Navegación móvil siempre visible para no ocultar Evolución en teléfono -->
+      <nav class="mobile-portal-nav lg:hidden" aria-label="Navegación del portal">
+        <router-link
+          v-for="item in mainItems"
+          :key="item.to"
+          :to="item.to"
+          class="mobile-portal-nav-item"
+          active-class="mobile-portal-nav-item-active"
+        >
+          <component :is="iconOf(item.icon)" class="mobile-portal-nav-icon" />
+          <span>{{ item.text }}</span>
+        </router-link>
+      </nav>
     </header>
 
     <!-- ── Contenido ──────────────────────────────────────────────────────── -->
-    <main class="flex-1 flex flex-col min-h-0 overflow-hidden p-4" :style="{ background: layout.isDarkMode ? '#0b0e17' : 'var(--rf-bg)' }">
+    <main class="portal-main flex-1 flex flex-col min-h-0 overflow-hidden p-4" :style="{ background: layout.isDarkMode ? '#0b0e17' : 'var(--rf-bg)' }">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" :key="route.path" />
@@ -214,6 +228,41 @@ header::after {
   color: #fff !important;
 }
 
+.mobile-portal-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 0 10px 8px;
+}
+.mobile-portal-nav-item {
+  display: flex;
+  min-width: 0;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: rgba(255,255,255,.76);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.mobile-portal-nav-icon { width: 14px; height: 14px; flex: 0 0 auto; }
+.mobile-portal-nav-item-active {
+  border-color: rgba(255,255,255,.7);
+  background: #fff;
+  color: var(--rf-primary);
+  box-shadow: 0 3px 9px rgba(5,24,62,.18);
+}
+.dark .mobile-portal-nav-item-active {
+  border-color: rgba(255,255,255,.16);
+  background: rgba(255,255,255,.13);
+  color: #fff;
+}
+
 .topbar-action-btn {
   width: 34px;
   height: 34px;
@@ -252,6 +301,11 @@ header::after {
   border-color: #ffffff;
   box-shadow: 0 6px 18px rgba(10, 25, 60, .38);
   transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .portal-main { padding: 8px !important; }
+  .mobile-portal-nav-item { gap: 4px; font-size: 10px; }
 }
 .dark .topbar-user {
   background: rgba(255,255,255,0.1);

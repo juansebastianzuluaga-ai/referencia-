@@ -2827,6 +2827,46 @@ function limpiarFormulario() {
   .rf-col-quarter { grid-column: span 1; }
   .rf-urgencia-vital-field { grid-column: 1 / -1; }
 }
+
+@media (max-width: 640px) {
+  .solicitud-page {
+    min-width: 0;
+    padding: .4rem;
+    gap: .35rem;
+  }
+  .rf-stepper {
+    min-width: 0;
+    gap: .4rem;
+    padding: .45rem .5rem;
+    border-radius: 12px;
+  }
+  .rf-stepper-title h2 { font-size: .84rem; }
+  .rf-stepper-title p { font-size: .61rem; }
+  .rf-stepper-progress { gap: 5px; }
+  .rf-stepper-progress-track { width: 42px; }
+  .rf-stepper-progress-label { min-width: 25px; font-size: .64rem; }
+  .rf-body { min-width: 0; gap: .35rem; }
+  .rf-form-col { min-width: 0; padding-right: 1px; gap: .4rem; }
+  .rf-bento-top .rf-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .35rem .5rem;
+  }
+  .rf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rf-grid-trio { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 .5rem; }
+  .rf-grid-trio > :last-child { grid-column: 1 / -1; }
+  .rf-grid > *,
+  .rf-grid-trio > *,
+  .rf-section { min-width: 0; }
+  .rf-section--compact { padding: .6rem .65rem .7rem; }
+  .rf-section-header { min-width: 0; gap: .5rem; }
+  .rf-section-heading { min-width: 0; }
+  .rf-section-heading h3 { font-size: .78rem; }
+  .rf-section-heading p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :deep(.rf-form-col .el-form-item__label) { font-size: .66rem; }
+  :deep(.rf-form-col .el-input__wrapper),
+  :deep(.rf-form-col .el-select__wrapper),
+  :deep(.rf-form-col .el-textarea__inner) { min-width: 0; }
+}
 </style>
 
 <style>

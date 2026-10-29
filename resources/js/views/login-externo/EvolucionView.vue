@@ -1222,6 +1222,29 @@ onMounted(async () => {
 }
 
 @media (max-width: 640px) {
+  .evo-page { padding: 8px !important; }
+  .evo-workspace { gap: 10px; padding-bottom: 18px; }
+  .evo-lookup-card { padding: 18px 16px 20px; border-radius: 18px; }
+  .evo-lookup-title { font-size: 19px; }
+  .evo-lookup-subtitle { margin-bottom: 14px; }
+  .evo-lookup-card-compact {
+    width: 100%;
+    max-width: 100%;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 8px;
+    padding: 10px;
+  }
+  .evo-lookup-card-compact .evo-lookup-title { font-size: 13px; }
+  .evo-lookup-card-compact :deep(.el-input),
+  .evo-lookup-card-compact .evo-lookup-submit { grid-column: 1 / -1; }
+  .evo-results-list, .evo-card { min-width: 0; width: 100%; }
+  .evo-card-head { padding: 10px !important; gap: 8px; }
+  .evo-card-head > div:nth-child(2) { min-width: 0; }
+  .evo-card-body { padding: 10px !important; }
+  .evo-textarea { width: 100%; min-height: 78px; font-size: 12px; }
+  .evo-history-row { gap: 8px; }
+  .evo-history-box { width: 100%; }
+  .evo-save-btn { min-height: 40px; }
   .evo-quick-facts { grid-template-columns: 1fr; }
   .evo-history-row { flex-direction: column; }
   .evo-history-box { max-height: none; }

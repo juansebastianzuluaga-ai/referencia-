@@ -2040,6 +2040,27 @@ usePolling(() => {
   }
 }
 
+@media (max-width: 1023px) {
+  .ph-dashboard > div:first-child {
+    min-height: 0;
+  }
+  .landing-hero {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-inner { padding: 1rem; }
+  .landing-logo-circle { width: 44px; height: 44px; }
+  .landing-logo-circle img { width: 34px; height: 34px; }
+  .landing-brand-text strong { font-size: 15px; }
+  .landing-brand-text span { font-size: 7px; letter-spacing: .14em; }
+  .landing-title { font-size: clamp(1.55rem, 7vw, 2rem); }
+  .landing-desc { font-size: 12px; }
+  .landing-cta { width: 100%; justify-content: center; padding: 12px 14px; font-size: 12px; }
+}
+
 @keyframes fadeInScale {
   from { opacity: 0; transform: translate(-50%, -50%) scale(.8); }
   to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
