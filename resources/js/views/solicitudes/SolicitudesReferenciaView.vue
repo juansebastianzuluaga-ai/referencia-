@@ -556,7 +556,22 @@
                     </div>
                     <span class="evoluciones-entry-tag">Evolución</span>
                   </div>
-                  <p>{{ evolucion.descripcion || 'La clínica registró una evolución sin descripción.' }}</p>
+                  <p>{{ evolucion.texto || 'La clínica registró una evolución sin descripción.' }}</p>
+                  <div v-if="evolucion.adjuntos?.length" class="evoluciones-adjuntos">
+                    <a
+                      v-for="adj in evolucion.adjuntos"
+                      :key="adj.id"
+                      :href="adjuntoUrl(adj)"
+                      target="_blank"
+                      rel="noopener"
+                      class="evoluciones-adjunto"
+                      :title="`Abrir ${adj.nombre_original}`"
+                    >
+                      <component :is="PaperclipIcon" class="w-3 h-3" />
+                      <span class="evoluciones-adjunto-name">{{ adj.nombre_original }}</span>
+                      <small>{{ formatTamano(adj.tamano) }}</small>
+                    </a>
+                  </div>
                 </div>
               </article>
             </div>
@@ -1320,6 +1335,12 @@ interface Solicitud {
   observaciones_respuesta?: string;
   adjuntos?: { id: number; nombre_original: string; mime_type: string; tamano: number }[];
   eventos?: { id: number; tipo: string; titulo: string; descripcion?: string; created_at: string }[];
+  evoluciones?: {
+    id: number;
+    nota: string;
+    created_at: string;
+    adjuntos?: { id: number; nombre_original: string; mime_type: string; tamano: number }[];
+  }[];
   created_at: string;
 }
 
@@ -1950,6 +1971,13 @@ function adjuntoUrl(adj: { id: number }): string {
   return `/api/solicitudes-referencia/${solicitudSeleccionada.value?.id}/adjuntos/${adj.id}/descargar`;
 }
 
+function formatTamano(bytes: number): string {
+  if (!bytes) return '—';
+  return bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
 const pdfBlobUrl = ref<string | null>(null);
 const cargandoPdf = ref(false);
 const zoomLevel = ref(1);
@@ -2474,12 +2502,23 @@ async function guardarNota() {
 }
 
 /** Evoluciones clínicas, de la más reciente a la más antigua. */
-const evolucionesPaciente = computed(() =>
-  (solicitudSeleccionada.value?.eventos ?? [])
+/** Evoluciones de la clínica con sus soportes adjuntos; si la fila no las trae cargadas, se reconstruyen desde el historial de eventos. */
+const evolucionesPaciente = computed(() => {
+  const sol = solicitudSeleccionada.value;
+  if (!sol) return [];
+
+  if (sol.evoluciones?.length) {
+    return sol.evoluciones
+      .slice()
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map(e => ({ id: e.id, texto: e.nota, created_at: e.created_at, adjuntos: e.adjuntos ?? [] }));
+  }
+
+  return (sol.eventos ?? [])
     .filter(e => e.tipo === 'evolucion')
-    .slice()
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
-);
+    .map(e => ({ id: e.id, texto: e.descripcion, created_at: e.created_at, adjuntos: [] as { id: number; nombre_original: string; mime_type: string; tamano: number }[] }));
+});
 
 /** Notas internas de seguimiento, de la más reciente a la más antigua. */
 const notasSeguimiento = computed(() =>
@@ -4456,6 +4495,20 @@ usePolling(() => {
 .evoluciones-modal-meta time { display: block; margin-top: 3px; color: #8292aa; font-size: .62rem; }
 .evoluciones-entry-tag { padding: 3px 7px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: .54rem; font-weight: 850; white-space: nowrap; }
 .evoluciones-modal-entry p { margin: 9px 0 0; color: #334155; font-size: .76rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.evoluciones-adjuntos { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; padding-top: 8px; border-top: 1px dashed #c9ddf8; }
+.evoluciones-adjunto {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
+  padding: 4px 9px; border: 1px solid #c9ddf8; border-radius: 8px;
+  background: #f2f8ff; color: #1d4ed8; font-size: .64rem; font-weight: 700; text-decoration: none;
+  transition: all .15s ease;
+}
+.evoluciones-adjunto:hover { background: #dbeafe; border-color: #93c5fd; }
+.evoluciones-adjunto-name { overflow: hidden; max-width: 220px; text-overflow: ellipsis; white-space: nowrap; }
+.evoluciones-adjunto small { color: #64748b; font-size: .56rem; font-weight: 600; }
+.dark .evoluciones-adjuntos { border-top-color: #2c4a75; }
+.dark .evoluciones-adjunto { border-color: #2c4a75; background: #17263f; color: #9ec8ff; }
+.dark .evoluciones-adjunto:hover { background: #1f3d69; border-color: #4771ab; }
+.dark .evoluciones-adjunto small { color: #7d95bb; }
 .evoluciones-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 18px; color: #94a3b8; text-align: center; }
 .evoluciones-empty > svg { color: #60a5fa; }
 .evoluciones-empty strong { color: #334155; font-size: .84rem; }

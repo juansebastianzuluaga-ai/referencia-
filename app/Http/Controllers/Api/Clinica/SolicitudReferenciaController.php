@@ -434,20 +434,44 @@ class SolicitudReferenciaController extends Controller
         $clinicaId = $this->getClinicaId($request);
 
         $validated = $request->validate([
-            'nota' => ['required', 'string', 'max:2000'],
+            'nota' => ['required_without:soportes', 'nullable', 'string', 'max:2000'],
+            'soportes' => ['required_without:nota', 'nullable', 'array', 'max:5'],
+            'soportes.*' => ['file', 'mimes:pdf,jpg,jpeg,png,gif,webp,bmp,tiff,svg,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,rar', 'max:10240'],
         ]);
 
         $solicitud = SolicitudReferencia::whereIn('estado', ['pendiente', 'pendiente_cama', 'en_espera'])
             ->when($clinicaId, fn ($q) => $q->where('clinica_id', $clinicaId))
             ->findOrFail($id);
 
-        $evolucion = $solicitud->evoluciones()->create(['nota' => trim($validated['nota'])]);
+        $soportes = $validated['soportes'] ?? [];
+        $nota = trim((string) ($validated['nota'] ?? ''));
+
+        if ($nota === '') {
+            $nota = count($soportes) === 1
+                ? 'La clínica adjuntó un soporte clínico.'
+                : 'La clínica adjuntó '.count($soportes).' soportes clínicos.';
+        }
+
+        // La evolución puede llevar la historia clínica como archivo: se
+        // guarda como soporte de la solicitud, igual que los adjuntos que
+        // vienen en el formulario de remisión.
+        $evolucion = $solicitud->evoluciones()->create(['nota' => $nota]);
+
+        foreach ($soportes as $soporte) {
+            $solicitud->adjuntos()->create([
+                'solicitud_evolucion_id' => $evolucion->id,
+                'nombre_original' => $soporte->getClientOriginalName(),
+                'ruta' => $soporte->store("solicitudes-referencia/{$solicitud->id}", 'local'),
+                'mime_type' => $soporte->getMimeType(),
+                'tamano' => $soporte->getSize(),
+            ]);
+        }
 
         SolicitudReferenciaEvento::create([
             'solicitud_referencia_id' => $solicitud->id,
             'tipo' => 'evolucion',
             'titulo' => 'Evolución del paciente',
-            'descripcion' => $evolucion->nota,
+            'descripcion' => $evolucion->nota.(count($soportes) ? ' (+'.count($soportes).' soporte(s))' : ''),
         ]);
 
         // Aviso por correo al equipo interno — mismos destinatarios que la
@@ -472,7 +496,11 @@ class SolicitudReferenciaController extends Controller
             ]);
         }
 
-        return response()->json(['data' => $evolucion, 'message' => 'Evolución registrada'], 201);
+        return response()->json([
+            'data' => $evolucion,
+            'solicitud' => $solicitud->load(['evoluciones', 'adjuntos:id,solicitud_referencia_id,nombre_original,mime_type,tamano']),
+            'message' => 'Evolución registrada',
+        ], 201);
     }
 
     public function show(int $id, Request $request): JsonResponse

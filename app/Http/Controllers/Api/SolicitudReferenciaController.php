@@ -26,7 +26,7 @@ class SolicitudReferenciaController extends Controller
     {
         abort_unless(request()->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
 
-        $solicitudes = SolicitudReferencia::with(['clinica', 'adjuntos', 'diagnosticos', 'eventos'])
+        $solicitudes = SolicitudReferencia::with(['clinica', 'adjuntos', 'diagnosticos', 'eventos', 'evoluciones.adjuntos'])
             ->whereIn('estado', ['pendiente', 'pendiente_cama', 'en_espera'])
             ->orderByRaw("FIELD(estado, 'pendiente', 'pendiente_cama', 'en_espera')")
             ->orderBy('created_at', 'desc')
@@ -40,7 +40,7 @@ class SolicitudReferenciaController extends Controller
     {
         abort_unless(request()->user()->hasPermission('clinicas.view'), Response::HTTP_FORBIDDEN);
 
-        $solicitudes = SolicitudReferencia::with(['clinica', 'adjuntos', 'diagnosticos', 'eventos'])
+        $solicitudes = SolicitudReferencia::with(['clinica', 'adjuntos', 'diagnosticos', 'eventos', 'evoluciones.adjuntos'])
             ->whereIn('estado', ['completado', 'negado'])
             ->orderBy('updated_at', 'desc')
             ->get();

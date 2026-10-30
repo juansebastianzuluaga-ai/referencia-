@@ -133,6 +133,32 @@
                   placeholder="Describa la evolución del paciente: estado clínico, signos, procedimientos, observaciones…"
                 ></textarea>
 
+                <!-- Adjuntar soportes con la evolución (p. ej. la HC escaneada) -->
+                <div class="evo-attach">
+                  <input
+                    :ref="(el) => setSoporteInput(sol.id, el)"
+                    type="file"
+                    class="hidden"
+                    multiple
+                    accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.svg,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
+                    @change="agregarSoportes(sol.id, $event)"
+                  />
+                  <button type="button" class="evo-attach-btn" @click="soporteInputs[sol.id]?.click()">
+                    <component :is="PaperclipIcon" class="w-3.5 h-3.5" /> Adjuntar soporte
+                  </button>
+                  <span class="evo-attach-hint">HC, PDF o imágenes · hasta 5 archivos de 10 MB</span>
+                </div>
+                <div v-if="soportesDraft[sol.id]?.length" class="evo-attach-list">
+                  <span v-for="(archivo, i) in soportesDraft[sol.id]" :key="`${archivo.name}-${i}`" class="evo-attach-chip">
+                    <component :is="PaperclipIcon" class="w-3 h-3" />
+                    <span class="evo-attach-name" :title="archivo.name">{{ archivo.name }}</span>
+                    <small>{{ formatTamano(archivo.size) }}</small>
+                    <button type="button" class="evo-attach-del" aria-label="Quitar archivo" @click="soportesDraft[sol.id].splice(i, 1)">
+                      <component :is="XIcon" class="w-3 h-3" />
+                    </button>
+                  </span>
+                </div>
+
                 <div class="evo-history-box evo-history-box-compact">
                   <div class="evo-history-title"><component :is="ClockIcon" class="w-3.5 h-3.5" /> Historial de evolución</div>
                   <template v-if="sol.evoluciones?.length">
@@ -188,7 +214,7 @@
               <button
                 class="evo-detail-footer-btn"
                 type="button"
-                :disabled="!drafts[sol.id]?.trim() || guardando.has(sol.id)"
+                :disabled="(!drafts[sol.id]?.trim() && !soportesDraft[sol.id]?.length) || guardando.has(sol.id)"
                 @click="guardarNota(sol)"
               >
                 <component :is="guardando.has(sol.id) ? LoaderIcon : SendIcon" class="w-3.5 h-3.5" :class="{ 'animate-spin': guardando.has(sol.id) }" />
@@ -205,7 +231,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue';
-import { Search as SearchIcon, Clock as ClockIcon, Activity as ActivityIcon, CheckCircle as CheckCircleIcon, Send as SendIcon, Loader2 as LoaderIcon, Calendar as CalendarIcon, User as UserIcon, Building2 as BuildingIcon, Stethoscope as StethoscopeIcon, ClipboardList as ClipboardIcon, Paperclip as PaperclipIcon, ShieldCheck as ShieldIcon } from '@lucide/vue';
+import { Search as SearchIcon, Clock as ClockIcon, Activity as ActivityIcon, CheckCircle as CheckCircleIcon, Send as SendIcon, Loader2 as LoaderIcon, Calendar as CalendarIcon, User as UserIcon, Building2 as BuildingIcon, Stethoscope as StethoscopeIcon, ClipboardList as ClipboardIcon, Paperclip as PaperclipIcon, ShieldCheck as ShieldIcon, X as XIcon } from '@lucide/vue';
 import { useRoute } from 'vue-router';
 import { ElInput } from 'element-plus';
 import http from '@/plugins/axios';
@@ -270,7 +296,32 @@ const busqueda = ref('');
 const busquedaAplicada = ref('');
 const hasSearched = ref(false);
 const drafts = reactive<Record<number, string>>({});
+const soportesDraft = reactive<Record<number, File[]>>({});
+const soporteInputs = reactive<Record<number, HTMLInputElement>>({});
 const guardando = reactive(new Set<number>());
+
+function setSoporteInput(id: number, el: unknown): void {
+  if (el instanceof HTMLInputElement) soporteInputs[id] = el;
+}
+
+function agregarSoportes(id: number, event: Event): void {
+  const input = event.target as HTMLInputElement;
+  const archivos = [...(input.files ?? [])];
+  input.value = '';
+
+  soportesDraft[id] = soportesDraft[id] ?? [];
+  for (const archivo of archivos) {
+    if (soportesDraft[id].length >= 5) {
+      notify.warning('Máximo 5 soportes por evolución');
+      break;
+    }
+    if (archivo.size > 10 * 1024 * 1024) {
+      notify.warning(`"${archivo.name}" supera los 10 MB`);
+      continue;
+    }
+    soportesDraft[id].push(archivo);
+  }
+}
 
 const hoyLabel = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -388,12 +439,24 @@ function nuevaBusqueda(): void {
 
 async function guardarNota(sol: Solicitud) {
   const nota = drafts[sol.id]?.trim();
-  if (!nota) return;
+  const soportes = soportesDraft[sol.id] ?? [];
+  if (!nota && soportes.length === 0) return;
   guardando.add(sol.id);
   try {
-    const { data } = await http.post(`/api/externo/solicitudes/${sol.id}/evoluciones`, { nota });
-    sol.evoluciones = [data.data, ...(sol.evoluciones ?? [])];
+    const body = new FormData();
+    if (nota) body.append('nota', nota);
+    soportes.forEach((soporte) => body.append('soportes[]', soporte));
+    const { data } = await http.post(`/api/externo/solicitudes/${sol.id}/evoluciones`, body, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    if (data.solicitud) {
+      sol.evoluciones = data.solicitud.evoluciones ?? sol.evoluciones;
+      sol.adjuntos = data.solicitud.adjuntos ?? sol.adjuntos;
+    } else {
+      sol.evoluciones = [data.data, ...(sol.evoluciones ?? [])];
+    }
     drafts[sol.id] = '';
+    soportesDraft[sol.id] = [];
     notify.success('Evolución registrada');
   } catch (e: any) {
     notify.error(e?.response?.data?.message ?? 'No se pudo registrar la evolución');
@@ -629,6 +692,33 @@ onMounted(async () => {
 .dark .evo-extra-danger { border-color: #6b2434; background: #2b1620; color: #fda4af; }
 .dark .evo-extra-info { border-color: #31527c; background: #172b47; color: #93c5fd; }
 .evo-textarea-clinical { width: 100%; min-height: 64px; margin-bottom: 10px; border-color: #a9ccff; font-size: 12px; }
+.evo-attach { display: flex; align-items: center; gap: 10px; margin: -2px 0 8px; }
+.evo-attach-btn {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  padding: 6px 12px; border: 1.5px dashed #a9ccff; border-radius: 9px;
+  background: #f2f8ff; color: #0754b5; font-size: 11px; font-weight: 800;
+  cursor: pointer; transition: all .15s ease;
+}
+.evo-attach-btn:hover { background: #e4f0ff; border-color: #5b9dff; }
+.evo-attach-hint { color: #90a6c4; font-size: 9.5px; line-height: 1.3; }
+.evo-attach-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.evo-attach-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  padding: 4px 8px; border: 1px solid #d4e2f5; border-radius: 8px;
+  background: #fff; color: #2d4a73; font-size: 10.5px; font-weight: 600;
+}
+.evo-attach-name { overflow: hidden; max-width: 160px; text-overflow: ellipsis; white-space: nowrap; }
+.evo-attach-chip small { color: #8ba3c9; font-size: 9px; }
+.evo-attach-del {
+  display: grid; place-items: center; width: 16px; height: 16px; flex-shrink: 0;
+  border: 0; border-radius: 50%; background: #fee2e2; color: #dc2626; cursor: pointer;
+}
+.evo-attach-del:hover { background: #fecaca; }
+.dark .evo-attach-btn { border-color: #31527c; background: #172b47; color: #93c5fd; }
+.dark .evo-attach-btn:hover { border-color: #4d8ef7; background: #1e3a5f; }
+.dark .evo-attach-hint { color: #6d84a8; }
+.dark .evo-attach-chip { border-color: #314666; background: #1c2d46; color: #bcd5f7; }
+.dark .evo-attach-del { background: #4c1d24; color: #fda4af; }
 .evo-history-box-compact { display: block; max-height: 130px; padding: 9px 12px; overflow-y: auto; }
 .evo-history-title { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; color: #0754b5; font-size: 11px; font-weight: 850; }
 .dark .evo-history-title { color: #7dbbff; }
