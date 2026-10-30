@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\UpdateSettingRequest;
 use App\Http\Resources\SettingResource;
+use App\Mail\CorreoPrueba;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class SettingController extends BaseController
 {
@@ -47,5 +51,26 @@ class SettingController extends BaseController
         ]);
 
         return $this->sendResponse($grouped, 'Configuraciones actualizadas correctamente');
+    }
+
+    /** Envía un correo de prueba con la configuración guardada en Ajustes. */
+    public function probarCorreo(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->hasPermission('settings.update'), Response::HTTP_FORBIDDEN);
+
+        $validated = $request->validate([
+            'correo' => ['required', 'email', 'max:255'],
+        ]);
+
+        try {
+            Mail::to($validated['correo'])->send(new CorreoPrueba);
+        } catch (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo enviar el correo: '.$e->getMessage(),
+            ], 503);
+        }
+
+        return $this->sendResponse(null, "Correo de prueba enviado a {$validated['correo']}");
     }
 }

@@ -93,6 +93,7 @@ Route::prefix('api')->name('api.')->group(function (): void {
 
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index')->middleware('permission:settings.view');
         Route::put('settings', [SettingController::class, 'update'])->name('settings.update')->middleware('permission:settings.update');
+        Route::post('settings/probar-correo', [SettingController::class, 'probarCorreo'])->name('settings.probar-correo')->middleware('permission:settings.update');
 
         Route::get('api-credentials', [ApiCredentialController::class, 'index'])->name('api-credentials.index')->middleware('permission:api-keys.view');
         Route::post('api-credentials', [ApiCredentialController::class, 'store'])->name('api-credentials.store')->middleware('permission:api-keys.create');

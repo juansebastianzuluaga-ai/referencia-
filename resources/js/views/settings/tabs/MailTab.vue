@@ -147,14 +147,73 @@
         Sendmail usa el servidor de correo local del sistema. Asegúrate de que esté configurado correctamente en el servidor.
       </el-alert>
     </template>
+
+    <!-- Probar envío -->
+    <div class="border-t border-gray-100 pt-4">
+      <h4 class="text-sm font-semibold text-gray-800 mb-1.5">Probar envío de correo</h4>
+      <p class="text-xs text-gray-400 mb-4">Envía un correo de prueba con la configuración <strong>guardada</strong>. Si cambiaste algo arriba, guarda primero los cambios.</p>
+      <div class="flex items-start gap-3">
+        <el-input
+          v-model="correoPrueba"
+          type="email"
+          placeholder="correo@destino.com"
+          class="flex-1"
+          clearable
+          @keyup.enter="probarCorreo"
+        />
+        <el-button
+          type="primary"
+          :loading="probando"
+          :disabled="!correoPrueba.trim()"
+          @click="probarCorreo"
+        >
+          Enviar prueba
+        </el-button>
+      </div>
+      <el-alert
+        v-if="resultadoPrueba"
+        :type="resultadoPrueba.ok ? 'success' : 'error'"
+        :title="resultadoPrueba.ok ? 'Envío exitoso' : 'Falló el envío'"
+        :description="resultadoPrueba.mensaje"
+        class="mt-4"
+        show-icon
+        :closable="true"
+        @close="resultadoPrueba = null"
+      />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
+import http from '@/plugins/axios';
+import notify from '@/plugins/toast';
 
 const settingsStore = useSettingsStore();
+
+const correoPrueba = ref('');
+const probando = ref(false);
+const resultadoPrueba = ref<{ ok: boolean; mensaje: string } | null>(null);
+
+async function probarCorreo(): Promise<void> {
+  const correo = correoPrueba.value.trim();
+  if (!correo) return;
+
+  probando.value = true;
+  resultadoPrueba.value = null;
+  try {
+    const { data } = await http.post('/api/settings/probar-correo', { correo });
+    resultadoPrueba.value = { ok: true, mensaje: data.message || `Correo enviado a ${correo}` };
+    notify.success(data.message || 'Correo de prueba enviado');
+  } catch (e: any) {
+    const mensaje = e?.response?.data?.message || 'No se pudo enviar el correo de prueba';
+    resultadoPrueba.value = { ok: false, mensaje };
+    notify.error(mensaje);
+  } finally {
+    probando.value = false;
+  }
+}
 
 const form = reactive({
   mail_mailer: 'smtp',
